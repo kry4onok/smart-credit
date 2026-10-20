@@ -21,18 +21,17 @@
 4. Сгенерировать код и проверить сборку producer/consumer. Сгенерированный код не редактировать вручную.
 5. Влить контракт в `main`; сервисные ветки подтягивают его и реализуют свою сторону.
 
-Принят единый корневой Go module `github.com/alfabank-hackathon-2026/smart-credit` (совпадает с Git remote). После создания `go.mod` генерация из корня репозитория:
+Принят единый корневой Go module `github.com/alfabank-hackathon-2026/smart-credit` (совпадает с Git remote). Генерация из корня репозитория:
 
 ```bash
-go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config api/codegen/common.yaml api/common.yaml
-go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config api/codegen/auth.yaml api/auth.yaml
-go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config api/codegen/client.yaml api/client.yaml
-go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config api/codegen/bank.yaml api/bank.yaml
+make gen
 ```
 
-`common` генерируется первым, поскольку сервисы импортируют его типы. `buf`
-конфигурацию и генерацию Go/Python protobuf добавим после согласования структуры
-Python-пакетов с ML-командой.
+Сейчас `gen` вызывает `gen-openapi`; позже к нему добавится `gen-proto`.
+`common` генерируется первым, поскольку сервисы импортируют его типы. Версия
+`oapi-codegen` зафиксирована в `Makefile`. `buf` конфигурацию и генерацию
+Go/Python protobuf добавим после согласования структуры Python-пакетов с
+ML-командой.
 
 Контракты меняются в этих же файлах. Добавление необязательного поля совместимо;
 удаление или смену смысла поля согласовывают обе стороны до слияния. Для Kafka
