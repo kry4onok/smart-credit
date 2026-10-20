@@ -3,15 +3,18 @@ package container
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
+	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Container struct {
-	DB *pgxpool.Pool
+	DB          *pgxpool.Pool
+	HTTPHandler http.Handler
 
 	closeOnce sync.Once
 }
@@ -27,7 +30,10 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		return nil, fmt.Errorf("create postgres dependency: %w", err)
 	}
 
-	return &Container{DB: db}, nil
+	return &Container{
+		DB:          db,
+		HTTPHandler: httpapi.New(db),
+	}, nil
 }
 
 func (c *Container) Close() {
