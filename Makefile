@@ -17,7 +17,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi infra-up infra-down infra-ps infra-logs bank-db-up bank-db-down bank-db-status
+.PHONY: help require-env gen gen-openapi infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -26,6 +26,7 @@ help:
 	@echo 'make infra-up         Запустить Postgres и Kafka, создать топики'
 	@echo 'make infra-ps         Показать состояние контейнеров'
 	@echo 'make infra-logs       Показать логи инфраструктуры'
+	@echo 'make bank-run         Запустить bank-service локально'
 	@echo 'make bank-db-up       Применить миграции bank_db'
 	@echo 'make bank-db-down     Откатить миграцию bank_db'
 	@echo 'make bank-db-status   Показать состояние миграций bank_db'
@@ -56,6 +57,9 @@ infra-ps: require-env
 
 infra-logs: require-env
 	$(COMPOSE) logs -f postgres kafka
+
+bank-run: require-env
+	go run ./services/bank-service/cmd/service
 
 bank-db-up: require-env
 	$(GOOSE) -dir $(BANK_MIGRATIONS) postgres "$(BANK_DATABASE_URL)" up
