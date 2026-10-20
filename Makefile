@@ -11,18 +11,20 @@ BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGR
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.24.1
 BANK_MIGRATIONS := services/bank-service/migrations
 OAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
+GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 OPENAPI_OUTPUT_DIRS := \
 	pkg/api/common \
 	services/auth/internal/generated \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
+.PHONY: help require-env gen gen-openapi lint infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
 
 help:
 	@echo 'Сначала: cp .env.example .env'
 	@echo 'make gen              Сгенерировать код из всех контрактов'
 	@echo 'make gen-openapi      Сгенерировать Go-код из OpenAPI'
+	@echo 'make lint             Проверить Go-код линтерами и форматтерами'
 	@echo 'make infra-up         Запустить Postgres и Kafka, создать топики'
 	@echo 'make infra-ps         Показать состояние контейнеров'
 	@echo 'make infra-logs       Показать логи инфраструктуры'
@@ -43,6 +45,9 @@ gen-openapi:
 	$(OAPI_CODEGEN) -config api/codegen/auth.yaml api/auth.yaml
 	$(OAPI_CODEGEN) -config api/codegen/client.yaml api/client.yaml
 	$(OAPI_CODEGEN) -config api/codegen/bank.yaml api/bank.yaml
+
+lint:
+	$(GOLANGCI_LINT) run ./...
 
 infra-up: require-env
 	$(COMPOSE) up -d --wait postgres kafka
