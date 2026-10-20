@@ -1,0 +1,332 @@
+openapi: 3.1.0
+info:
+  title: Smart Credit Bank API
+  version: draft
+  description: Рабочее место аналитика. Требует роль ANALYST или ADMIN, если не указано иное.
+servers:
+  - url: /api
+security:
+  - BearerAuth: []
+tags:
+  - name: Cases
+paths:
+  /healthz:
+    get:
+      operationId: bankHealth
+      summary: Liveness процесса
+      servers: [{ url: / }]
+      security: []
+      responses:
+        '204': { description: Процесс жив. }
+  /readyz:
+    get:
+      operationId: bankReady
+      summary: Готовность обслуживать запросы, включая bank_db
+      servers: [{ url: / }]
+      security: []
+      responses:
+        '204': { description: Сервис готов. }
+        '503': { description: Сервис ещё не готов. }
+  /backoffice/applications:
+    get:
+      tags: [Cases]
+      operationId: listCases
+      summary: Очередь дел для сотрудников банка
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/Cursor' }
+        - { $ref: './common.yaml#/components/parameters/Limit' }
+        - name: status
+          in: query
+          schema: { $ref: './common.yaml#/components/schemas/BankStatus' }
+        - name: product_id
+          in: query
+          schema: { $ref: './common.yaml#/components/schemas/Id' }
+        - name: assignee
+          in: query
+          description: 'me, unassigned или UUID аналитика.'
+          schema: { type: string }
+      responses:
+        '200':
+          description: Ручные дела сортируются первыми, затем по created_at и id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CasePage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /backoffice/applications/{application_id}:
+    get:
+      tags: [Cases]
+      operationId: getCase
+      summary: Дело с данными, проверками и скорингом
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+      responses:
+        '200':
+          description: Доступные действия вычислены из роли, назначения и статуса.
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BankCase' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /backoffice/applications/{application_id}/take:
+    post:
+      tags: [Cases]
+      operationId: takeCase
+      summary: Атомарно назначить дело себе
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      responses:
+        '200':
+          description: Дело назначено текущему аналитику, в аудит добавлена запись.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BankCase' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /backoffice/applications/{application_id}/decision:
+    post:
+      tags: [Cases]
+      operationId: decideCase
+      summary: Решение назначенного аналитика по MANUAL_REVIEW
+      description: >-
+        Для оферты другого продукта банк проверяет его диапазоны, правила и
+        необходимые документы. Если данных не хватает, аналитик выбирает
+        REQUEST_INFO; неполную оферту выпускать нельзя.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+        - { $ref: './common.yaml#/components/parameters/IfMatch' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalystDecisionRequest' }
+      responses:
+        '200':
+          description: Решение, аудит и публичное событие записаны в одной транзакции.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BankCase' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /backoffice/applications/{application_id}/audit:
+    get:
+      tags: [Cases]
+      operationId: getCaseAudit
+      summary: Неизменяемая история переходов и решений
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/Cursor' }
+        - { $ref: './common.yaml#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: История от старой к новой.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /backoffice/applications/{application_id}/summary:
+    post:
+      tags: [Cases]
+      operationId: summarizeCase
+      summary: Резюме дела для сотрудника с помощью assistant
+      description: >-
+        Часть MVP. Bank-service вызывает assistant с дедлайном; при сбое
+        возвращает шаблон. Текст не меняет состояние или кредитное решение.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+      responses:
+        '200':
+          description: Текст и происхождение текста.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [text, source]
+                properties:
+                  text: { type: string }
+                  source: { type: string, enum: [assistant, template] }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  responses:
+    BadRequest:
+      description: Некорректный запрос.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Unauthorized:
+      description: Нет действительной сессии.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Forbidden:
+      description: Недостаточно прав.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    NotFound:
+      description: Ресурс не найден.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Conflict:
+      description: Конфликт состояния, версии или идемпотентности.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    ValidationError:
+      description: Нарушено бизнес-правило.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+  securitySchemes:
+    BearerAuth: { $ref: './common.yaml#/components/securitySchemes/BearerAuth' }
+  schemas:
+    CaseListItem:
+      type: object
+      required: [id, status, product_id, requested_amount, created_at, version]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        status: { $ref: './common.yaml#/components/schemas/BankStatus' }
+        product_id: { $ref: './common.yaml#/components/schemas/Id' }
+        requested_amount: { $ref: './common.yaml#/components/schemas/Money' }
+        company_name: { type: string }
+        assignee_id:
+          oneOf:
+            - { $ref: './common.yaml#/components/schemas/Id' }
+            - { type: 'null' }
+        created_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+        version: { type: integer, format: int64, minimum: 1 }
+    CasePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CaseListItem' }
+        next_cursor: { type: [string, 'null'] }
+    BankCase:
+      type: object
+      required: [id, status, product_id, product_name, product_version, company, application, audit_version, allowed_actions, created_at, updated_at, version]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        status: { $ref: './common.yaml#/components/schemas/BankStatus' }
+        product_id: { $ref: './common.yaml#/components/schemas/Id' }
+        product_name: { type: string, description: Снимок исходного продукта заявки. }
+        product_version: { type: integer, format: int64, minimum: 1 }
+        company: { $ref: './common.yaml#/components/schemas/CompanyProfile' }
+        application: { $ref: '#/components/schemas/SubmittedApplication' }
+        checks: { $ref: '#/components/schemas/Checks' }
+        score: { $ref: '#/components/schemas/ScoreResult' }
+        triggered_rules:
+          type: array
+          items: { type: string }
+        recommendation: { type: string, enum: [APPROVE, COUNTER, REQUEST_INFO, MANUAL_REVIEW, REJECT] }
+        assignee_id: { $ref: './common.yaml#/components/schemas/Id' }
+        info_request: { $ref: './common.yaml#/components/schemas/InfoRequest' }
+        offer: { $ref: './common.yaml#/components/schemas/Offer' }
+        public_reason: { type: string, description: Текст результата, опубликованный клиенту. }
+        allowed_actions:
+          type: array
+          items: { type: string, enum: [TAKE, DECIDE, VIEW] }
+        audit_version: { type: integer, format: int64, minimum: 0 }
+        created_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+        updated_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+        version: { type: integer, format: int64, minimum: 1 }
+    SubmittedApplication:
+      type: object
+      required: [amount, term_months, purpose, document_types]
+      properties:
+        amount: { $ref: './common.yaml#/components/schemas/Money' }
+        term_months: { type: integer, minimum: 1 }
+        purpose: { $ref: './common.yaml#/components/schemas/PurposeTag' }
+        document_types:
+          type: array
+          items: { $ref: './common.yaml#/components/schemas/DocumentType' }
+    Checks:
+      type: object
+      required: [company_status, total_debt, overdue_count_12m, max_overdue_days]
+      properties:
+        company_status: { type: string, enum: [UNKNOWN, ACTIVE, LIQUIDATING, LIQUIDATED] }
+        registered_at: { type: string, format: date }
+        okved: { type: string }
+        total_debt: { $ref: './common.yaml#/components/schemas/Money' }
+        overdue_count_12m: { type: integer, minimum: 0 }
+        max_overdue_days: { type: integer, minimum: 0 }
+        bureau_error: { type: [string, 'null'] }
+    ScoreResult:
+      type: object
+      required: [score, grade, reasons, model_version, feature_schema_version]
+      properties:
+        score: { type: integer, minimum: 0, maximum: 1000, description: Чем выше значение, тем ниже риск. }
+        grade: { type: string, enum: [A, B, C, D, E] }
+        reasons:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreReason' }
+        model_version: { type: string }
+        feature_schema_version: { type: string }
+    ScoreReason:
+      type: object
+      required: [code, description, direction, contribution]
+      properties:
+        code: { type: string, enum: [SHORT_HISTORY, LOW_PROFIT_MARGIN, HIGH_OBLIGATIONS, HIGH_BUREAU_DEBT, RECENT_OVERDUE, LARGE_REQUEST, STABLE_BUSINESS, NO_OVERDUE] }
+        description: { type: string }
+        direction: { type: string, enum: [INCREASES_RISK, DECREASES_RISK] }
+        contribution: { type: integer, minimum: 0, description: Абсолютная величина вклада; направление задаёт direction. }
+    AnalystDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [outcome, comment]
+      properties:
+        outcome: { type: string, enum: [APPROVE, COUNTER, REQUEST_INFO, REJECT] }
+        comment: { type: string, minLength: 1, maxLength: 2000, description: Внутренний комментарий; клиент его не видит. }
+        public_reason: { type: string, minLength: 1, maxLength: 500, description: Безопасное основание для объяснения клиенту. }
+        offer: { $ref: '#/components/schemas/OfferTerms' }
+        info_request: { $ref: '#/components/schemas/InfoRequestDraft' }
+      description: >-
+        APPROVE/COUNTER требуют offer; REQUEST_INFO требует info_request;
+        REJECT запрещает оба поля. Для REJECT и COUNTER обязателен public_reason;
+        comment остаётся только во внутреннем аудите. Проверяется usecase.
+    OfferTerms:
+      type: object
+      additionalProperties: false
+      required: [product_id, amount, term_months, rate_bps]
+      properties:
+        product_id: { $ref: './common.yaml#/components/schemas/Id', description: Продукт оферты; может отличаться от продукта исходной заявки. }
+        amount: { $ref: './common.yaml#/components/schemas/Money' }
+        term_months: { type: integer, minimum: 1 }
+        rate_bps: { type: integer, minimum: 0 }
+    InfoRequestDraft:
+      type: object
+      additionalProperties: false
+      required: [message, required_fields, required_document_types]
+      properties:
+        message: { type: string, minLength: 1 }
+        required_fields:
+          type: array
+          items: { $ref: './common.yaml#/components/schemas/InfoField' }
+        required_document_types:
+          type: array
+          items: { $ref: './common.yaml#/components/schemas/DocumentType' }
+    AuditEntry:
+      type: object
+      required: [id, action, actor_type, occurred_at, reason]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        action: { type: string }
+        actor_type: { type: string, enum: [SYSTEM, ANALYST, CLIENT] }
+        actor_id: { $ref: './common.yaml#/components/schemas/Id' }
+        from_status: { $ref: './common.yaml#/components/schemas/BankStatus' }
+        to_status: { $ref: './common.yaml#/components/schemas/BankStatus' }
+        reason: { type: string }
+        occurred_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+    AuditPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEntry' }
+        next_cursor: { type: [string, 'null'] }

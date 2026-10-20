@@ -1,0 +1,10 @@
+package: generated
+generate:
+  models: true
+  chi-server: true
+  strict-server: true
+output-options:
+  skip-prune: true
+import-mapping:
+  ./common.yaml: github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common
+output: services/auth/internal/generated/openapi.gen.go

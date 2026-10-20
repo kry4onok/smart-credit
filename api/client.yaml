@@ -1,0 +1,493 @@
+openapi: 3.1.0
+info:
+  title: Smart Credit Client API
+  version: draft
+  description: >-
+    Кабинет клиента. Все операции требуют роль CLIENT и ограничены org_id из JWT.
+    Банковские статусы здесь являются проекцией событий bank.events.
+servers:
+  - url: /api
+security:
+  - BearerAuth: []
+tags:
+  - name: Company
+  - name: Products
+  - name: Applications
+paths:
+  /healthz:
+    get:
+      operationId: clientHealth
+      summary: Liveness процесса
+      servers: [{ url: / }]
+      security: []
+      responses:
+        '204': { description: Процесс жив. }
+  /readyz:
+    get:
+      operationId: clientReady
+      summary: Готовность обслуживать запросы, включая client_db
+      servers: [{ url: / }]
+      security: []
+      responses:
+        '204': { description: Сервис готов. }
+        '503': { description: Сервис ещё не готов. }
+  /client/company:
+    get:
+      tags: [Company]
+      operationId: getCompany
+      summary: Получить профиль компании для мастера заявки
+      responses:
+        '200':
+          description: Профиль организации из JWT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VersionedCompany' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Company]
+      operationId: updateCompany
+      summary: Сохранить профиль для будущих заявок
+      description: Снимки уже отправленных заявок не меняются.
+      parameters:
+        - name: If-Match
+          in: header
+          required: false
+          description: ETag из GET; при первом создании профиля заголовок не нужен.
+          schema: { type: string, pattern: '^"[0-9]+"$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './common.yaml#/components/schemas/CompanyProfile' }
+      responses:
+        '200':
+          description: Обновлённый профиль.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VersionedCompany' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /client/products:
+    get:
+      tags: [Products]
+      operationId: listClientProducts
+      summary: Каталог продуктов, опубликованный банком
+      parameters:
+        - name: purpose
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Клиентская копия каталога.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, catalog_version]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: './common.yaml#/components/schemas/Product' }
+                  catalog_version: { type: integer, format: int64, minimum: 1 }
+  /client/products/{product_id}:
+    get:
+      tags: [Products]
+      operationId: getClientProduct
+      summary: Детали продукта
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ProductId' }
+      responses:
+        '200':
+          description: Условия и список документов.
+          content:
+            application/json:
+              schema: { $ref: './common.yaml#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /client/applications:
+    post:
+      tags: [Applications]
+      operationId: createApplication
+      summary: Создать черновик по выбранному продукту
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [product_id]
+              properties:
+                product_id: { $ref: './common.yaml#/components/schemas/Id' }
+      responses:
+        '201':
+          description: Черновик со снимком компании.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientApplication' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Applications]
+      operationId: listApplications
+      summary: Список заявок своей организации
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/Cursor' }
+        - { $ref: './common.yaml#/components/parameters/Limit' }
+        - name: status
+          in: query
+          schema: { $ref: './common.yaml#/components/schemas/ClientStatus' }
+      responses:
+        '200':
+          description: Заявки с публичными статусами.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplicationPage' }
+  /client/applications/{application_id}:
+    parameters:
+      - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+    get:
+      tags: [Applications]
+      operationId: getApplication
+      summary: Карточка заявки клиента
+      responses:
+        '200':
+          description: Полная клиентская проекция.
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientApplication' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Applications]
+      operationId: updateApplication
+      summary: Автосохранить форму черновика
+      description: Доступно только в DRAFT. Ответ на запрос банка передаётся через POST /info.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/IfMatch' }
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema: { $ref: '#/components/schemas/ApplicationFormPatch' }
+      responses:
+        '200':
+          description: Обновлённая заявка.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientApplication' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /client/applications/{application_id}/documents:
+    post:
+      tags: [Applications]
+      operationId: addApplicationDocument
+      summary: Приложить демо-документ
+      description: >-
+        Доступно в DRAFT и при активном NEEDS_INFO. Тип должен входить в список
+        документов продукта или в актуальный запрос банка. Файл до 5 MiB.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [document_type, file]
+              properties:
+                document_type: { $ref: './common.yaml#/components/schemas/DocumentType' }
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Метаданные сохранённого файла. Лимит 5 MiB.
+          content:
+            application/json:
+              schema: { $ref: './common.yaml#/components/schemas/DocumentMetadata' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /client/applications/{application_id}/submit:
+    post:
+      tags: [Applications]
+      operationId: submitApplication
+      summary: Передать заполненную заявку в банк через outbox
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      responses:
+        '200':
+          description: Заявка локально отправлена; банк обработает событие асинхронно.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientApplication' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /client/applications/{application_id}/info:
+    post:
+      tags: [Applications]
+      operationId: provideInfo
+      summary: Ответить на актуальный запрос банка
+      description: >-
+        request_id должен совпадать с активным запросом. Поля и документы
+        сверяются с required_fields/required_document_types; снимок компании
+        меняется только в этой заявке, общий профиль организации не затрагивается.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProvideInfoRequest' }
+      responses:
+        '202':
+          description: Ответ записан в outbox и ждёт обработки банком.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionAccepted' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /client/applications/{application_id}/offer/accept:
+    post:
+      tags: [Applications]
+      operationId: acceptOffer
+      summary: Принять актуальную оферту
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OfferActionRequest' }
+      responses:
+        '202':
+          description: Действие отправлено банку.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionAccepted' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /client/applications/{application_id}/offer/decline:
+    post:
+      tags: [Applications]
+      operationId: declineOffer
+      summary: Отклонить актуальную оферту
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OfferActionRequest' }
+      responses:
+        '202':
+          description: Действие отправлено банку.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionAccepted' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /client/applications/{application_id}/sign:
+    post:
+      tags: [Applications]
+      operationId: signContract
+      summary: Симулировать подписание принятой оферты
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OfferActionRequest' }
+      responses:
+        '202':
+          description: Демо-подпись отправлена банку.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionAccepted' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /client/applications/{application_id}/cancel:
+    post:
+      tags: [Applications]
+      operationId: cancelApplication
+      summary: Отозвать заявку до подписания
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '202':
+          description: Отзыв отправлен банку.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionAccepted' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /client/applications/{application_id}/timeline:
+    get:
+      tags: [Applications]
+      operationId: getApplicationTimeline
+      summary: Клиентская история без внутреннего score и аудита
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+      responses:
+        '200':
+          description: Записи от старой к новой.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/TimelineEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  responses:
+    BadRequest:
+      description: Некорректный запрос.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Unauthorized:
+      description: Нет действительной сессии.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Forbidden:
+      description: Недостаточно прав.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    NotFound:
+      description: Ресурс не найден.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Conflict:
+      description: Конфликт состояния, версии или идемпотентности.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    ValidationError:
+      description: Нарушено бизнес-правило.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+  securitySchemes:
+    BearerAuth: { $ref: './common.yaml#/components/securitySchemes/BearerAuth' }
+  schemas:
+    VersionedCompany:
+      type: object
+      required: [version, profile]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        profile: { $ref: './common.yaml#/components/schemas/CompanyProfile' }
+    ApplicationForm:
+      type: object
+      additionalProperties: false
+      required: [amount, term_months, purpose]
+      properties:
+        amount: { $ref: './common.yaml#/components/schemas/Money' }
+        term_months: { type: integer, minimum: 1 }
+        purpose: { $ref: './common.yaml#/components/schemas/PurposeTag' }
+    ApplicationFormPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        amount: { $ref: './common.yaml#/components/schemas/Money' }
+        term_months: { type: integer, minimum: 1 }
+        purpose: { $ref: './common.yaml#/components/schemas/PurposeTag' }
+    ClientApplication:
+      type: object
+      additionalProperties: false
+      required: [id, product_id, product_version, company, status, stage_label, next_action, allowed_actions, documents, created_at, updated_at, version]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        product_id: { $ref: './common.yaml#/components/schemas/Id' }
+        product_version: { type: integer, format: int64, minimum: 1 }
+        company: { $ref: './common.yaml#/components/schemas/CompanyProfile' }
+        form: { $ref: '#/components/schemas/ApplicationForm' }
+        status: { $ref: './common.yaml#/components/schemas/ClientStatus' }
+        stage_label: { type: string, description: Понятное клиенту название текущего этапа. }
+        next_action: { type: string }
+        allowed_actions:
+          type: array
+          description: Вычисляются сервером из статуса и ожидающего действия.
+          items: { type: string, enum: [EDIT_DRAFT, UPLOAD_DOCUMENT, SUBMIT, PROVIDE_INFO, ACCEPT_OFFER, DECLINE_OFFER, SIGN, CANCEL] }
+        pending_action: { type: string, enum: [INFO_SENT, ACCEPT_PENDING, DECLINE_PENDING, SIGN_PENDING, CANCEL_PENDING] }
+        documents:
+          type: array
+          items: { $ref: './common.yaml#/components/schemas/DocumentMetadata' }
+        info_request: { $ref: './common.yaml#/components/schemas/InfoRequest' }
+        offer: { $ref: './common.yaml#/components/schemas/Offer' }
+        public_reason: { type: string }
+        created_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+        updated_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+        version: { type: integer, format: int64, minimum: 1 }
+    ApplicationListItem:
+      type: object
+      required: [id, product_id, status, next_action, created_at]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        product_id: { $ref: './common.yaml#/components/schemas/Id' }
+        status: { $ref: './common.yaml#/components/schemas/ClientStatus' }
+        next_action: { type: string }
+        amount: { $ref: './common.yaml#/components/schemas/Money' }
+        created_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+    ApplicationPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ApplicationListItem' }
+        next_cursor: { type: [string, 'null'] }
+    ProvideInfoRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id]
+      properties:
+        request_id: { $ref: './common.yaml#/components/schemas/Id' }
+        company: { $ref: './common.yaml#/components/schemas/CompanyProfile', description: Полный уточнённый снимок компании для этой заявки. }
+        fields: { $ref: '#/components/schemas/ApplicationFormPatch' }
+        document_ids:
+          type: array
+          items: { $ref: './common.yaml#/components/schemas/Id' }
+    OfferActionRequest:
+      type: object
+      additionalProperties: false
+      required: [offer_id]
+      properties:
+        offer_id: { $ref: './common.yaml#/components/schemas/Id' }
+    ActionAccepted:
+      type: object
+      required: [application_id, pending_action]
+      properties:
+        application_id: { $ref: './common.yaml#/components/schemas/Id' }
+        pending_action: { type: string }
+    TimelineEntry:
+      type: object
+      required: [id, status, message, occurred_at]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        status: { $ref: './common.yaml#/components/schemas/ClientStatus' }
+        message: { type: string }
+        occurred_at: { $ref: './common.yaml#/components/schemas/Timestamp' }

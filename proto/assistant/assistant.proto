@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package smartcredit.assistant;
+
+option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant;assistantpb";
+
+// Часть MVP: объясняет решение клиенту и резюмирует дело аналитику.
+// Только bank-service вызывает его; ответ не меняет кредитное решение.
+service AssistantService {
+  rpc SummarizeCase(SummarizeCaseRequest) returns (TextResponse);
+  rpc ExplainDecision(ExplainDecisionRequest) returns (TextResponse);
+}
+
+message SummarizeCaseRequest {
+  string application_id = 1;
+  string product_name = 2;
+  string purpose = 3;
+  string grade = 4;
+  repeated string reason_codes = 5;
+  repeated string triggered_rule_codes = 6;
+}
+
+message ExplainDecisionRequest {
+  string application_id = 1;
+  string outcome = 2;
+  string product_name = 3;
+  repeated string public_reason_codes = 4;
+  string analyst_public_reason = 5; // Безопасное основание; не внутренний comment.
+}
+
+message TextResponse {
+  string text = 1;
+  string model_version = 2;
+}

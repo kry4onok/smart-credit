@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package smartcredit.scoring;
+
+option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/scoring;scoringpb";
+
+import "proto/common/common.proto";
+
+service ScoringService {
+  // Оценка риска, а не кредитное решение. Вызывает только bank-service.
+  rpc Score(ScoreRequest) returns (ScoreResponse);
+}
+
+message ScoreRequest {
+  string application_id = 1; // UUID
+  string product_id = 2; // UUID
+  string feature_schema_version = 3;
+  Features features = 4;
+}
+
+message Features {
+  smartcredit.common.Money revenue_12m = 1;
+  smartcredit.common.Money profit_12m = 2;
+  smartcredit.common.Money obligations = 3;
+  smartcredit.common.Money total_debt = 4;
+  int32 company_age_months = 5;
+  string okved_group = 6;
+  int32 overdue_count_12m = 7;
+  int32 max_overdue_days = 8;
+  smartcredit.common.Money requested_amount = 9;
+  int32 requested_term_months = 10;
+  smartcredit.common.PurposeTag purpose_tag = 11;
+}
+
+message ScoreResponse {
+  int32 score = 1; // Шкала 0..1000, больше = ниже риск.
+  Grade grade = 2;
+  repeated Reason reasons = 3;
+  string model_version = 4;
+  string feature_schema_version = 5;
+}
+
+enum Grade {
+  GRADE_UNSPECIFIED = 0;
+  GRADE_A = 1;
+  GRADE_B = 2;
+  GRADE_C = 3;
+  GRADE_D = 4;
+  GRADE_E = 5;
+}
+
+message Reason {
+  ReasonCode code = 1;
+  string description = 2; // Только для сотрудника банка.
+  Direction direction = 3;
+  int32 contribution = 4; // Абсолютный вклад в шкале score.
+}
+
+enum ReasonCode {
+  REASON_CODE_UNSPECIFIED = 0;
+  REASON_CODE_SHORT_HISTORY = 1;
+  REASON_CODE_LOW_PROFIT_MARGIN = 2;
+  REASON_CODE_HIGH_OBLIGATIONS = 3;
+  REASON_CODE_HIGH_BUREAU_DEBT = 4;
+  REASON_CODE_RECENT_OVERDUE = 5;
+  REASON_CODE_LARGE_REQUEST = 6;
+  REASON_CODE_STABLE_BUSINESS = 7;
+  REASON_CODE_NO_OVERDUE = 8;
+}
+
+enum Direction {
+  DIRECTION_UNSPECIFIED = 0;
+  DIRECTION_INCREASES_RISK = 1;
+  DIRECTION_DECREASES_RISK = 2;
+}

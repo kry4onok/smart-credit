@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package smartcredit.bureau;
+
+option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau;bureaupb";
+
+import "proto/common/common.proto";
+
+service BureauService {
+  // Упрощённые ЕГРЮЛ/ЕГРИП и ФНС «Прозрачный бизнес».
+  rpc GetCompanyProfile(CompanyProfileRequest) returns (CompanyProfileResponse);
+  // Упрощённое БКИ.
+  rpc GetCreditHistory(CreditHistoryRequest) returns (CreditHistoryResponse);
+}
+
+message CompanyProfileRequest { string inn = 1; }
+
+message CompanyProfileResponse {
+  CompanyStatus status = 1;
+  string registered_at = 2; // YYYY-MM-DD
+  string okved = 3;
+  string director_name = 4;
+  repeated string founder_names = 5;
+  string address = 6;
+}
+
+enum CompanyStatus {
+  COMPANY_STATUS_UNSPECIFIED = 0;
+  COMPANY_STATUS_ACTIVE = 1;
+  COMPANY_STATUS_LIQUIDATING = 2;
+  COMPANY_STATUS_LIQUIDATED = 3;
+}
+
+message CreditHistoryRequest { string inn = 1; }
+
+message CreditHistoryResponse {
+  smartcredit.common.Money total_debt = 1;
+  repeated Obligation obligations = 2;
+  int32 overdue_count_12m = 3;
+  int32 max_overdue_days = 4;
+}
+
+message Obligation {
+  string kind = 1;
+  smartcredit.common.Money outstanding = 2;
+}

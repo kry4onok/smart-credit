@@ -1,0 +1,203 @@
+openapi: 3.1.0
+info:
+  title: Smart Credit Auth API
+  version: draft
+  description: Учётные записи, сессии и публичные ключи JWT.
+servers:
+  - url: /api
+security:
+  - BearerAuth: []
+tags:
+  - name: Session
+  - name: Keys
+paths:
+  /healthz:
+    get:
+      operationId: authHealth
+      summary: Liveness процесса
+      servers: [{ url: / }]
+      security: []
+      responses:
+        '204': { description: Процесс жив. }
+  /readyz:
+    get:
+      operationId: authReady
+      summary: Готовность обслуживать запросы, включая auth_db
+      servers: [{ url: / }]
+      security: []
+      responses:
+        '204': { description: Сервис готов. }
+        '503': { description: Сервис ещё не готов. }
+  /auth/login:
+    post:
+      tags: [Session]
+      operationId: login
+      summary: Начать сессию пользователя
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Access JWT в теле, refresh token в HttpOnly cookie.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: Refresh cookie с HttpOnly и SameSite=Strict; Secure на HTTPS.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessTokenResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Превышен лимит попыток входа.
+          content:
+            application/problem+json:
+              schema: { $ref: './common.yaml#/components/schemas/Problem' }
+  /auth/refresh:
+    post:
+      tags: [Session]
+      operationId: refreshSession
+      summary: Выпустить новый access JWT по действующему refresh cookie
+      description: >-
+        В MVP refresh token не ротируется при каждом обращении. В БД хранится
+        только его хеш; logout отзывает токен. Срок refresh ограничен 7 днями.
+      security: []
+      responses:
+        '200':
+          description: Новый access JWT; действующий refresh cookie не меняется.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessTokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/logout:
+    post:
+      tags: [Session]
+      operationId: logout
+      summary: Отозвать refresh token и очистить cookie
+      description: Не требует действующего access JWT; сервис отзывает токен из refresh cookie.
+      security: []
+      responses:
+        '204':
+          description: Сессия завершена. Повторный вызов также возвращает 204.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+  /auth/me:
+    get:
+      tags: [Session]
+      operationId: getCurrentUser
+      summary: Получить роль и организацию текущего пользователя
+      responses:
+        '200':
+          description: Текущий пользователь.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrentUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /.well-known/jwks.json:
+    get:
+      tags: [Keys]
+      operationId: getJwks
+      summary: Получить публичные ключи проверки JWT
+      description: >-
+        Вызывают client-service и bank-service напрямую во внутренней сети.
+        Nginx при необходимости проксирует публичный /api/.well-known/jwks.json.
+      security: []
+      responses:
+        '200':
+          description: JSON Web Key Set; приватных параметров нет.
+          headers:
+            Cache-Control:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Jwks' }
+components:
+  responses:
+    BadRequest:
+      description: Некорректный запрос.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Unauthorized:
+      description: Нет действительной сессии.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Forbidden:
+      description: Недостаточно прав.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    NotFound:
+      description: Ресурс не найден.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    Conflict:
+      description: Конфликт состояния, версии или идемпотентности.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+    ValidationError:
+      description: Нарушено бизнес-правило.
+      content:
+        application/problem+json:
+          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+  securitySchemes:
+    BearerAuth: { $ref: './common.yaml#/components/securitySchemes/BearerAuth' }
+  schemas:
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1 }
+    AccessTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, const: Bearer }
+        expires_in: { type: integer, minimum: 1, description: Секунды до истечения. }
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required: [id, email, full_name, role, can_submit]
+      properties:
+        id: { $ref: './common.yaml#/components/schemas/Id' }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        role: { $ref: './common.yaml#/components/schemas/Role' }
+        can_submit: { type: boolean }
+        organization:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [id, inn, name]
+          properties:
+            id: { $ref: './common.yaml#/components/schemas/Id' }
+            inn: { type: string }
+            name: { type: string }
+    Jwks:
+      type: object
+      additionalProperties: false
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [kty, kid, use, alg, n, e]
+            properties:
+              kty: { type: string, const: RSA }
+              kid: { type: string }
+              use: { type: string, const: sig }
+              alg: { type: string, const: RS256 }
+              n: { type: string }
+              e: { type: string }

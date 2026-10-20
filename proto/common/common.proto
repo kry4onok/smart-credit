@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package smartcredit.common;
+
+option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common;commonpb";
+
+import "google/protobuf/timestamp.proto";
+
+enum PurposeTag {
+  PURPOSE_TAG_UNSPECIFIED = 0;
+  PURPOSE_TAG_WORKING_CAPITAL = 1;
+  PURPOSE_TAG_EQUIPMENT = 2;
+  PURPOSE_TAG_EXPANSION = 3;
+}
+
+enum DocumentType {
+  DOCUMENT_TYPE_UNSPECIFIED = 0;
+  DOCUMENT_TYPE_BANK_STATEMENT = 1;
+  DOCUMENT_TYPE_BUSINESS_PLAN = 2;
+}
+
+// Денежные значения передаются целыми копейками. currency всегда RUB.
+message Money {
+  int64 amount_kopecks = 1;
+  string currency = 2;
+}
+
+message CompanySnapshot {
+  string inn = 1;
+  string name = 2;
+  string okved = 3;
+  string registered_at = 4; // YYYY-MM-DD
+  Money revenue_12m = 5;
+  Money profit_12m = 6; // Может быть отрицательной.
+  Money obligations = 7;
+}
+
+message DocumentMetadata {
+  string document_id = 1; // UUID
+  DocumentType document_type = 2;
+  string file_name = 3;
+  string sha256 = 4;
+  google.protobuf.Timestamp uploaded_at = 5;
+  bool is_mock = 6;
+}
+
+message ApplicationForm {
+  Money amount = 1;
+  int32 term_months = 2;
+  PurposeTag purpose = 3;
+}
+
+message Offer {
+  string offer_id = 1; // UUID
+  OfferKind kind = 2;
+  Money amount = 3;
+  int32 term_months = 4;
+  int32 rate_bps = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  string explanation = 7;
+  string product_id = 8; // Может отличаться от продукта исходной заявки.
+  int64 product_version = 9;
+  string product_name = 10; // Снимок названия на момент предложения.
+}
+
+enum OfferKind {
+  OFFER_KIND_UNSPECIFIED = 0;
+  OFFER_KIND_OFFER = 1;
+  OFFER_KIND_COUNTER_OFFER = 2;
+}
+
+message InfoRequest {
+  string request_id = 1; // UUID
+  string message = 2;
+  repeated InfoField required_fields = 3;
+  repeated DocumentType required_document_types = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+enum InfoField {
+  INFO_FIELD_UNSPECIFIED = 0;
+  INFO_FIELD_COMPANY_REVENUE_12M = 1;
+  INFO_FIELD_COMPANY_PROFIT_12M = 2;
+  INFO_FIELD_COMPANY_OBLIGATIONS = 3;
+  INFO_FIELD_APPLICATION_AMOUNT = 4;
+  INFO_FIELD_APPLICATION_TERM_MONTHS = 5;
+  INFO_FIELD_APPLICATION_PURPOSE = 6;
+}
+
+message Product {
+  string product_id = 1; // UUID
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  repeated PurposeTag purpose_tags = 5;
+  Money min_amount = 6;
+  Money max_amount = 7;
+  int32 min_term_months = 8;
+  int32 max_term_months = 9;
+  int32 indicative_rate_bps = 10;
+  repeated DocumentType required_document_types = 11;
+  int64 version = 12;
+}

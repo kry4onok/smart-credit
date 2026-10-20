@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  title: Smart Credit shared HTTP schemas
+  version: draft
+  description: >-
+    Общие схемы для auth, client и bank. Этот файл не содержит маршрутов.
+    Публичный origin обслуживает nginx: например, путь /client/products
+    доступен браузеру как /api/client/products.
+paths: {}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ApplicationId:
+      name: application_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    ProductId:
+      name: product_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    Cursor:
+      name: cursor
+      in: query
+      description: Непрозрачный курсор из предыдущего ответа.
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID действия. Повтор с другим телом возвращает 409.
+      schema: { $ref: '#/components/schemas/Id' }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: ETag из GET, равный версии ресурса в двойных кавычках.
+      schema: { type: string, pattern: '^"[0-9]+"$' }
+  responses:
+    BadRequest:
+      description: Некорректный синтаксис запроса.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Нет действительной сессии.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Недостаточно прав.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Ресурс отсутствует либо не принадлежит организации.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Конфликт версии, перехода состояния или ключа идемпотентности.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ValidationError:
+      description: Не выполнено бизнес-правило.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Id:
+      type: string
+      format: uuid
+    Timestamp:
+      type: string
+      format: date-time
+      description: RFC 3339, UTC.
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amount_kopecks, currency]
+      properties:
+        amount_kopecks: { type: integer, format: int64, minimum: 0, maximum: 9007199254740991 }
+        currency: { type: string, const: RUB }
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code, trace_id]
+      properties:
+        type: { type: string, format: uri-reference, default: 'about:blank' }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        code: { type: string, description: Машинный код ошибки в UPPER_SNAKE_CASE. }
+        trace_id: { type: string }
+    Role:
+      type: string
+      enum: [CLIENT, ANALYST, ADMIN]
+    PurposeTag:
+      type: string
+      enum: [WORKING_CAPITAL, EQUIPMENT, EXPANSION]
+    DocumentType:
+      type: string
+      enum: [BANK_STATEMENT, BUSINESS_PLAN]
+    ClientStatus:
+      type: string
+      enum:
+        - DRAFT
+        - SUBMITTED
+        - UNDER_REVIEW
+        - NEEDS_INFO
+        - OFFER_AVAILABLE
+        - FORMALIZING
+        - DISBURSED
+        - REJECTED
+        - CLOSED
+    BankStatus:
+      type: string
+      enum:
+        - SUBMITTED
+        - VALIDATION
+        - NEEDS_INFO
+        - ENRICHMENT
+        - SCORING
+        - DECISION
+        - MANUAL_REVIEW
+        - OFFER
+        - COUNTER_OFFER
+        - OFFER_ACCEPTED
+        - SIGNING
+        - DISBURSED
+        - REJECTED
+        - CANCELLED
+        - EXPIRED
+    CompanyProfile:
+      type: object
+      additionalProperties: false
+      required: [inn, name, okved, registered_at, revenue_12m, profit_12m, obligations]
+      properties:
+        inn: { type: string, pattern: '^[0-9]{10}([0-9]{2})?$' }
+        name: { type: string, minLength: 1, maxLength: 256 }
+        okved: { type: string, minLength: 2, maxLength: 16 }
+        registered_at: { type: string, format: date }
+        revenue_12m: { $ref: '#/components/schemas/Money' }
+        profit_12m: { $ref: '#/components/schemas/SignedMoney' }
+        obligations: { $ref: '#/components/schemas/Money' }
+    SignedMoney:
+      type: object
+      additionalProperties: false
+      required: [amount_kopecks, currency]
+      properties:
+        amount_kopecks: { type: integer, format: int64, minimum: -9007199254740991, maximum: 9007199254740991 }
+        currency: { type: string, const: RUB }
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, description, purpose_tags, min_amount, max_amount, min_term_months, max_term_months, required_document_types, version]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        purpose_tags:
+          type: array
+          items: { $ref: '#/components/schemas/PurposeTag' }
+        min_amount: { $ref: '#/components/schemas/Money' }
+        max_amount: { $ref: '#/components/schemas/Money' }
+        min_term_months: { type: integer, minimum: 1 }
+        max_term_months: { type: integer, minimum: 1 }
+        indicative_rate_bps: { type: integer, minimum: 0, description: Не является офертой. }
+        required_document_types:
+          type: array
+          items: { $ref: '#/components/schemas/DocumentType' }
+        version: { type: integer, format: int64, minimum: 1 }
+    DocumentMetadata:
+      type: object
+      additionalProperties: false
+      required: [id, document_type, file_name, sha256, uploaded_at, is_mock]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        document_type: { $ref: '#/components/schemas/DocumentType' }
+        file_name: { type: string }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        uploaded_at: { $ref: '#/components/schemas/Timestamp' }
+        is_mock: { type: boolean }
+    InfoRequest:
+      type: object
+      additionalProperties: false
+      required: [id, message, required_fields, required_document_types, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        message: { type: string }
+        required_fields:
+          type: array
+          items: { $ref: '#/components/schemas/InfoField' }
+        required_document_types:
+          type: array
+          items: { $ref: '#/components/schemas/DocumentType' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+    InfoField:
+      type: string
+      description: Поле снимка конкретной заявки, которое банк просит уточнить.
+      enum:
+        - COMPANY_REVENUE_12M
+        - COMPANY_PROFIT_12M
+        - COMPANY_OBLIGATIONS
+        - APPLICATION_AMOUNT
+        - APPLICATION_TERM_MONTHS
+        - APPLICATION_PURPOSE
+    Offer:
+      type: object
+      additionalProperties: false
+      required: [id, kind, product_id, product_version, product_name, amount, term_months, rate_bps, expires_at, explanation]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        kind: { type: string, enum: [OFFER, COUNTER_OFFER] }
+        product_id: { $ref: '#/components/schemas/Id' }
+        product_version: { type: integer, format: int64, minimum: 1 }
+        product_name: { type: string, description: Снимок названия предложенного продукта. }
+        amount: { $ref: '#/components/schemas/Money' }
+        term_months: { type: integer, minimum: 1 }
+        rate_bps: { type: integer, minimum: 0 }
+        expires_at: { $ref: '#/components/schemas/Timestamp' }
+        explanation: { type: string }

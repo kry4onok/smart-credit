@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package smartcredit.events;
+
+option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events;eventspb";
+
+import "google/protobuf/timestamp.proto";
+import "proto/common/common.proto";
+
+// Одно Kafka-сообщение = один Event. Ключ партиции равен aggregate_id.
+// application_id является aggregate_id для заявок; каталог имеет aggregate_id="catalog".
+// Доставка at-least-once. Relay публикует события одного aggregate_id в порядке
+// aggregate_version. event_id и aggregate_version используются consumer для идемпотентности.
+message Event {
+  string event_id = 1; // UUID
+  string aggregate_type = 2; // APPLICATION или CATALOG
+  string aggregate_id = 3; // UUID заявки или "catalog"
+  int64 aggregate_version = 4; // Монотонно внутри aggregate_id и producer.
+  google.protobuf.Timestamp occurred_at = 5;
+  string correlation_id = 6;
+
+  oneof payload {
+    ApplicationSubmitted application_submitted = 10;
+    InfoProvided info_provided = 11;
+    OfferAccepted offer_accepted = 12;
+    OfferDeclined offer_declined = 13;
+    ContractSigned contract_signed = 14;
+    ApplicationCancelled application_cancelled = 15;
+    ApplicationPublicStatePublished application_public_state_published = 16;
+    ProductCatalogPublished product_catalog_published = 17;
+  }
+}
+
+// client.events. Банк не обращается к client_db за недостающими полями.
+message ApplicationSubmitted {
+  string org_id = 1; // UUID из проверенного JWT.
+  string client_user_id = 2; // UUID автора действия.
+  string product_id = 3; // UUID
+  int64 product_version = 4;
+  smartcredit.common.CompanySnapshot company = 5;
+  smartcredit.common.ApplicationForm form = 6;
+  repeated smartcredit.common.DocumentMetadata documents = 7;
+}
+
+message InfoProvided {
+  string request_id = 1;
+  // Полный текущий снимок формы: consumer может повторно пройти validation.
+  smartcredit.common.ApplicationForm form = 2;
+  repeated smartcredit.common.DocumentMetadata documents = 3;
+  smartcredit.common.CompanySnapshot company = 4;
+}
+
+message OfferAccepted { string offer_id = 1; }
+message OfferDeclined { string offer_id = 1; }
+message ContractSigned {
+  string offer_id = 1;
+  google.protobuf.Timestamp signed_at = 2;
+}
+message ApplicationCancelled { string reason = 1; }
+
+// bank.events. Только безопасные для клиента данные. В каждом событии полный
+// публичный снимок; при пропуске старого сообщения новый снимок восстанавливает проекцию.
+message ApplicationPublicStatePublished {
+  ClientStatus status = 1;
+  string stage_label = 2;
+  string next_action = 3;
+  smartcredit.common.InfoRequest active_info_request = 4;
+  smartcredit.common.Offer active_offer = 5;
+  string public_reason = 6;
+}
+
+enum ClientStatus {
+  CLIENT_STATUS_UNSPECIFIED = 0;
+  CLIENT_STATUS_SUBMITTED = 1;
+  CLIENT_STATUS_UNDER_REVIEW = 2;
+  CLIENT_STATUS_NEEDS_INFO = 3;
+  CLIENT_STATUS_OFFER_AVAILABLE = 4;
+  CLIENT_STATUS_FORMALIZING = 5;
+  CLIENT_STATUS_DISBURSED = 6;
+  CLIENT_STATUS_REJECTED = 7;
+  CLIENT_STATUS_CLOSED = 8;
+}
+
+message ProductCatalogPublished {
+  repeated smartcredit.common.Product products = 1;
+}
