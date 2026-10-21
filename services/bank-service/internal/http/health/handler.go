@@ -7,18 +7,17 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 )
 
-const readinessTimeout = time.Second
-
 type Pinger interface {
 	Ping(context.Context) error
 }
 
 type Handler struct {
-	db Pinger
+	db               Pinger
+	readinessTimeout time.Duration
 }
 
-func New(db Pinger) *Handler {
-	return &Handler{db: db}
+func New(db Pinger, readinessTimeout time.Duration) *Handler {
+	return &Handler{db: db, readinessTimeout: readinessTimeout}
 }
 
 func (h *Handler) Health(context.Context, generated.BankHealthRequestObject) (generated.BankHealthResponseObject, error) {
@@ -30,7 +29,7 @@ func (h *Handler) Ready(ctx context.Context, _ generated.BankReadyRequestObject)
 		return generated.BankReady503Response{}, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, readinessTimeout)
+	ctx, cancel := context.WithTimeout(ctx, h.readinessTimeout)
 	defer cancel()
 
 	if err := h.db.Ping(ctx); err != nil {

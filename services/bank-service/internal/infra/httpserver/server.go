@@ -8,28 +8,29 @@ import (
 	"time"
 )
 
-const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 30 * time.Second
-	writeTimeout      = 30 * time.Second
-	idleTimeout       = 60 * time.Second
-	maxHeaderBytes    = 1 << 20
-)
+type Config struct {
+	Address           string
+	ReadHeaderTimeout time.Duration
+	ReadTimeout       time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	MaxHeaderBytes    int
+}
 
 type Server struct {
 	server *http.Server
 }
 
-func New(address string, handler http.Handler) *Server {
+func New(cfg Config, handler http.Handler) *Server {
 	return &Server{
 		server: &http.Server{
-			Addr:              address,
+			Addr:              cfg.Address,
 			Handler:           handler,
-			ReadHeaderTimeout: readHeaderTimeout,
-			ReadTimeout:       readTimeout,
-			WriteTimeout:      writeTimeout,
-			IdleTimeout:       idleTimeout,
-			MaxHeaderBytes:    maxHeaderBytes,
+			ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+			ReadTimeout:       cfg.ReadTimeout,
+			WriteTimeout:      cfg.WriteTimeout,
+			IdleTimeout:       cfg.IdleTimeout,
+			MaxHeaderBytes:    cfg.MaxHeaderBytes,
 		},
 	}
 }
