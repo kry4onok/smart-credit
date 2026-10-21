@@ -18,7 +18,7 @@ paths:
     get:
       operationId: clientHealth
       summary: Liveness процесса
-      servers: [{ url: / }]
+      servers: [{ url: /internal/client }]
       security: []
       responses:
         '204': { description: Процесс жив. }
@@ -26,7 +26,7 @@ paths:
     get:
       operationId: clientReady
       summary: Готовность обслуживать запросы, включая client_db
-      servers: [{ url: / }]
+      servers: [{ url: /internal/client }]
       security: []
       responses:
         '204': { description: Сервис готов. }
