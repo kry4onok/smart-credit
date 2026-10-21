@@ -7,6 +7,7 @@ endif
 
 COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
 POSTGRES_PORT ?= 5432
+SWAGGER_PORT ?= 8081
 BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/bank_db?sslmode=disable
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.24.1
 BANK_MIGRATIONS := services/bank-service/migrations
@@ -18,13 +19,16 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
 
 help:
 	@echo 'Сначала: cp .env.example .env'
 	@echo 'make gen              Сгенерировать код из всех контрактов'
 	@echo 'make gen-openapi      Сгенерировать Go-код из OpenAPI'
 	@echo 'make lint             Проверить Go-код линтерами и форматтерами'
+	@echo 'make docs-up          Запустить Swagger UI для всех API'
+	@echo 'make docs-down        Остановить и удалить Swagger UI'
+	@echo 'make docs-logs        Показать логи Swagger UI'
 	@echo 'make infra-up         Запустить Postgres и Kafka, создать топики'
 	@echo 'make infra-ps         Показать состояние контейнеров'
 	@echo 'make infra-logs       Показать логи инфраструктуры'
@@ -48,6 +52,16 @@ gen-openapi:
 
 lint:
 	$(GOLANGCI_LINT) run ./...
+
+docs-up: require-env
+	$(COMPOSE) up -d --wait swagger-ui
+	@echo 'Swagger UI: http://localhost:$(SWAGGER_PORT)'
+
+docs-down: require-env
+	$(COMPOSE) rm -sf swagger-ui
+
+docs-logs: require-env
+	$(COMPOSE) logs -f swagger-ui
 
 infra-up: require-env
 	$(COMPOSE) up -d --wait postgres kafka
