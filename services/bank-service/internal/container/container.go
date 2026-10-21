@@ -9,6 +9,8 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
+	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
+	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -29,10 +31,12 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create postgres dependency: %w", err)
 	}
+	caseRepository := caserepository.New(db)
+	listCases := listcase.New(caseRepository)
 
 	return &Container{
 		DB:          db,
-		HTTPHandler: httpapi.New(db),
+		HTTPHandler: httpapi.New(db, listCases),
 	}, nil
 }
 

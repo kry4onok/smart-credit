@@ -5,18 +5,22 @@ import (
 	"net/http"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
+	listhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/list"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/health"
 )
 
 var errNotImplemented = errors.New("operation is not implemented")
 
 type server struct {
-	health *health.Handler
+	health    *health.Handler
+	listCases *listhandler.Handler
 }
 
-func New(db health.Pinger) http.Handler {
+func New(db health.Pinger, listCases listhandler.UseCase) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health: health.New(db),
+		health:    health.New(db),
+		listCases: listhandler.New(listCases),
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})
@@ -24,11 +28,11 @@ func New(db health.Pinger) http.Handler {
 	return generated.Handler(strictHandler)
 }
 
-func responseErrorHandler(w http.ResponseWriter, _ *http.Request, err error) {
+func responseErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, errNotImplemented) {
 		w.WriteHeader(http.StatusNotImplemented)
 		return
 	}
 
-	w.WriteHeader(http.StatusInternalServerError)
+	domainerror.Write(w, r, err)
 }
