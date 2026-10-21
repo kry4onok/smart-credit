@@ -23,6 +23,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/bank-service/internal/generated
 
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status
+.PHONY: client-up client-down client-logs
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -47,6 +48,9 @@ help:
 	@echo 'make bank-db-down     Откатить миграцию bank_db'
 	@echo 'make bank-db-status   Показать состояние миграций bank_db'
 	@echo 'make client-db-up     Применить миграции client_db'
+	@echo 'make client-up        Собрать и запустить client-service в Docker'
+	@echo 'make client-down      Остановить и удалить контейнер client-service'
+	@echo 'make client-logs      Показать логи client-service'
 	@echo 'make client-db-down   Откатить миграцию client_db'
 	@echo 'make client-db-status Показать состояние миграций client_db'
 	@echo 'make infra-down       Остановить контейнеры, сохранив данные'
@@ -126,6 +130,17 @@ bank-db-down: require-env
 
 bank-db-status: require-env
 	$(GOOSE) -dir $(BANK_MIGRATIONS) postgres "$(BANK_DATABASE_URL)" status
+
+client-up: require-env
+	$(COMPOSE) up -d --wait postgres
+	$(GOOSE) -dir $(CLIENT_MIGRATIONS) postgres "$(CLIENT_DATABASE_URL)" up
+	$(COMPOSE) up -d --build --wait client-service
+
+client-down: require-env
+	$(COMPOSE) rm -sf client-service
+
+client-logs: require-env
+	$(COMPOSE) logs -f client-service
 
 client-db-up: require-env
 	$(GOOSE) -dir $(CLIENT_MIGRATIONS) postgres "$(CLIENT_DATABASE_URL)" up
