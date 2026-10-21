@@ -28,6 +28,38 @@ make docs-logs
 make docs-down
 ```
 
+Для вызова API из Swagger запустите общий dev gateway:
+
+```sh
+make gateway-up
+```
+
+Swagger с рабочим `Try it out` доступен по адресу
+`http://localhost:8000/docs/`. Gateway ожидает локальные сервисы на следующих
+портах:
+
+| Маршрут gateway | Локальный сервис |
+|---|---|
+| `/api/auth/*`, `/api/.well-known/*` | auth-service на `127.0.0.1:8082` |
+| `/api/client/*` | client-service на `127.0.0.1:8083` |
+| `/api/backoffice/*` | bank-service на `127.0.0.1:8080` |
+
+Технические ручки получают отдельный префикс, чтобы Swagger мог определить
+конкретный сервис: `/internal/auth/healthz`, `/internal/client/healthz` и
+`/internal/bank/healthz`. Gateway удаляет этот префикс и передаёт сервису
+обычный `/healthz` или `/readyz`.
+
+Gateway удаляет только внешний префикс `/api`. Например,
+`/api/backoffice/applications` передаётся bank-service как
+`/backoffice/applications`. Если соответствующий сервис не запущен, маршрут
+вернёт `502 Bad Gateway`. Технические ручки также остаются доступны напрямую
+на порту конкретного сервиса.
+
+```sh
+make gateway-logs
+make gateway-down
+```
+
 ## Локальная инфраструктура
 
 Из корня репозитория:

@@ -8,6 +8,7 @@ endif
 COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
 POSTGRES_PORT ?= 5432
 SWAGGER_PORT ?= 8081
+GATEWAY_PORT ?= 8000
 BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/bank_db?sslmode=disable
 CLIENT_DATABASE_URL ?= postgres://client_user:$(CLIENT_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/client_db?sslmode=disable
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.24.1
@@ -21,7 +22,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -31,6 +32,10 @@ help:
 	@echo 'make docs-up          Запустить Swagger UI для всех API'
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
 	@echo 'make docs-logs        Показать логи Swagger UI'
+	@echo 'make gateway-up       Запустить nginx gateway и Swagger UI'
+	@echo 'make gateway-down     Остановить и удалить gateway и Swagger UI'
+	@echo 'make gateway-reload   Проверить и перечитать конфигурацию nginx'
+	@echo 'make gateway-logs     Показать логи gateway'
 	@echo 'make infra-up         Запустить Postgres и Kafka, создать топики'
 	@echo 'make infra-ps         Показать состояние контейнеров'
 	@echo 'make infra-logs       Показать логи инфраструктуры'
@@ -67,6 +72,20 @@ docs-down: require-env
 
 docs-logs: require-env
 	$(COMPOSE) logs -f swagger-ui
+
+gateway-up: require-env
+	$(COMPOSE) up -d --wait swagger-ui gateway
+	@echo 'Swagger UI with API gateway: http://localhost:$(GATEWAY_PORT)/docs/'
+
+gateway-down: require-env
+	$(COMPOSE) rm -sf gateway swagger-ui
+
+gateway-reload: require-env
+	$(COMPOSE) exec gateway nginx -t
+	$(COMPOSE) exec gateway nginx -s reload
+
+gateway-logs: require-env
+	$(COMPOSE) logs -f gateway
 
 infra-up: require-env
 	$(COMPOSE) up -d --wait postgres kafka

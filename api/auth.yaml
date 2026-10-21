@@ -15,7 +15,7 @@ paths:
     get:
       operationId: authHealth
       summary: Liveness процесса
-      servers: [{ url: / }]
+      servers: [{ url: /internal/auth }]
       security: []
       responses:
         '204': { description: Процесс жив. }
@@ -23,7 +23,7 @@ paths:
     get:
       operationId: authReady
       summary: Готовность обслуживать запросы, включая auth_db
-      servers: [{ url: / }]
+      servers: [{ url: /internal/auth }]
       security: []
       responses:
         '204': { description: Сервис готов. }

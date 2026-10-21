@@ -14,7 +14,7 @@ paths:
     get:
       operationId: bankHealth
       summary: Liveness процесса
-      servers: [{ url: / }]
+      servers: [{ url: /internal/bank }]
       security: []
       responses:
         '204': { description: Процесс жив. }
@@ -22,7 +22,7 @@ paths:
     get:
       operationId: bankReady
       summary: Готовность обслуживать запросы, включая bank_db
-      servers: [{ url: / }]
+      servers: [{ url: /internal/bank }]
       security: []
       responses:
         '204': { description: Сервис готов. }
