@@ -21,7 +21,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
 
 help:
 	@echo 'Сначала: cp .env.example .env'
