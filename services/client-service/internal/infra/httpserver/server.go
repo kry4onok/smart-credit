@@ -38,3 +38,10 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (s *Server) Close() error {
+	if err := s.server.Close(); err != nil {
+		return fmt.Errorf("close HTTP server: %w", err)
+	}
+	return nil
+}

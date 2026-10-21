@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -48,6 +49,10 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	shutdownContext, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(shutdownContext); err != nil {
+		closeErr := server.Close()
+		if closeErr != nil {
+			return errors.Join(err, closeErr)
+		}
 		return err
 	}
 	if err := <-serverErrors; err != nil {
