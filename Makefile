@@ -22,7 +22,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-db-up bank-db-down bank-db-status
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -40,6 +40,9 @@ help:
 	@echo 'make infra-ps         Показать состояние контейнеров'
 	@echo 'make infra-logs       Показать логи инфраструктуры'
 	@echo 'make bank-run         Запустить bank-service локально'
+	@echo 'make bank-up          Собрать и запустить bank-service в Docker'
+	@echo 'make bank-down        Остановить и удалить контейнер bank-service'
+	@echo 'make bank-logs        Показать логи bank-service'
 	@echo 'make bank-db-up       Применить миграции bank_db'
 	@echo 'make bank-db-down     Откатить миграцию bank_db'
 	@echo 'make bank-db-status   Показать состояние миграций bank_db'
@@ -103,6 +106,17 @@ infra-logs: require-env
 
 bank-run: require-env
 	go run ./services/bank-service/cmd/service
+
+bank-up: require-env
+	$(COMPOSE) up -d --wait postgres
+	$(GOOSE) -dir $(BANK_MIGRATIONS) postgres "$(BANK_DATABASE_URL)" up
+	$(COMPOSE) up -d --build --wait bank-service
+
+bank-down: require-env
+	$(COMPOSE) rm -sf bank-service
+
+bank-logs: require-env
+	$(COMPOSE) logs -f bank-service
 
 bank-db-up: require-env
 	$(GOOSE) -dir $(BANK_MIGRATIONS) postgres "$(BANK_DATABASE_URL)" up
