@@ -45,6 +45,8 @@ type Case struct {
 	ProductVersion int64
 	Company        Company
 	Application    SubmittedApplication
+	Checks         *Checks
+	Score          *ScoreResult
 	TriggeredRules []string
 	Recommendation *CaseRecommendation
 	AssigneeID     *uuid.UUID
@@ -71,6 +73,39 @@ type SubmittedApplication struct {
 	Purpose       PurposeTag
 	DocumentTypes []DocumentType
 }
+
+type Checks struct {
+	CompanyStatus    CompanyStatus
+	RegisteredAt     *time.Time
+	OKVED            *string
+	TotalDebtKopecks int64
+	OverdueCount12M  int
+	MaxOverdueDays   int
+	BureauError      *string
+}
+
+type CompanyStatus string
+
+type ScoreResult struct {
+	Score                int
+	Grade                ScoreGrade
+	Reasons              []ScoreReason
+	ModelVersion         string
+	FeatureSchemaVersion string
+}
+
+type ScoreReason struct {
+	Code         ScoreReasonCode
+	Description  string
+	Direction    ScoreReasonDirection
+	Contribution int
+}
+
+type ScoreGrade string
+
+type ScoreReasonCode string
+
+type ScoreReasonDirection string
 
 type PurposeTag string
 

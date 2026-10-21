@@ -42,6 +42,9 @@ func Load() (Config, error) {
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		return Config{}, fmt.Errorf("read environment: %w", err)
 	}
+	if cfg.Database.URL == "" {
+		return Config{}, fmt.Errorf("BANK_DATABASE_URL is required")
+	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(cfg); err != nil {
