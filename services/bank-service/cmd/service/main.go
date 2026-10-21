@@ -38,13 +38,20 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	}
 	defer dependencies.Close()
 
-	server := httpserver.New(cfg.HTTPAddress, dependencies.HTTPHandler)
+	server := httpserver.New(httpserver.Config{
+		Address:           cfg.HTTP.Address,
+		ReadHeaderTimeout: cfg.HTTP.ReadHeaderTimeout,
+		ReadTimeout:       cfg.HTTP.ReadTimeout,
+		WriteTimeout:      cfg.HTTP.WriteTimeout,
+		IdleTimeout:       cfg.HTTP.IdleTimeout,
+		MaxHeaderBytes:    cfg.HTTP.MaxHeaderBytes,
+	}, dependencies.HTTPHandler)
 	serverErrors := make(chan error, 1)
 	go func() {
 		serverErrors <- server.Run()
 	}()
 
-	logger.Info("bank-service started", "address", cfg.HTTPAddress)
+	logger.Info("bank-service started", "address", cfg.HTTP.Address)
 
 	select {
 	case err := <-serverErrors:

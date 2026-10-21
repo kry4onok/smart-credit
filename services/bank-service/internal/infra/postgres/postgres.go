@@ -9,17 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const (
-	maxConnLifetime   = 30 * time.Minute
-	maxConnIdleTime   = 5 * time.Minute
-	healthCheckPeriod = time.Minute
-)
-
 type Config struct {
-	URL            string
-	ConnectTimeout time.Duration
-	MaxConnections int32
-	MinConnections int32
+	URL               string
+	ConnectTimeout    time.Duration
+	MaxConnections    int32
+	MinConnections    int32
+	MaxConnLifetime   time.Duration
+	MaxConnIdleTime   time.Duration
+	HealthCheckPeriod time.Duration
 }
 
 func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
@@ -32,6 +29,9 @@ func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	if cfg.MaxConnections <= 0 || cfg.MinConnections < 0 || cfg.MinConnections > cfg.MaxConnections {
 		return nil, fmt.Errorf("invalid pool size: min=%d max=%d", cfg.MinConnections, cfg.MaxConnections)
 	}
+	if cfg.MaxConnLifetime <= 0 || cfg.MaxConnIdleTime <= 0 || cfg.HealthCheckPeriod <= 0 {
+		return nil, fmt.Errorf("postgres pool durations must be positive")
+	}
 
 	poolConfig, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {
@@ -40,9 +40,9 @@ func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 
 	poolConfig.MaxConns = cfg.MaxConnections
 	poolConfig.MinConns = cfg.MinConnections
-	poolConfig.MaxConnLifetime = maxConnLifetime
-	poolConfig.MaxConnIdleTime = maxConnIdleTime
-	poolConfig.HealthCheckPeriod = healthCheckPeriod
+	poolConfig.MaxConnLifetime = cfg.MaxConnLifetime
+	poolConfig.MaxConnIdleTime = cfg.MaxConnIdleTime
+	poolConfig.HealthCheckPeriod = cfg.HealthCheckPeriod
 	poolConfig.ConnConfig.ConnectTimeout = cfg.ConnectTimeout
 	if poolConfig.ConnConfig.RuntimeParams == nil {
 		poolConfig.ConnConfig.RuntimeParams = make(map[string]string)

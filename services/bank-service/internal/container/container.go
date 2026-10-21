@@ -23,10 +23,13 @@ type Container struct {
 
 func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	db, err := postgres.New(ctx, postgres.Config{
-		URL:            cfg.Database.URL,
-		ConnectTimeout: cfg.Database.ConnectTimeout,
-		MaxConnections: cfg.Database.MaxConnections,
-		MinConnections: cfg.Database.MinConnections,
+		URL:               cfg.Database.URL,
+		ConnectTimeout:    cfg.Database.ConnectTimeout,
+		MaxConnections:    cfg.Database.MaxConnections,
+		MinConnections:    cfg.Database.MinConnections,
+		MaxConnLifetime:   cfg.Database.MaxConnLifetime,
+		MaxConnIdleTime:   cfg.Database.MaxConnIdleTime,
+		HealthCheckPeriod: cfg.Database.HealthCheckPeriod,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create postgres dependency: %w", err)
@@ -36,7 +39,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 
 	return &Container{
 		DB:          db,
-		HTTPHandler: httpapi.New(db, listCases),
+		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout, listCases),
 	}, nil
 }
 

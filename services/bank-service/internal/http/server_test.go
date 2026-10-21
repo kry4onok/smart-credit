@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 type pingerStub struct {
@@ -20,7 +21,7 @@ func (p *pingerStub) Ping(context.Context) error {
 
 func TestHealth(t *testing.T) {
 	db := &pingerStub{err: errors.New("database is unavailable")}
-	handler := New(db, nil)
+	handler := New(db, time.Second, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))
@@ -46,7 +47,7 @@ func TestReady(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := &pingerStub{err: tt.pingError}
-			handler := New(db, nil)
+			handler := New(db, time.Second, nil)
 
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/readyz", nil))
@@ -62,7 +63,7 @@ func TestReady(t *testing.T) {
 }
 
 func TestUnimplementedContractRoute(t *testing.T) {
-	handler := New(&pingerStub{}, nil)
+	handler := New(&pingerStub{}, time.Second, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/backoffice/applications/00000000-0000-0000-0000-000000000001", nil))

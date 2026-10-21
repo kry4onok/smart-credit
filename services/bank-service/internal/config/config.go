@@ -4,138 +4,67 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"strconv"
-	"strings"
 	"time"
-)
 
-const (
-	defaultHTTPAddress      = ":8080"
-	defaultShutdownTimeout  = 10 * time.Second
-	defaultDBConnectTimeout = 5 * time.Second
-	defaultDBMaxConnections = 10
-	defaultDBMinConnections = 1
+	"github.com/go-playground/validator/v10"
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	HTTPAddress     string
-	Database        DatabaseConfig
-	ShutdownTimeout time.Duration
+	HTTP             HTTPConfig
+	Database         DatabaseConfig
+	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
+	ShutdownTimeout  time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
+}
+
+type HTTPConfig struct {
+	Address           string        `env:"BANK_HTTP_ADDR" env-required:"true" validate:"required"`
+	ReadHeaderTimeout time.Duration `env:"BANK_HTTP_READ_HEADER_TIMEOUT" env-required:"true" validate:"gt=0"`
+	ReadTimeout       time.Duration `env:"BANK_HTTP_READ_TIMEOUT" env-required:"true" validate:"gt=0"`
+	WriteTimeout      time.Duration `env:"BANK_HTTP_WRITE_TIMEOUT" env-required:"true" validate:"gt=0"`
+	IdleTimeout       time.Duration `env:"BANK_HTTP_IDLE_TIMEOUT" env-required:"true" validate:"gt=0"`
+	MaxHeaderBytes    int           `env:"BANK_HTTP_MAX_HEADER_BYTES" env-required:"true" validate:"gt=0"`
 }
 
 type DatabaseConfig struct {
-	URL            string
-	ConnectTimeout time.Duration
-	MaxConnections int32
-	MinConnections int32
+	URL               string        `env:"BANK_DATABASE_URL" env-required:"true" validate:"required,url"`
+	ConnectTimeout    time.Duration `env:"BANK_DB_CONNECT_TIMEOUT" env-required:"true" validate:"gt=0"`
+	MaxConnections    int32         `env:"BANK_DB_MAX_CONNS" env-required:"true" validate:"gt=0"`
+	MinConnections    int32         `env:"BANK_DB_MIN_CONNS" env-required:"true" validate:"gte=0,ltefield=MaxConnections"`
+	MaxConnLifetime   time.Duration `env:"BANK_DB_MAX_CONN_LIFETIME" env-required:"true" validate:"gt=0"`
+	MaxConnIdleTime   time.Duration `env:"BANK_DB_MAX_CONN_IDLE_TIME" env-required:"true" validate:"gt=0"`
+	HealthCheckPeriod time.Duration `env:"BANK_DB_HEALTH_CHECK_PERIOD" env-required:"true" validate:"gt=0"`
 }
 
 func Load() (Config, error) {
-	cfg := Config{
-		HTTPAddress: valueOrDefault("BANK_HTTP_ADDR", defaultHTTPAddress),
-		Database: DatabaseConfig{
-			URL:            strings.TrimSpace(os.Getenv("BANK_DATABASE_URL")),
-			ConnectTimeout: defaultDBConnectTimeout,
-			MaxConnections: defaultDBMaxConnections,
-			MinConnections: defaultDBMinConnections,
-		},
-		ShutdownTimeout: defaultShutdownTimeout,
+	var cfg Config
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		return Config{}, fmt.Errorf("read environment: %w", err)
 	}
 
-	if cfg.Database.URL == "" {
-		return Config{}, fmt.Errorf("BANK_DATABASE_URL is required")
-	}
-	if err := validateHTTPAddress(cfg.HTTPAddress); err != nil {
-		return Config{}, fmt.Errorf("BANK_HTTP_ADDR: %w", err)
-	}
-	if err := validateDatabaseURL(cfg.Database.URL); err != nil {
-		return Config{}, fmt.Errorf("BANK_DATABASE_URL: %w", err)
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Struct(cfg); err != nil {
+		return Config{}, fmt.Errorf("validate config: %w", err)
 	}
 
-	var err error
-	cfg.Database.ConnectTimeout, err = durationValue("BANK_DB_CONNECT_TIMEOUT", defaultDBConnectTimeout)
+	_, port, err := net.SplitHostPort(cfg.HTTP.Address)
 	if err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("BANK_HTTP_ADDR must have host:port form with a valid port")
 	}
-	cfg.Database.MaxConnections, err = int32Value("BANK_DB_MAX_CONNS", defaultDBMaxConnections, 1)
-	if err != nil {
-		return Config{}, err
+	portNumber, err := strconv.Atoi(port)
+	if err != nil || validate.Var(portNumber, "required,port") != nil {
+		return Config{}, fmt.Errorf("BANK_HTTP_ADDR must have host:port form with a valid port")
 	}
-	cfg.Database.MinConnections, err = int32Value("BANK_DB_MIN_CONNS", defaultDBMinConnections, 0)
-	if err != nil {
-		return Config{}, err
-	}
-	if cfg.Database.MinConnections > cfg.Database.MaxConnections {
-		return Config{}, fmt.Errorf("BANK_DB_MIN_CONNS must not exceed BANK_DB_MAX_CONNS")
-	}
-	cfg.ShutdownTimeout, err = durationValue("BANK_SHUTDOWN_TIMEOUT", defaultShutdownTimeout)
-	if err != nil {
-		return Config{}, err
+
+	parsed, err := url.Parse(cfg.Database.URL)
+	if err != nil ||
+		(parsed.Scheme != "postgres" && parsed.Scheme != "postgresql") ||
+		parsed.Hostname() == "" ||
+		parsed.Path == "" ||
+		parsed.Path == "/" {
+		return Config{}, fmt.Errorf("BANK_DATABASE_URL must be a postgres URL with host and database name")
 	}
 
 	return cfg, nil
-}
-
-func valueOrDefault(name, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
-		return value
-	}
-	return fallback
-}
-
-func durationValue(name string, fallback time.Duration) (time.Duration, error) {
-	raw := strings.TrimSpace(os.Getenv(name))
-	if raw == "" {
-		return fallback, nil
-	}
-
-	value, err := time.ParseDuration(raw)
-	if err != nil || value <= 0 {
-		return 0, fmt.Errorf("%s must be a positive duration", name)
-	}
-	return value, nil
-}
-
-func int32Value(name string, fallback int32, minimum int64) (int32, error) {
-	raw := strings.TrimSpace(os.Getenv(name))
-	if raw == "" {
-		return fallback, nil
-	}
-
-	value, err := strconv.ParseInt(raw, 10, 32)
-	if err != nil || value < minimum {
-		return 0, fmt.Errorf("%s must be an integer greater than or equal to %d", name, minimum)
-	}
-	return int32(value), nil
-}
-
-func validateHTTPAddress(address string) error {
-	_, port, err := net.SplitHostPort(address)
-	if err != nil {
-		return fmt.Errorf("must have host:port form")
-	}
-
-	portNumber, err := strconv.Atoi(port)
-	if err != nil || portNumber < 1 || portNumber > 65535 {
-		return fmt.Errorf("port must be between 1 and 65535")
-	}
-	return nil
-}
-
-func validateDatabaseURL(databaseURL string) error {
-	parsed, err := url.Parse(databaseURL)
-	if err != nil {
-		return fmt.Errorf("must be a valid URL")
-	}
-	if parsed.Scheme != "postgres" && parsed.Scheme != "postgresql" {
-		return fmt.Errorf("scheme must be postgres or postgresql")
-	}
-	if parsed.Host == "" {
-		return fmt.Errorf("host is required")
-	}
-	if strings.Trim(parsed.Path, "/") == "" {
-		return fmt.Errorf("database name is required")
-	}
-	return nil
 }

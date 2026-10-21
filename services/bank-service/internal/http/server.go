@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 	listhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/list"
@@ -17,9 +18,9 @@ type server struct {
 	listCases *listhandler.Handler
 }
 
-func New(db health.Pinger, listCases listhandler.UseCase) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, listCases listhandler.UseCase) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:    health.New(db),
+		health:    health.New(db, readinessTimeout),
 		listCases: listhandler.New(listCases),
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
