@@ -36,6 +36,16 @@ func BadRequest(code string, cause error) *Error {
 	}
 }
 
+func NotFound(code string, cause error) *Error {
+	return &Error{
+		Status: http.StatusNotFound,
+		Code:   code,
+		Title:  "Ресурс не найден",
+		Detail: cause.Error(),
+		cause:  cause,
+	}
+}
+
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	problem := common.Problem{
 		Type:   "about:blank",

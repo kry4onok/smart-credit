@@ -6,10 +6,6 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 )
 
-func (s *server) GetCase(context.Context, generated.GetCaseRequestObject) (generated.GetCaseResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) GetCaseAudit(context.Context, generated.GetCaseAuditRequestObject) (generated.GetCaseAuditResponseObject, error) {
 	return nil, errNotImplemented
 }

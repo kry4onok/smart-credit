@@ -10,6 +10,7 @@ import (
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
+	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -36,10 +37,11 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	}
 	caseRepository := caserepository.New(db)
 	listCases := listcase.New(caseRepository)
+	getCase := getcase.New(caseRepository)
 
 	return &Container{
 		DB:          db,
-		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout, listCases),
+		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase),
 	}, nil
 }
 
