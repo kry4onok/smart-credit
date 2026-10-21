@@ -50,6 +50,8 @@ type Case struct {
 	TriggeredRules []string
 	Recommendation *CaseRecommendation
 	AssigneeID     *uuid.UUID
+	InfoRequest    *InfoRequest
+	Offer          *Offer
 	PublicReason   *string
 	AuditVersion   int64
 	CreatedAt      time.Time
@@ -106,6 +108,31 @@ type ScoreGrade string
 type ScoreReasonCode string
 
 type ScoreReasonDirection string
+
+type InfoRequest struct {
+	ID                    uuid.UUID
+	Message               string
+	RequiredFields        []InfoField
+	RequiredDocumentTypes []DocumentType
+	CreatedAt             time.Time
+}
+
+type InfoField string
+
+type Offer struct {
+	ID             uuid.UUID
+	Kind           OfferKind
+	ProductID      uuid.UUID
+	ProductVersion int64
+	ProductName    string
+	AmountKopecks  int64
+	TermMonths     int
+	RateBPS        int
+	ExpiresAt      time.Time
+	Explanation    string
+}
+
+type OfferKind string
 
 type PurposeTag string
 

@@ -53,6 +53,21 @@ func scanCase(row rowScanner) (model.Case, error) {
 	var modelVersion *string
 	var featureSchemaVersion *string
 	var recommendation *string
+	var infoRequestID *uuid.UUID
+	var infoRequestMessage *string
+	var requiredFields []string
+	var requiredDocumentTypes []string
+	var infoRequestCreatedAt *time.Time
+	var offerID *uuid.UUID
+	var offerKind *string
+	var offerProductID *uuid.UUID
+	var offerProductVersion *int64
+	var offerProductName *string
+	var offerAmountKopecks *int64
+	var offerTermMonths *int
+	var offerRateBPS *int
+	var offerExpiresAt *time.Time
+	var offerExplanation *string
 
 	err := row.Scan(
 		&item.ID,
@@ -87,6 +102,21 @@ func scanCase(row rowScanner) (model.Case, error) {
 		&item.TriggeredRules,
 		&recommendation,
 		&item.AssigneeID,
+		&infoRequestID,
+		&infoRequestMessage,
+		&requiredFields,
+		&requiredDocumentTypes,
+		&infoRequestCreatedAt,
+		&offerID,
+		&offerKind,
+		&offerProductID,
+		&offerProductVersion,
+		&offerProductName,
+		&offerAmountKopecks,
+		&offerTermMonths,
+		&offerRateBPS,
+		&offerExpiresAt,
+		&offerExplanation,
 		&item.PublicReason,
 		&item.AuditVersion,
 		&item.CreatedAt,
@@ -131,8 +161,49 @@ func scanCase(row rowScanner) (model.Case, error) {
 		value := model.CaseRecommendation(*recommendation)
 		item.Recommendation = &value
 	}
+	if infoRequestID != nil {
+		item.InfoRequest = &model.InfoRequest{
+			ID:                    *infoRequestID,
+			Message:               *infoRequestMessage,
+			RequiredFields:        convertInfoFields(requiredFields),
+			RequiredDocumentTypes: convertDocumentTypes(requiredDocumentTypes),
+			CreatedAt:             *infoRequestCreatedAt,
+		}
+	}
+	if offerID != nil {
+		item.Offer = &model.Offer{
+			ID:             *offerID,
+			Kind:           model.OfferKind(*offerKind),
+			ProductID:      *offerProductID,
+			ProductVersion: *offerProductVersion,
+			ProductName:    *offerProductName,
+			AmountKopecks:  *offerAmountKopecks,
+			TermMonths:     *offerTermMonths,
+			RateBPS:        *offerRateBPS,
+			ExpiresAt:      *offerExpiresAt,
+			Explanation:    *offerExplanation,
+		}
+	}
 
 	return item, nil
+}
+
+func convertInfoFields(values []string) []model.InfoField {
+	result := make([]model.InfoField, len(values))
+	for index, value := range values {
+		result[index] = model.InfoField(value)
+	}
+
+	return result
+}
+
+func convertDocumentTypes(values []string) []model.DocumentType {
+	result := make([]model.DocumentType, len(values))
+	for index, value := range values {
+		result[index] = model.DocumentType(value)
+	}
+
+	return result
 }
 
 type scoreReasonRecord struct {

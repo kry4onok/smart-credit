@@ -72,6 +72,21 @@ SELECT
     cases.triggered_rules,
     cases.recommendation,
     cases.assignee_id,
+    active_info_request.id,
+    active_info_request.message,
+    active_info_request.required_fields,
+    active_info_request.required_document_types,
+    active_info_request.created_at,
+    active_offer.id,
+    active_offer.kind,
+    active_offer.product_id,
+    active_offer.product_version,
+    active_offer.product_name,
+    active_offer.amount_kopecks,
+    active_offer.term_months,
+    active_offer.rate_bps,
+    active_offer.expires_at,
+    active_offer.explanation,
     cases.public_reason,
     cases.audit_version,
     cases.created_at,
@@ -99,6 +114,32 @@ LEFT JOIN LATERAL (
     ORDER BY created_at DESC, id DESC
     LIMIT 1
 ) AS latest_score ON true
+LEFT JOIN LATERAL (
+    SELECT id, message, required_fields, required_document_types, created_at
+    FROM info_requests
+    WHERE case_id = cases.id AND status = 'OPEN'
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+) AS active_info_request ON true
+LEFT JOIN LATERAL (
+    SELECT
+        id,
+        kind,
+        product_id,
+        product_version,
+        product_name,
+        amount_kopecks,
+        term_months,
+        rate_bps,
+        expires_at,
+        explanation
+    FROM offers
+    WHERE case_id = cases.id
+        AND status = 'AVAILABLE'
+        AND expires_at > now()
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+) AS active_offer ON true
 WHERE cases.id = $1`
 
 func (r *Repository) GetCase(
