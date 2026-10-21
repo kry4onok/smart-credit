@@ -46,5 +46,29 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  swagger-ui:
+    image: docker.swagger.io/swaggerapi/swagger-ui:v5.33.1
+    environment:
+      URLS: >-
+        [
+          { "url": "/api/auth.yaml", "name": "Auth API" },
+          { "url": "/api/client.yaml", "name": "Client API" },
+          { "url": "/api/bank.yaml", "name": "Bank API" }
+        ]
+      URLS_PRIMARY_NAME: Bank API
+      DEEP_LINKING: "true"
+      DISPLAY_OPERATION_ID: "true"
+      VALIDATOR_URL: none
+    ports:
+      - "127.0.0.1:${SWAGGER_PORT:-8081}:8080"
+    volumes:
+      - ../api:/usr/share/nginx/html/api:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   postgres_data:
