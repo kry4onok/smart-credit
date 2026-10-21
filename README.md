@@ -93,11 +93,82 @@ make bank-db-up
 паролей в `.env` после первого запуска само по себе не меняет пароли
 существующих ролей.
 
+## Как добавить Go-сервис в Docker
+
+Для Go-сервисов используется общий `deploy/docker/go-service.Dockerfile`.
+Копировать Dockerfile в каталог своего сервиса не нужно. Чтобы подключить новый
+сервис:
+
+1. Добавьте запускаемый пакет `<service-path>/cmd/service`.
+2. Настройте чтение адреса HTTP-сервера и зависимостей из env.
+3. Добавьте сервис в `deploy/docker-compose.yml` по шаблону ниже.
+4. Добавьте команды `<service>-up`, `<service>-down` и `<service>-logs` в
+   `Makefile`.
+5. Проверьте прямые `/healthz`, `/readyz` и технический маршрут через gateway.
+
+Все Go-сервисы внутри контейнера слушают порт `8080`. Разные порты используются
+только на компьютере: bank — `8080`, auth — `8082`, client — `8083`.
+
+```yaml
+client-service:
+  build:
+    context: ..
+    dockerfile: deploy/docker/go-service.Dockerfile
+    args:
+      SERVICE_PATH: services/client-service
+  environment:
+    CLIENT_HTTP_ADDR: ":8080"
+    CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
+  depends_on:
+    postgres:
+      condition: service_healthy
+  ports:
+    - "127.0.0.1:8083:8080"
+  healthcheck:
+    test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+  restart: unless-stopped
+```
+
+Из контейнеров Postgres доступен как `postgres:5432`, Kafka — как
+`kafka:19092`. В `.env` нельзя добавлять секреты для общего окружения: в Git
+попадают только названия переменных и безопасные локальные значения из
+`.env.example`.
+
+Пока каждый сервис запускается своей командой. После добавления запускаемых
+auth и client контейнеров появятся общие команды `make dev-up`,
+`make dev-down` и `make dev-logs`, которые поднимут инфраструктуру, применят
+миграции и запустят весь стенд.
+
 ## bank-service
 
-После запуска инфраструктуры и миграций сервис запускается на компьютере:
+Сервис можно собрать и запустить в Docker вместе с Postgres:
 
 ```sh
+make bank-up
+```
+
+Команда поднимает Postgres, применяет миграции `bank_db`, собирает общий
+Go-образ с параметром `SERVICE_PATH=services/bank-service` и ждёт успешного
+`/healthz`. Логи и остановка контейнера:
+
+```sh
+make bank-logs
+make bank-down
+```
+
+Контейнер подключается к Postgres по внутреннему адресу `postgres:5432`, а
+порт `8080` публикуется только на `127.0.0.1`. Поэтому существующий gateway
+может обращаться к банку так же, как при локальном запуске.
+
+Для запуска сервиса непосредственно на компьютере сначала поднимите
+инфраструктуру и примените миграции:
+
+```sh
+make infra-up
+make bank-db-up
 make bank-run
 ```
 
@@ -110,6 +181,3 @@ curl -i http://localhost:8080/readyz
 
 Обе ручки отвечают `204 No Content`, когда сервис и Postgres готовы. Остальные
 маршруты bank API до реализации возвращают `501 Not Implemented`.
-
-Пока Compose запускает только инфраструктуру. Приложения будут добавлены после
-появления их Dockerfile.
