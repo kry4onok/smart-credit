@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
 	HTTP             HTTPConfig
 	Database         DatabaseConfig
+	DemoAnalystID    string        `env:"BANK_DEMO_ANALYST_ID"`
 	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
 	ShutdownTimeout  time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
 }
@@ -44,6 +46,12 @@ func Load() (Config, error) {
 	}
 	if cfg.Database.URL == "" {
 		return Config{}, fmt.Errorf("BANK_DATABASE_URL is required")
+	}
+	if cfg.DemoAnalystID != "" {
+		id, err := uuid.Parse(cfg.DemoAnalystID)
+		if err != nil || id == uuid.Nil {
+			return Config{}, fmt.Errorf("BANK_DEMO_ANALYST_ID must be a nonzero UUID")
+		}
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())

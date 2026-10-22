@@ -17,7 +17,3 @@ func (s *server) DecideCase(context.Context, generated.DecideCaseRequestObject) 
 func (s *server) SummarizeCase(context.Context, generated.SummarizeCaseRequestObject) (generated.SummarizeCaseResponseObject, error) {
 	return nil, errNotImplemented
 }
-
-func (s *server) TakeCase(context.Context, generated.TakeCaseRequestObject) (generated.TakeCaseResponseObject, error) {
-	return nil, errNotImplemented
-}
