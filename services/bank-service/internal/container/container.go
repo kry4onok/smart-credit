@@ -9,6 +9,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
@@ -16,8 +17,9 @@ import (
 )
 
 type Container struct {
-	DB          *pgxpool.Pool
-	HTTPHandler http.Handler
+	DB           *pgxpool.Pool
+	Transactions *transaction.Manager
+	HTTPHandler  http.Handler
 
 	closeOnce sync.Once
 }
@@ -40,8 +42,9 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	getCase := getcase.New(caseRepository)
 
 	return &Container{
-		DB:          db,
-		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase),
+		DB:           db,
+		Transactions: transaction.New(db),
+		HTTPHandler:  httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase),
 	}, nil
 }
 
