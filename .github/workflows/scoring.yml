@@ -3,9 +3,9 @@ name: Scoring
 on:
   push:
     branches: [main, feat/ml-scoring]
-    paths: ["ml/scoring/**", "proto/**", "scripts/**", "seed/scoring/**", "cmd/scoring-smoke/**", "go.mod", "go.sum", "Makefile", ".dockerignore", "deploy/docker/scoring.Dockerfile", "deploy/docker-compose.scoring.yml", ".github/workflows/scoring.yml"]
+    paths: ["ml/scoring/**", "proto/**", "scripts/**", "seed/scoring/**", "cmd/scoring-smoke/**", "go.mod", "go.sum", ".env.example", "Makefile", ".dockerignore", "deploy/docker/scoring.Dockerfile", "deploy/docker-compose.yml", ".github/workflows/scoring.yml"]
   pull_request:
-    paths: ["ml/scoring/**", "proto/**", "scripts/**", "seed/scoring/**", "cmd/scoring-smoke/**", "go.mod", "go.sum", "Makefile", ".dockerignore", "deploy/docker/scoring.Dockerfile", "deploy/docker-compose.scoring.yml", ".github/workflows/scoring.yml"]
+    paths: ["ml/scoring/**", "proto/**", "scripts/**", "seed/scoring/**", "cmd/scoring-smoke/**", "go.mod", "go.sum", ".env.example", "Makefile", ".dockerignore", "deploy/docker/scoring.Dockerfile", "deploy/docker-compose.yml", ".github/workflows/scoring.yml"]
 
 permissions:
   contents: read
@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - run: cp .env.example .env
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -27,7 +28,7 @@ jobs:
       - run: make scoring-up scoring-smoke scoring-smoke-go
       - name: Container logs on failure
         if: failure()
-        run: docker compose -f deploy/docker-compose.scoring.yml logs --no-color scoring
+        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color scoring
       - name: Stop scoring
         if: always()
         run: make scoring-down

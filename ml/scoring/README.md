@@ -14,10 +14,10 @@ make scoring-sync scoring-up
 make scoring-smoke scoring-smoke-go
 ```
 
-Docker запускает только scoring, без БД, Kafka, `.env` и внешнего model API.
+Scoring описан в общем `deploy/docker-compose.yml`. Перед первым запуском
+создайте `.env` на основе `.env.example`. `make scoring-up` запускает только
+scoring, без БД, Kafka и внешнего model API.
 Host: `127.0.0.1:50051`; общая Compose-сеть: `scoring:50051`.
-Дополнительный Compose-файл: `deploy/docker-compose.scoring.yml`.
-Его можно объединить с `deploy/docker-compose.yml` через второй `-f`.
 Health: стандартный `grpc.health.v1.Health/Check`, имя сервиса
 `smartcredit.scoring.ScoringService`; SERVING после загрузки конфига.
 

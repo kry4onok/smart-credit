@@ -1,5 +1,7 @@
 # smart-credit
 
+Полное техническое задание: [TZ.md](TZ.md).
+
 ## Проверка Go-кода
 
 Перед pull request запустите:
@@ -225,7 +227,9 @@ curl -i http://localhost:8080/readyz
 - [Общие профили для bureau mocks и интеграции](seed/scoring/personas.json).
 
 Нужны Docker, Go из `go.mod` и uv (проверено с 0.12.3). Scoring запускается
-отдельно от Postgres/Kafka и не требует `.env`:
+из общего `deploy/docker-compose.yml`. Для первого запуска подготовьте `.env`
+по разделу «Локальная инфраструктура». `scoring-up` запускает только scoring,
+без Postgres/Kafka:
 
 ```sh
 make scoring-sync
@@ -235,10 +239,9 @@ make scoring-smoke-go
 ```
 
 Host endpoint — `127.0.0.1:50051`; стандартный gRPC health. Внутри общей
-Compose-сети backend использует `scoring:50051`. Чтобы описать все сервисы одним
-Compose-проектом, добавьте `-f deploy/docker-compose.scoring.yml` к команде
-с `-f deploy/docker-compose.yml`; default project directory у них один.
-Для нестандартного порта: `SCORING_PORT=50052 make scoring-up`, затем
+Compose-сети backend использует `scoring:50051`. Все сервисы описаны в общем
+`deploy/docker-compose.yml` и используют одну сеть.
+Для нестандартного порта: `make scoring-up SCORING_PORT=50052`, затем
 `make scoring-smoke scoring-smoke-go SCORING_TARGET=127.0.0.1:50052`.
 
 ```sh

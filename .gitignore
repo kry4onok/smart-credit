@@ -58,6 +58,7 @@ dist/
 *.txt
 !README
 !README.*
+!/TZ.md
 !requirements*.txt
 !CMakeLists.txt
 !LICENSE*

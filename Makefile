@@ -7,6 +7,7 @@ endif
 
 COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
 POSTGRES_PORT ?= 5432
+SCORING_PORT ?= 50051
 SWAGGER_PORT ?= 8081
 GATEWAY_PORT ?= 8000
 BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/bank_db?sslmode=disable
@@ -79,8 +80,7 @@ gen-proto-check:
 	uv run --no-project --python 3.12.12 scripts/generate_proto.py --check
 
 .PHONY: scoring-test scoring-lint scoring-run scoring-up scoring-down scoring-smoke scoring-smoke-go scoring-evaluate
-SCORING_COMPOSE := docker compose -f deploy/docker-compose.scoring.yml
-SCORING_TARGET ?= 127.0.0.1:50051
+SCORING_TARGET ?= 127.0.0.1:$(SCORING_PORT)
 SCORING_PY := uv run --project ml/scoring --locked
 
 scoring-test:
@@ -93,11 +93,11 @@ scoring-lint:
 scoring-run:
 	PYTHONPATH=proto/gen/python $(SCORING_PY) smart-credit-scoring
 
-scoring-up:
-	$(SCORING_COMPOSE) up -d --build --wait scoring
+scoring-up: require-env
+	$(COMPOSE) up -d --build --wait scoring
 
-scoring-down:
-	$(SCORING_COMPOSE) rm -sf scoring
+scoring-down: require-env
+	$(COMPOSE) rm -sf scoring
 
 scoring-smoke:
 	PYTHONPATH=proto/gen/python $(SCORING_PY) python scripts/scoring_smoke.py --target $(SCORING_TARGET)
