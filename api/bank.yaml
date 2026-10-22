@@ -78,12 +78,19 @@ paths:
       parameters:
         - { $ref: './common.yaml#/components/parameters/ApplicationId' }
         - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+        - { $ref: './common.yaml#/components/parameters/IfMatch' }
       responses:
         '200':
           description: Дело назначено текущему аналитику, в аудит добавлена запись.
+          headers:
+            ETag:
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/BankCase' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
   /backoffice/applications/{application_id}/decision:
     post:

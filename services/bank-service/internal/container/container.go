@@ -8,11 +8,14 @@ import (
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
+	authmiddleware "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/middleware/auth"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
+	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -40,11 +43,21 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	caseRepository := caserepository.New(db)
 	listCases := listcase.New(caseRepository)
 	getCase := getcase.New(caseRepository)
+	transactions := transaction.New(db)
+	takeCase := takecase.New(caseRepository, transactions)
+	demoAnalystID := uuid.Nil
+	if cfg.DemoAnalystID != "" {
+		demoAnalystID, err = uuid.Parse(cfg.DemoAnalystID)
+		if err != nil || demoAnalystID == uuid.Nil {
+			db.Close()
+			return nil, fmt.Errorf("invalid BANK_DEMO_ANALYST_ID")
+		}
+	}
 
 	return &Container{
 		DB:           db,
-		Transactions: transaction.New(db),
-		HTTPHandler:  httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase),
+		Transactions: transactions,
+		HTTPHandler:  authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
 	}, nil
 }
 
