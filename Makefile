@@ -30,6 +30,12 @@ help:
 	@echo 'Сначала: cp .env.example .env'
 	@echo 'make gen              Сгенерировать код из всех контрактов'
 	@echo 'make gen-openapi      Сгенерировать Go-код из OpenAPI'
+	@echo 'make gen-proto        Сгенерировать Go/Python из protobuf'
+	@echo 'make scoring-sync     Установить Python-окружение scoring'
+	@echo 'make scoring-test     Проверить модель и gRPC'
+	@echo 'make scoring-up       Собрать и запустить scoring в Docker'
+	@echo 'make scoring-smoke    Проверить scoring из Python'
+	@echo 'make scoring-smoke-go Проверить scoring из Go'
 	@echo 'make lint             Проверить Go-код линтерами и форматтерами'
 	@echo 'make docs-up          Запустить Swagger UI для всех API'
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
@@ -60,7 +66,47 @@ help:
 require-env:
 	@test -f .env || { echo 'Сначала выполните: cp .env.example .env' >&2; exit 1; }
 
-gen: gen-openapi
+gen: gen-openapi gen-proto
+
+.PHONY: gen-proto gen-proto-check scoring-sync
+scoring-sync:
+	uv sync --project ml/scoring --locked
+
+gen-proto:
+	uv run --no-project --python 3.12.12 scripts/generate_proto.py
+
+gen-proto-check:
+	uv run --no-project --python 3.12.12 scripts/generate_proto.py --check
+
+.PHONY: scoring-test scoring-lint scoring-run scoring-up scoring-down scoring-smoke scoring-smoke-go scoring-evaluate
+SCORING_COMPOSE := docker compose -f deploy/docker-compose.scoring.yml
+SCORING_TARGET ?= 127.0.0.1:50051
+SCORING_PY := uv run --project ml/scoring --locked
+
+scoring-test:
+	$(SCORING_PY) pytest ml/scoring/tests
+
+scoring-lint:
+	$(SCORING_PY) ruff check --config ml/scoring/pyproject.toml ml/scoring/src ml/scoring/tests scripts/generate_proto.py scripts/scoring_smoke.py scripts/evaluate_scoring.py
+	$(SCORING_PY) ruff format --check --config ml/scoring/pyproject.toml ml/scoring/src ml/scoring/tests scripts/generate_proto.py scripts/scoring_smoke.py scripts/evaluate_scoring.py
+
+scoring-run:
+	PYTHONPATH=proto/gen/python $(SCORING_PY) smart-credit-scoring
+
+scoring-up:
+	$(SCORING_COMPOSE) up -d --build --wait scoring
+
+scoring-down:
+	$(SCORING_COMPOSE) rm -sf scoring
+
+scoring-smoke:
+	PYTHONPATH=proto/gen/python $(SCORING_PY) python scripts/scoring_smoke.py --target $(SCORING_TARGET)
+
+scoring-smoke-go:
+	go run ./cmd/scoring-smoke --target $(SCORING_TARGET)
+
+scoring-evaluate:
+	PYTHONPATH=proto/gen/python $(SCORING_PY) python scripts/evaluate_scoring.py --target $(SCORING_TARGET) --output /tmp/smart-credit-scoring-evaluation.json
 
 gen-openapi:
 	@mkdir -p $(OPENAPI_OUTPUT_DIRS)

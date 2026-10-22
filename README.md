@@ -211,3 +211,56 @@ curl -i http://localhost:8080/readyz
 
 Обе ручки отвечают `204 No Content`, когда сервис и Postgres готовы. Остальные
 маршруты bank API до реализации возвращают `501 Not Implemented`.
+
+## Scoring v1
+
+Готов отдельный Python gRPC-сервис: риск бизнеса 0..1000, grade A–E,
+четыре вклада факторов, до трёх причин и явные результаты для недостаточных
+или неприменимых данных. Это экспертная монотонная модель, не оценка PD.
+Банк принимает кредитное решение и проверяет продукт, документы и стоп-факторы.
+
+- [Контракт и задачи backend](docs/SCORING_BACKEND_AGREEMENT.md).
+- [Формула, выбор модели и ограничения](docs/SCORING_MODEL_CARD.md).
+- [Выполненные проверки и измерения](docs/SCORING_EVALUATION.md).
+- [Общие профили для bureau mocks и интеграции](seed/scoring/personas.json).
+
+Нужны Docker, Go из `go.mod` и uv (проверено с 0.12.3). Scoring запускается
+отдельно от Postgres/Kafka и не требует `.env`:
+
+```sh
+make scoring-sync
+make scoring-up
+make scoring-smoke
+make scoring-smoke-go
+```
+
+Host endpoint — `127.0.0.1:50051`; стандартный gRPC health. Внутри общей
+Compose-сети backend использует `scoring:50051`. Чтобы описать все сервисы одним
+Compose-проектом, добавьте `-f deploy/docker-compose.scoring.yml` к команде
+с `-f deploy/docker-compose.yml`; default project directory у них один.
+Для нестандартного порта: `SCORING_PORT=50052 make scoring-up`, затем
+`make scoring-smoke scoring-smoke-go SCORING_TARGET=127.0.0.1:50052`.
+
+```sh
+make scoring-test scoring-lint
+make gen-proto-check
+make scoring-evaluate
+make scoring-down
+```
+
+`scoring-evaluate` сохраняет клиентские измерения в
+`/tmp/smart-credit-scoring-evaluation.json`; они не оценивают точность дефолта.
+Для запуска без Docker: `make scoring-run` (по умолчанию loopback; переопределение
+через `SCORING_ADDR`). `SCORING_MODEL_PATH` позволяет явно выбрать артефакт;
+без него используется включённый в пакет конфиг. Python 3.12.12 и зависимости
+закреплены в `ml/scoring`; generated Python imports требуют
+`PYTHONPATH=proto/gen/python`, как уже задано в Makefile и контейнере.
+
+Все пять proto генерируются командой `make gen-proto`; `make gen` теперь
+включает OpenAPI и protobuf. Generated файлы не редактировать вручную.
+CI `.github/workflows/scoring.yml` проверяет воспроизводимость генерации,
+модель, gRPC, Go и оба клиента против контейнера.
+
+Вызов scoring из банковского конвейера, сохранение текущей revision/attempt и
+отображение результата в карточке подключает backend по соглашению. Наличие
+этого сервиса не означает готовность всего банковского E2E.

@@ -1,0 +1,33 @@
+name: Scoring
+
+on:
+  push:
+    branches: [main, feat/ml-scoring]
+    paths: ["ml/scoring/**", "proto/**", "scripts/**", "seed/scoring/**", "cmd/scoring-smoke/**", "go.mod", "go.sum", "Makefile", ".dockerignore", "deploy/docker/scoring.Dockerfile", "deploy/docker-compose.scoring.yml", ".github/workflows/scoring.yml"]
+  pull_request:
+    paths: ["ml/scoring/**", "proto/**", "scripts/**", "seed/scoring/**", "cmd/scoring-smoke/**", "go.mod", "go.sum", "Makefile", ".dockerignore", "deploy/docker/scoring.Dockerfile", "deploy/docker-compose.scoring.yml", ".github/workflows/scoring.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  scoring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.3"
+      - run: make scoring-sync gen-proto-check scoring-lint scoring-test
+      - run: go test ./...
+      - run: make scoring-up scoring-smoke scoring-smoke-go
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose -f deploy/docker-compose.scoring.yml logs --no-color scoring
+      - name: Stop scoring
+        if: always()
+        run: make scoring-down

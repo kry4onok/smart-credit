@@ -9,18 +9,16 @@ import argparse
 import importlib.metadata
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import grpc_tools
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = json.loads((ROOT / "scripts/proto-tools.json").read_text())
-SOURCES = sorted(
-    str(path.relative_to(ROOT)) for path in (ROOT / "proto").glob("*/*.proto")
-)
+SOURCES = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "proto").glob("*/*.proto"))
 
 
 def run(*args: str, env: dict[str, str] | None = None) -> None:
@@ -30,9 +28,7 @@ def run(*args: str, env: dict[str, str] | None = None) -> None:
 def generate(output: Path, language: str) -> None:
     actual = importlib.metadata.version("grpcio-tools")
     if actual != TOOLS["grpcio-tools"]:
-        raise SystemExit(
-            f"grpcio-tools {TOOLS['grpcio-tools']} required; found {actual}"
-        )
+        raise SystemExit(f"grpcio-tools {TOOLS['grpcio-tools']} required; found {actual}")
     include = Path(grpc_tools.__file__).parent / "_proto"
     args = [sys.executable, "-m", "grpc_tools.protoc", "-I.", f"-I{include}"]
     destination = output / language
@@ -55,9 +51,7 @@ def generate(output: Path, language: str) -> None:
                 if binary.exists()
                 else ""
             )
-            if installed.split()[-1:] != [version] and installed.split()[-1:] != [
-                version[1:]
-            ]:
+            if installed.split()[-1:] != [version] and installed.split()[-1:] != [version[1:]]:
                 run("go", "install", f"{module}@{version}", env=env)
             args += [f"--plugin={name}={binary}"]
         for plugin in ("go", "go-grpc"):
@@ -85,9 +79,7 @@ def file_map(directory: Path) -> dict[str, bytes]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--language", choices=("all", "go", "python"), default="all")
-    parser.add_argument(
-        "--check", action="store_true", help="Fail on generated-code drift"
-    )
+    parser.add_argument("--check", action="store_true", help="Fail on generated-code drift")
     options = parser.parse_args()
     languages = ("go", "python") if options.language == "all" else (options.language,)
     with tempfile.TemporaryDirectory(prefix="smart-credit-proto-") as temporary:
@@ -99,9 +91,7 @@ def main() -> None:
             actual = file_map(destination)
             if options.check:
                 changes = sorted(
-                    k
-                    for k in actual.keys() | expected.keys()
-                    if actual.get(k) != expected.get(k)
+                    k for k in actual.keys() | expected.keys() if actual.get(k) != expected.get(k)
                 )
                 if changes:
                     raise SystemExit("Generated contract drift: " + ", ".join(changes))
@@ -112,9 +102,8 @@ def main() -> None:
                     path = destination / name
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_bytes(content)
-            print(
-                f"{language}: {len(expected)} generated files {'checked' if options.check else 'written'}"
-            )
+            action = "checked" if options.check else "written"
+            print(f"{language}: {len(expected)} generated files {action}")
 
 
 if __name__ == "__main__":
