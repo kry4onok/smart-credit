@@ -37,6 +37,7 @@ help:
 	@echo 'make scoring-up       Собрать и запустить scoring в Docker'
 	@echo 'make scoring-smoke    Проверить scoring из Python'
 	@echo 'make scoring-smoke-go Проверить scoring из Go'
+	@echo 'make bank-scoring-smoke Проверить банковский adapter со scoring'
 	@echo 'make lint             Проверить Go-код линтерами и форматтерами'
 	@echo 'make docs-up          Запустить Swagger UI для всех API'
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
@@ -79,7 +80,7 @@ gen-proto:
 gen-proto-check:
 	uv run --no-project --python 3.12.12 scripts/generate_proto.py --check
 
-.PHONY: scoring-test scoring-lint scoring-run scoring-up scoring-down scoring-smoke scoring-smoke-go scoring-evaluate
+.PHONY: scoring-test scoring-lint scoring-run scoring-up scoring-down scoring-smoke scoring-smoke-go bank-scoring-smoke scoring-evaluate
 SCORING_TARGET ?= 127.0.0.1:$(SCORING_PORT)
 SCORING_PY := uv run --project ml/scoring --locked
 
@@ -104,6 +105,9 @@ scoring-smoke:
 
 scoring-smoke-go:
 	go run ./cmd/scoring-smoke --target $(SCORING_TARGET)
+
+bank-scoring-smoke:
+	BANK_SCORING_TARGET=$(SCORING_TARGET) go test ./services/bank-service/internal/client/scoring -run '^TestLiveScoringAdapter$$' -count=1 -v
 
 scoring-evaluate:
 	PYTHONPATH=proto/gen/python $(SCORING_PY) python scripts/evaluate_scoring.py --target $(SCORING_TARGET) --output /tmp/smart-credit-scoring-evaluation.json
