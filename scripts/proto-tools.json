@@ -1,0 +1,6 @@
+{
+  "grpcio-tools": "1.78.0",
+  "protoc-gen-go": "v1.36.11",
+  "protoc-gen-go-grpc": "v1.5.1",
+  "go_module": "github.com/alfabank-hackathon-2026/smart-credit"
+}

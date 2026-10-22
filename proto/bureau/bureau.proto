@@ -36,8 +36,10 @@ message CreditHistoryRequest { string inn = 1; }
 message CreditHistoryResponse {
   smartcredit.common.Money total_debt = 1;
   repeated Obligation obligations = 2;
-  int32 overdue_count_12m = 3;
-  int32 max_overdue_days = 4;
+  // Same trailing 12-calendar-month window as the financial snapshot.
+  // Explicit zero is known zero; absence is unknown and must remain absent.
+  optional int32 overdue_count_12m = 3;
+  optional int32 max_overdue_days = 4; // Maximum DPD reached within the window.
 }
 
 message Obligation {
