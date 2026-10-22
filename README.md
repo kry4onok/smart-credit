@@ -209,8 +209,10 @@ curl -i http://localhost:8080/healthz
 curl -i http://localhost:8080/readyz
 ```
 
-Обе ручки отвечают `204 No Content`, когда сервис и Postgres готовы. Остальные
-маршруты bank API до реализации возвращают `501 Not Implemented`.
+Обе ручки отвечают `204 No Content`, когда сервис и Postgres готовы.
+Реализованы список, карточка и взятие дела в работу (`take`); решение, аудит
+и резюме пока возвращают `501 Not Implemented`. Для demo-аналитика используется
+`BANK_DEMO_ANALYST_ID` из `.env.example`.
 
 ## Scoring v1
 
@@ -219,9 +221,7 @@ curl -i http://localhost:8080/readyz
 или неприменимых данных. Это экспертная монотонная модель, не оценка PD.
 Банк принимает кредитное решение и проверяет продукт, документы и стоп-факторы.
 
-- [Контракт и задачи backend](docs/SCORING_BACKEND_AGREEMENT.md).
-- [Формула, выбор модели и ограничения](docs/SCORING_MODEL_CARD.md).
-- [Выполненные проверки и измерения](docs/SCORING_EVALUATION.md).
+- [Запуск scoring и подключение backend](ml/scoring/README.md).
 - [Общие профили для bureau mocks и интеграции](seed/scoring/personas.json).
 
 Нужны Docker, Go из `go.mod` и uv (проверено с 0.12.3). Scoring запускается
@@ -262,5 +262,5 @@ CI `.github/workflows/scoring.yml` проверяет воспроизводим
 модель, gRPC, Go и оба клиента против контейнера.
 
 Вызов scoring из банковского конвейера, сохранение текущей revision/attempt и
-отображение результата в карточке подключает backend по соглашению. Наличие
+отображение результата в карточке подключает backend по инструкции scoring. Наличие
 этого сервиса не означает готовность всего банковского E2E.

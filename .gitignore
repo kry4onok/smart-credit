@@ -43,3 +43,22 @@ __pycache__/
 dist/
 .tools/
 .DS_Store
+
+# Human documents and working notes stay local; keep useful READMEs.
+*.md
+*.markdown
+*.mdx
+*.pdf
+*.doc
+*.docx
+*.odt
+*.rtf
+*.rst
+*.adoc
+*.txt
+!README
+!README.*
+!requirements*.txt
+!CMakeLists.txt
+!LICENSE*
+!NOTICE*
