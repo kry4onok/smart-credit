@@ -68,7 +68,7 @@ func main() {
 	}
 }
 
-func run(target, fixturesPath, configPath, caseName string) error {
+func run(target, fixturesPath, configPath, caseName string) (runErr error) {
 	data, err := os.ReadFile(fixturesPath)
 	if err != nil {
 		return fmt.Errorf("read fixtures: %w", err)
@@ -80,6 +80,7 @@ func run(target, fixturesPath, configPath, caseName string) error {
 	if fixtures.SchemaVersion != "scoring-personas-v1" {
 		return errors.New("unknown fixture schema")
 	}
+
 	config, err := os.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("read model artifact: %w", err)
@@ -90,7 +91,13 @@ func run(target, fixturesPath, configPath, caseName string) error {
 	if err != nil {
 		return errors.New("create scoring connection")
 	}
-	defer connection.Close()
+
+	defer func() {
+		if closeErr := connection.Close(); closeErr != nil {
+			runErr = errors.Join(runErr, fmt.Errorf("close scoring connection: %w", closeErr))
+		}
+	}()
+
 	for _, service := range []string{"", "smartcredit.scoring.ScoringService"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		response, rpcErr := healthpb.NewHealthClient(connection).Check(ctx, &healthpb.HealthCheckRequest{Service: service})
@@ -102,6 +109,7 @@ func run(target, fixturesPath, configPath, caseName string) error {
 			return errors.New("scoring health is not SERVING")
 		}
 	}
+
 	client := scoringpb.NewScoringServiceClient(connection)
 	seen := make(map[string]bool)
 	passed := 0
@@ -133,6 +141,7 @@ func run(target, fixturesPath, configPath, caseName string) error {
 		}
 		fmt.Println()
 	}
+
 	if passed == 0 {
 		return errors.New("no matching fixtures")
 	}
@@ -144,37 +153,45 @@ func verifyResponse(fixture fixtureCase, request *scoringpb.ScoreRequest, respon
 	if response == nil {
 		return errors.New("missing response")
 	}
+
 	expected := fixture.Expected
 	statusValue, exists := scoringpb.AssessmentStatus_value["ASSESSMENT_STATUS_"+expected.AssessmentStatus]
 	if !exists || statusValue == 0 || response.AssessmentStatus != scoringpb.AssessmentStatus(statusValue) {
 		return errors.New("assessment status mismatch")
 	}
+
 	if response.ModelVersion != "monotone-scorecard-v1" || response.FeatureSchemaVersion != "borrower-features-v1" || response.BaselineScore != 500 {
 		return errors.New("model metadata mismatch")
 	}
+
 	if response.ConfigChecksum != checksum {
 		return errors.New("model artifact checksum mismatch")
 	}
 	if len(response.DataIssues) != len(expected.DataIssues) {
 		return errors.New("data issues mismatch")
 	}
+
 	previousIssue := ""
 	for index, issue := range response.DataIssues {
 		if issue == nil || issue.Code != expected.DataIssues[index].Code || issue.FieldPath != expected.DataIssues[index].FieldPath {
 			return errors.New("data issue mismatch")
 		}
+
 		key := issue.FieldPath + "\x00" + issue.Code
 		if key < previousIssue {
 			return errors.New("data issue ordering mismatch")
 		}
+
 		previousIssue = key
 	}
+
 	if response.AssessmentStatus != scoringpb.AssessmentStatus_ASSESSMENT_STATUS_ASSESSED {
 		if response.Score != nil || response.Grade != scoringpb.Grade_GRADE_UNSPECIFIED || len(response.Reasons) != 0 || len(response.FactorContributions) != 0 {
 			return errors.New("non-assessed response contains a score, grade, or explanations")
 		}
 		return nil
 	}
+
 	gradeValue, exists := scoringpb.Grade_value["GRADE_"+expected.Grade]
 	if !exists || expected.Score == nil || response.Score == nil || response.GetScore() != *expected.Score || response.Grade != scoringpb.Grade(gradeValue) {
 		return errors.New("score presence, score, or grade mismatch")
@@ -182,16 +199,21 @@ func verifyResponse(fixture fixtureCase, request *scoringpb.ScoreRequest, respon
 	if len(response.FactorContributions) != 4 || len(expected.Factors) != 4 {
 		return errors.New("expected exactly four factor groups")
 	}
+
 	points := make(map[string]int32)
+
 	for _, factor := range expected.Factors {
 		points[factor.FactorName] = factor.Points
 	}
+
 	seen := make(map[string]bool)
 	sum := int32(500)
+
 	for _, factor := range response.FactorContributions {
 		if factor == nil {
 			return errors.New("missing factor")
 		}
+
 		expectedPoints, exists := points[factor.FactorName]
 		if !exists || seen[factor.FactorName] || factor.Points != expectedPoints || strings.TrimSpace(factor.Description) == "" {
 			return errors.New("factor name, points, or description mismatch")
@@ -202,6 +224,7 @@ func verifyResponse(fixture fixtureCase, request *scoringpb.ScoreRequest, respon
 	if sum != response.GetScore() {
 		return errors.New("contributions do not sum to score")
 	}
+
 	reasons := reasonsForFixture(points, request.GetFeatures())
 	if len(response.Reasons) != len(reasons) {
 		return errors.New("reason count mismatch")

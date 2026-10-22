@@ -39,7 +39,13 @@ func New(
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})
 
-	return generated.Handler(strictHandler)
+	return generated.HandlerWithOptions(strictHandler, generated.ChiServerOptions{
+		ErrorHandlerFunc: requestParameterErrorHandler,
+	})
+}
+
+func requestParameterErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
+	domainerror.Write(w, r, domainerror.BadRequest("INVALID_REQUEST_PARAMETER", err))
 }
 
 func responseErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
