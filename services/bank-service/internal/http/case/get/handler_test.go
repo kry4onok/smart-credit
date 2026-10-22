@@ -1,7 +1,9 @@
 package gethandler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -73,6 +75,13 @@ func TestHandlerHandle(t *testing.T) {
 	}
 	if result.Headers.ETag == nil || *result.Headers.ETag != "\"7\"" {
 		t.Fatalf("ETag = %v, want quoted version", result.Headers.ETag)
+	}
+	encoded, err := json.Marshal(result.Body)
+	if err != nil {
+		t.Fatalf("marshal response: %v", err)
+	}
+	if !bytes.Contains(encoded, []byte(`"triggered_rules":[]`)) {
+		t.Fatalf("triggered rules = %s, want empty array", encoded)
 	}
 }
 
