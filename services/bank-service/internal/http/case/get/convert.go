@@ -117,11 +117,13 @@ func toScore(score model.ScoreResult) *generated.ScoreResult {
 	}
 
 	return &generated.ScoreResult{
-		Score:                score.Score,
+		AssessmentStatus:     generated.ScoreResultAssessmentStatus("ASSESSED"),
+		Score:                &score.Score,
 		Grade:                generated.ScoreResultGrade(score.Grade),
 		Reasons:              reasons,
 		ModelVersion:         score.ModelVersion,
 		FeatureSchemaVersion: score.FeatureSchemaVersion,
+		DataIssues:           []generated.ScoreDataIssue{},
 	}
 }
 
