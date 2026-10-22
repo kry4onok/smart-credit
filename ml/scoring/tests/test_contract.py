@@ -1,6 +1,7 @@
 """Wire compatibility: optional zero survives serialization for both producers."""
 
 import pytest
+
 from proto.bureau import bureau_pb2
 from proto.scoring import scoring_pb2
 

@@ -1,0 +1,44 @@
+[project]
+name = "smart-credit-scoring"
+version = "0.1.0"
+description = "Deterministic, explainable borrower scoring for Smart Credit MVP"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "grpcio==1.78.0",
+  "grpcio-health-checking==1.78.0",
+  "protobuf==6.33.5",
+]
+
+[project.scripts]
+smart-credit-scoring = "smart_credit_scoring.grpc_service:serve"
+
+[dependency-groups]
+dev = [
+  "grpcio-tools==1.78.0",
+  "pytest==8.4.2",
+  "hypothesis==6.140.3",
+  "ruff==0.14.0",
+]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/smart_credit_scoring"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"models" = "smart_credit_scoring/models"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "../../proto/gen/python", "../.."]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = ["../../proto/gen"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
