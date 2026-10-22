@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	"github.com/google/uuid"
@@ -68,7 +69,7 @@ func (r *Repository) ListCases(
 		cursorID = &query.After.ID
 	}
 
-	rows, err := r.db.Query(
+	rows, err := transaction.QueryerFromContext(ctx, r.db).Query(
 		ctx,
 		listCasesQuery,
 		status,

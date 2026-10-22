@@ -1,15 +1,8 @@
 package caserepository
 
-import (
-	"context"
+import "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 
-	"github.com/jackc/pgx/v5"
-)
-
-type Queryer interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
+type Queryer = transaction.Queryer
 
 type rowScanner interface {
 	Scan(dest ...any) error

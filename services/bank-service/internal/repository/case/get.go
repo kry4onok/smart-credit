@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -146,7 +147,7 @@ func (r *Repository) GetCase(
 	ctx context.Context,
 	caseID uuid.UUID,
 ) (model.Case, bool, error) {
-	caseItem, err := scanCase(r.db.QueryRow(ctx, getCaseQuery, caseID))
+	caseItem, err := scanCase(transaction.QueryerFromContext(ctx, r.db).QueryRow(ctx, getCaseQuery, caseID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Case{}, false, nil
 	}
