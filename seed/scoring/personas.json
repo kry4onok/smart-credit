@@ -1,0 +1,491 @@
+{
+    "schema_version": "scoring-personas-v1",
+    "as_of_date": "2026-10-22",
+    "description": "Synthetic contract examples, not training data or observed defaults. Money is RUB kopecks. Dates stay frozen during fixture replay.",
+    "cases": [
+        {
+            "name": "risk_a",
+            "company": {
+                "registered_at": "2023-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000001",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "180000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "300000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 36,
+                    "overdueCount12m": 0,
+                    "maxOverdueDays": 0
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 938,
+                "grade": "A",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": 50
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": 100
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": 88
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": 200
+                    }
+                ]
+            }
+        },
+        {
+            "name": "risk_b",
+            "company": {
+                "registered_at": "2023-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000002",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "60000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 36,
+                    "overdueCount12m": 0,
+                    "maxOverdueDays": 0
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 700,
+                "grade": "B",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": 50
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": 0
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": -50
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": 200
+                    }
+                ]
+            }
+        },
+        {
+            "name": "risk_c",
+            "company": {
+                "registered_at": "2025-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000003",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "60000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 12,
+                    "overdueCount12m": 1,
+                    "maxOverdueDays": 7
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 510,
+                "grade": "C",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": 0
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": 0
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": -50
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": 60
+                    }
+                ]
+            }
+        },
+        {
+            "name": "risk_d",
+            "company": {
+                "registered_at": "2025-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000004",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "30000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 12,
+                    "overdueCount12m": 1,
+                    "maxOverdueDays": 7
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 472,
+                "grade": "D",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": 0
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": -38
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": -50
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": 60
+                    }
+                ]
+            }
+        },
+        {
+            "name": "risk_e",
+            "company": {
+                "registered_at": "2026-04-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000005",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "-120000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "2400000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 6,
+                    "overdueCount12m": 2,
+                    "maxOverdueDays": 60
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 55,
+                "grade": "E",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": -35
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": -125
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": -125
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": -160
+                    }
+                ]
+            }
+        },
+        {
+            "name": "zero_debt",
+            "company": {
+                "registered_at": "2023-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000006",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "180000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "0",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 36,
+                    "overdueCount12m": 0,
+                    "maxOverdueDays": 0
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 975,
+                "grade": "A",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": 50
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": 100
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": 125
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": 200
+                    }
+                ]
+            }
+        },
+        {
+            "name": "score_zero",
+            "company": {
+                "registered_at": "2026-10-01",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000007",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "-120000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "2400000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 0,
+                    "overdueCount12m": 6,
+                    "maxOverdueDays": 7
+                }
+            },
+            "expected": {
+                "assessment_status": "ASSESSED",
+                "score": 0,
+                "grade": "E",
+                "data_issues": [],
+                "factor_contributions": [
+                    {
+                        "factor_name": "business_age",
+                        "points": -50
+                    },
+                    {
+                        "factor_name": "profit_margin",
+                        "points": -125
+                    },
+                    {
+                        "factor_name": "bureau_debt_load",
+                        "points": -125
+                    },
+                    {
+                        "factor_name": "payment_discipline",
+                        "points": -200
+                    }
+                ]
+            }
+        },
+        {
+            "name": "zero_revenue",
+            "company": {
+                "registered_at": "2023-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000008",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "0",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "0",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "0",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 36,
+                    "overdueCount12m": 0,
+                    "maxOverdueDays": 0
+                }
+            },
+            "expected": {
+                "assessment_status": "UNSUPPORTED_INPUT",
+                "data_issues": [
+                    {
+                        "code": "ZERO_REVENUE",
+                        "field_path": "features.revenue_12m"
+                    }
+                ],
+                "factor_contributions": []
+            }
+        },
+        {
+            "name": "missing_debt",
+            "company": {
+                "registered_at": "2023-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000009",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "180000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 36,
+                    "overdueCount12m": 0,
+                    "maxOverdueDays": 0
+                }
+            },
+            "expected": {
+                "assessment_status": "INSUFFICIENT_DATA",
+                "data_issues": [
+                    {
+                        "code": "MISSING_VALUE",
+                        "field_path": "features.total_debt"
+                    }
+                ],
+                "factor_contributions": []
+            }
+        },
+        {
+            "name": "conflicting_overdue",
+            "company": {
+                "registered_at": "2023-10-22",
+                "status": "ACTIVE"
+            },
+            "request": {
+                "applicationId": "c1000000-0000-4000-8000-000000000010",
+                "productId": "11111111-1111-4111-8111-111111111111",
+                "featureSchemaVersion": "borrower-features-v1",
+                "features": {
+                    "revenue12m": {
+                        "amountKopecks": "1200000000",
+                        "currency": "RUB"
+                    },
+                    "profit12m": {
+                        "amountKopecks": "180000000",
+                        "currency": "RUB"
+                    },
+                    "totalDebt": {
+                        "amountKopecks": "300000000",
+                        "currency": "RUB"
+                    },
+                    "companyAgeMonths": 36,
+                    "overdueCount12m": 0,
+                    "maxOverdueDays": 7
+                }
+            },
+            "expected": {
+                "assessment_status": "UNSUPPORTED_INPUT",
+                "data_issues": [
+                    {
+                        "code": "INCONSISTENT_OVERDUE",
+                        "field_path": "features.max_overdue_days"
+                    }
+                ],
+                "factor_contributions": []
+            }
+        }
+    ]
+}

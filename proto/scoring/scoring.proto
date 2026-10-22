@@ -7,37 +7,64 @@ option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/g
 import "proto/common/common.proto";
 
 service ScoringService {
-  // Оценка риска, а не кредитное решение. Вызывает только bank-service.
+  // Borrower risk index, not a credit decision. Called by bank-service.
   rpc Score(ScoreRequest) returns (ScoreResponse);
 }
 
 message ScoreRequest {
   string application_id = 1; // UUID
   string product_id = 2; // UUID
-  string feature_schema_version = 3;
+  string feature_schema_version = 3; // Exactly borrower-features-v1.
   Features features = 4;
 }
 
 message Features {
-  smartcredit.common.Money revenue_12m = 1;
-  smartcredit.common.Money profit_12m = 2;
-  smartcredit.common.Money obligations = 3;
-  smartcredit.common.Money total_debt = 4;
-  int32 company_age_months = 5;
-  string okved_group = 6;
-  int32 overdue_count_12m = 7;
-  int32 max_overdue_days = 8;
+  // Money: integer kopecks, RUB, absolute amount <= 9007199254740991.
+  // Financials and overdue metrics cover the same trailing 12-calendar-month window.
+  // Missing messages/scalars mean unknown; explicit zero means known zero.
+  smartcredit.common.Money revenue_12m = 1; // Nonnegative; zero is unsupported.
+  smartcredit.common.Money profit_12m = 2; // May be negative.
+  smartcredit.common.Money obligations = 3; // Legacy, unused by borrower-features-v1.
+  smartcredit.common.Money total_debt = 4; // Nonnegative outstanding balance as of assessment.
+  optional int32 company_age_months = 5; // Full calendar months, nonnegative.
+  string okved_group = 6; // Legacy, unused by borrower-features-v1.
+  optional int32 overdue_count_12m = 7; // Distinct overdue episodes within the window.
+  optional int32 max_overdue_days = 8; // Maximum DPD reached in that window; may exceed 365.
+  // Application terms below are retained for compatibility, unused by v1.
   smartcredit.common.Money requested_amount = 9;
   int32 requested_term_months = 10;
   smartcredit.common.PurposeTag purpose_tag = 11;
 }
 
 message ScoreResponse {
-  int32 score = 1; // Шкала 0..1000, больше = ниже риск.
+  optional int32 score = 1; // 0..1000, higher means lower risk. Present iff ASSESSED.
   Grade grade = 2;
   repeated Reason reasons = 3;
   string model_version = 4;
   string feature_schema_version = 5;
+  AssessmentStatus assessment_status = 6;
+  repeated DataIssue data_issues = 7;
+  repeated FactorContribution factor_contributions = 8;
+  int32 baseline_score = 9; // score = baseline + sum(all signed factor points).
+  string config_checksum = 10; // Lowercase SHA-256 of the exact model config bytes.
+}
+
+enum AssessmentStatus {
+  ASSESSMENT_STATUS_UNSPECIFIED = 0; // Never a valid v1 service result.
+  ASSESSMENT_STATUS_ASSESSED = 1;
+  ASSESSMENT_STATUS_INSUFFICIENT_DATA = 2;
+  ASSESSMENT_STATUS_UNSUPPORTED_INPUT = 3;
+}
+
+message DataIssue {
+  string code = 1; // MISSING_VALUE, ZERO_REVENUE, INCONSISTENT_OVERDUE.
+  string field_path = 2; // Proto field path, e.g. features.total_debt.
+}
+
+message FactorContribution {
+  string factor_name = 1;
+  int32 points = 2; // Signed score points; all four factors, including zero.
+  string description = 3; // Internal bank explanation.
 }
 
 enum Grade {
@@ -51,9 +78,9 @@ enum Grade {
 
 message Reason {
   ReasonCode code = 1;
-  string description = 2; // Только для сотрудника банка.
+  string description = 2; // Internal bank explanation only.
   Direction direction = 3;
-  int32 contribution = 4; // Абсолютный вклад в шкале score.
+  int32 contribution = 4; // Absolute nonzero score points; direction carries the sign.
 }
 
 enum ReasonCode {
@@ -66,6 +93,9 @@ enum ReasonCode {
   REASON_CODE_LARGE_REQUEST = 6;
   REASON_CODE_STABLE_BUSINESS = 7;
   REASON_CODE_NO_OVERDUE = 8;
+  REASON_CODE_HEALTHY_PROFIT_MARGIN = 9;
+  REASON_CODE_MANAGEABLE_BUREAU_DEBT = 10;
+  REASON_CODE_GOOD_PAYMENT_DISCIPLINE = 11;
 }
 
 enum Direction {

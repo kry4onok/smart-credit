@@ -31,3 +31,35 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# Python and local tooling
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+*.egg-info/
+dist/
+.tools/
+.DS_Store
+
+# Human documents and working notes stay local; keep useful READMEs.
+*.md
+*.markdown
+*.mdx
+*.pdf
+*.doc
+*.docx
+*.odt
+*.rtf
+*.rst
+*.adoc
+*.txt
+!README
+!README.*
+!/TZ.md
+!requirements*.txt
+!CMakeLists.txt
+!LICENSE*
+!NOTICE*
