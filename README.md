@@ -216,6 +216,13 @@ curl -i http://localhost:8080/readyz
 и резюме пока возвращают `501 Not Implemented`. Для demo-аналитика используется
 `BANK_DEMO_ANALYST_ID` из `.env.example`.
 
+Банковский scoring adapter в `services/bank-service/internal/client/scoring`
+принимает типизированный снимок компании и успешные ответы БКИ,
+сохраняет различие между отсутствующим значением и известным нулём, вызывает
+gRPC с общим дедлайном 2 с и проверяет ответ модели. Он пока не подключён к
+worker: хранение попыток, актуальность входа и обновление карточки будут
+реализованы отдельной миграцией и этапом конвейера.
+
 ## Scoring v1
 
 Готов отдельный Python gRPC-сервис: риск бизнеса 0..1000, grade A–E,
@@ -236,13 +243,19 @@ make scoring-sync
 make scoring-up
 make scoring-smoke
 make scoring-smoke-go
+make bank-scoring-smoke
 ```
 
 Host endpoint — `127.0.0.1:50051`; стандартный gRPC health. Внутри общей
 Compose-сети backend использует `scoring:50051`. Все сервисы описаны в общем
 `deploy/docker-compose.yml` и используют одну сеть.
+`bank-scoring-smoke` вызывает именно банковский adapter: он собирает запросы из
+типизированных данных, отправляет их по gRPC и проверяет ответы для обычного
+score, известного нулевого долга, score 0 и отсутствующего долга. Успех —
+четыре `PASS` в выводе теста. Проверка не меняет `bank_db` и карточку дела:
+adapter пока не подключён к worker.
 Для нестандартного порта: `make scoring-up SCORING_PORT=50052`, затем
-`make scoring-smoke scoring-smoke-go SCORING_TARGET=127.0.0.1:50052`.
+`make scoring-smoke scoring-smoke-go bank-scoring-smoke SCORING_TARGET=127.0.0.1:50052`.
 
 ```sh
 make scoring-test scoring-lint
