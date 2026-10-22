@@ -2,11 +2,14 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 )
 
 type pingerStub struct {
@@ -70,5 +73,53 @@ func TestUnimplementedContractRoute(t *testing.T) {
 
 	if response.Code != http.StatusNotImplemented {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusNotImplemented)
+	}
+}
+
+func TestTakeInvalidHeadersReturnProblemJSON(t *testing.T) {
+	tests := []struct {
+		name           string
+		idempotencyKey string
+		ifMatch        string
+	}{
+		{
+			name:           "missing If-Match",
+			idempotencyKey: "11111111-1111-4111-8111-111111111111",
+		},
+		{
+			name:           "invalid Idempotency-Key",
+			idempotencyKey: "not-a-uuid",
+			ifMatch:        `"1"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := New(&pingerStub{}, time.Second, nil, nil, nil)
+			request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
+				"/backoffice/applications/10000000-0000-4000-8000-000000000001/take", nil)
+			request.Header.Set("Idempotency-Key", tt.idempotencyKey)
+			if tt.ifMatch != "" {
+				request.Header.Set("If-Match", tt.ifMatch)
+			}
+			response := httptest.NewRecorder()
+
+			handler.ServeHTTP(response, request)
+
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400", response.Code)
+			}
+			if contentType := response.Header().Get("Content-Type"); contentType != "application/problem+json" {
+				t.Fatalf("Content-Type = %q, want application/problem+json", contentType)
+			}
+			var problem common.Problem
+			if err := json.Unmarshal(response.Body.Bytes(), &problem); err != nil {
+				t.Fatalf("decode problem: %v", err)
+			}
+			if problem.Status != http.StatusBadRequest || problem.Code != "INVALID_REQUEST_PARAMETER" ||
+				problem.Detail == nil || problem.TraceId == "" {
+				t.Fatalf("problem = %+v", problem)
+			}
+		})
 	}
 }
