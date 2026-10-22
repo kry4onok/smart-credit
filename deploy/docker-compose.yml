@@ -68,6 +68,7 @@ services:
       BANK_DB_HEALTH_CHECK_PERIOD: ${BANK_DB_HEALTH_CHECK_PERIOD}
       BANK_READINESS_TIMEOUT: ${BANK_READINESS_TIMEOUT}
       BANK_SHUTDOWN_TIMEOUT: ${BANK_SHUTDOWN_TIMEOUT}
+      BANK_DEMO_ANALYST_ID: ${BANK_DEMO_ANALYST_ID:-}
     depends_on:
       postgres:
         condition: service_healthy

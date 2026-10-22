@@ -78,12 +78,19 @@ paths:
       parameters:
         - { $ref: './common.yaml#/components/parameters/ApplicationId' }
         - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
+        - { $ref: './common.yaml#/components/parameters/IfMatch' }
       responses:
         '200':
           description: Дело назначено текущему аналитику, в аудит добавлена запись.
+          headers:
+            ETag:
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/BankCase' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
   /backoffice/applications/{application_id}/decision:
     post:
@@ -259,20 +266,57 @@ components:
         bureau_error: { type: [string, 'null'] }
     ScoreResult:
       type: object
-      required: [score, grade, reasons, model_version, feature_schema_version]
+      description: >-
+        Целевой контракт: последний завершённый доменный ответ scoring для текущих
+        input_revision и attempt_id. При новой попытке прежний результат
+        скрывается; при технической ошибке scoring поле отсутствует, а причина
+        остаётся в аудите.
+        При ASSESSED поле score обязательно, в том числе если score равен 0;
+        grade — A..E, data_issues пуст. При INSUFFICIENT_DATA или
+        UNSUPPORTED_INPUT score отсутствует, grade=UNSPECIFIED, reasons и
+        factor_contributions пусты. UNSPECIFIED assessment_status не является
+        допустимым результатом. Технические gRPC-ошибки не кодируются здесь.
+      required: [assessment_status, grade, reasons, model_version, feature_schema_version, data_issues]
       properties:
-        score: { type: integer, minimum: 0, maximum: 1000, description: Чем выше значение, тем ниже риск. }
-        grade: { type: string, enum: [A, B, C, D, E] }
+        assessment_status: { type: string, enum: [ASSESSED, INSUFFICIENT_DATA, UNSUPPORTED_INPUT] }
+        score: { type: integer, minimum: 0, maximum: 1000, description: Присутствует только при ASSESSED; чем выше значение, тем ниже риск. }
+        grade: { type: string, enum: [UNSPECIFIED, A, B, C, D, E] }
         reasons:
           type: array
+          maxItems: 3
           items: { $ref: '#/components/schemas/ScoreReason' }
         model_version: { type: string }
         feature_schema_version: { type: string }
+        data_issues:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreDataIssue' }
+        factor_contributions:
+          type: array
+          description: Полное разложение score; для v1 четыре группы, 500 + сумма points = score.
+          items: { $ref: '#/components/schemas/ScoreFactorContribution' }
+        baseline_score: { type: integer, description: Базовый score модели; для v1 равен 500. }
+        config_checksum: { type: string, pattern: '^[0-9a-f]{64}$', description: SHA-256 использованного конфигурационного артефакта. }
+        attempt_id: { $ref: './common.yaml#/components/schemas/Id' }
+        input_revision: { type: integer, format: int64, minimum: 1, description: Версия входных данных оценки, отдельная от version дела. }
+        as_of_date: { type: string, format: date, description: Зафиксированная UTC-дата начала попытки оценки. }
+    ScoreDataIssue:
+      type: object
+      required: [code, field_path]
+      properties:
+        code: { type: string, enum: [MISSING_VALUE, ZERO_REVENUE, INCONSISTENT_OVERDUE] }
+        field_path: { type: string, minLength: 1 }
+    ScoreFactorContribution:
+      type: object
+      required: [factor_name, points, description]
+      properties:
+        factor_name: { type: string, enum: [business_age, profit_margin, bureau_debt_load, payment_discipline] }
+        points: { type: integer, description: Вклад со знаком относительно baseline_score. }
+        description: { type: string }
     ScoreReason:
       type: object
       required: [code, description, direction, contribution]
       properties:
-        code: { type: string, enum: [SHORT_HISTORY, LOW_PROFIT_MARGIN, HIGH_OBLIGATIONS, HIGH_BUREAU_DEBT, RECENT_OVERDUE, LARGE_REQUEST, STABLE_BUSINESS, NO_OVERDUE] }
+        code: { type: string, enum: [SHORT_HISTORY, LOW_PROFIT_MARGIN, HIGH_OBLIGATIONS, HIGH_BUREAU_DEBT, RECENT_OVERDUE, LARGE_REQUEST, STABLE_BUSINESS, NO_OVERDUE, HEALTHY_PROFIT_MARGIN, MANAGEABLE_BUREAU_DEBT, GOOD_PAYMENT_DISCIPLINE] }
         description: { type: string }
         direction: { type: string, enum: [INCREASES_RISK, DECREASES_RISK] }
         contribution: { type: integer, minimum: 0, description: Абсолютная величина вклада; направление задаёт direction. }

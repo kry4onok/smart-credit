@@ -38,6 +38,16 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestLoadDemoAnalystID(t *testing.T) {
+	setValidEnvironment(t)
+	id := "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	t.Setenv("BANK_DEMO_ANALYST_ID", id)
+	cfg, err := Load()
+	if err != nil || cfg.DemoAnalystID != id {
+		t.Fatalf("DemoAnalystID=%q, err=%v", cfg.DemoAnalystID, err)
+	}
+}
+
 func TestLoadRejectsInvalidEnvironment(t *testing.T) {
 	tests := []struct {
 		name string
@@ -71,6 +81,11 @@ func TestLoadRejectsInvalidEnvironment(t *testing.T) {
 			name: "readiness exceeds write timeout",
 			env:  map[string]string{"BANK_READINESS_TIMEOUT": "30s"},
 			want: "ReadinessTimeout",
+		},
+		{
+			name: "invalid demo analyst ID",
+			env:  map[string]string{"BANK_DEMO_ANALYST_ID": "invalid"},
+			want: "BANK_DEMO_ANALYST_ID",
 		},
 	}
 
@@ -108,6 +123,7 @@ func setValidEnvironment(t *testing.T) {
 		"BANK_DB_HEALTH_CHECK_PERIOD":   "1m",
 		"BANK_READINESS_TIMEOUT":        "1s",
 		"BANK_SHUTDOWN_TIMEOUT":         "10s",
+		"BANK_DEMO_ANALYST_ID":          "",
 	}
 	for name, value := range values {
 		t.Setenv(name, value)

@@ -14,12 +14,12 @@ func toResponse(output getcase.Output) generated.GetCase200JSONResponse {
 	etag := fmt.Sprintf("\"%d\"", output.Case.Version)
 
 	return generated.GetCase200JSONResponse{
-		Body:    toBankCase(output),
+		Body:    ToBankCase(output),
 		Headers: generated.GetCase200ResponseHeaders{ETag: &etag},
 	}
 }
 
-func toBankCase(output getcase.Output) generated.BankCase {
+func ToBankCase(output getcase.Output) generated.BankCase {
 	caseItem := output.Case
 	actions := make([]generated.BankCaseAllowedActions, len(output.AllowedActions))
 	for index, action := range output.AllowedActions {
@@ -117,11 +117,13 @@ func toScore(score model.ScoreResult) *generated.ScoreResult {
 	}
 
 	return &generated.ScoreResult{
-		Score:                score.Score,
+		AssessmentStatus:     generated.ScoreResultAssessmentStatus("ASSESSED"),
+		Score:                &score.Score,
 		Grade:                generated.ScoreResultGrade(score.Grade),
 		Reasons:              reasons,
 		ModelVersion:         score.ModelVersion,
 		FeatureSchemaVersion: score.FeatureSchemaVersion,
+		DataIssues:           []generated.ScoreDataIssue{},
 	}
 }
 

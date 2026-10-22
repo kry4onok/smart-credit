@@ -134,21 +134,73 @@ func (e ChecksCompanyStatus) Valid() bool {
 	}
 }
 
+// Defines values for ScoreDataIssueCode.
+const (
+	INCONSISTENTOVERDUE ScoreDataIssueCode = "INCONSISTENT_OVERDUE"
+	MISSINGVALUE        ScoreDataIssueCode = "MISSING_VALUE"
+	ZEROREVENUE         ScoreDataIssueCode = "ZERO_REVENUE"
+)
+
+// Valid indicates whether the value is a known member of the ScoreDataIssueCode enum.
+func (e ScoreDataIssueCode) Valid() bool {
+	switch e {
+	case INCONSISTENTOVERDUE:
+		return true
+	case MISSINGVALUE:
+		return true
+	case ZEROREVENUE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ScoreFactorContributionFactorName.
+const (
+	BureauDebtLoad    ScoreFactorContributionFactorName = "bureau_debt_load"
+	BusinessAge       ScoreFactorContributionFactorName = "business_age"
+	PaymentDiscipline ScoreFactorContributionFactorName = "payment_discipline"
+	ProfitMargin      ScoreFactorContributionFactorName = "profit_margin"
+)
+
+// Valid indicates whether the value is a known member of the ScoreFactorContributionFactorName enum.
+func (e ScoreFactorContributionFactorName) Valid() bool {
+	switch e {
+	case BureauDebtLoad:
+		return true
+	case BusinessAge:
+		return true
+	case PaymentDiscipline:
+		return true
+	case ProfitMargin:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ScoreReasonCode.
 const (
-	HIGHBUREAUDEBT  ScoreReasonCode = "HIGH_BUREAU_DEBT"
-	HIGHOBLIGATIONS ScoreReasonCode = "HIGH_OBLIGATIONS"
-	LARGEREQUEST    ScoreReasonCode = "LARGE_REQUEST"
-	LOWPROFITMARGIN ScoreReasonCode = "LOW_PROFIT_MARGIN"
-	NOOVERDUE       ScoreReasonCode = "NO_OVERDUE"
-	RECENTOVERDUE   ScoreReasonCode = "RECENT_OVERDUE"
-	SHORTHISTORY    ScoreReasonCode = "SHORT_HISTORY"
-	STABLEBUSINESS  ScoreReasonCode = "STABLE_BUSINESS"
+	GOODPAYMENTDISCIPLINE ScoreReasonCode = "GOOD_PAYMENT_DISCIPLINE"
+	HEALTHYPROFITMARGIN   ScoreReasonCode = "HEALTHY_PROFIT_MARGIN"
+	HIGHBUREAUDEBT        ScoreReasonCode = "HIGH_BUREAU_DEBT"
+	HIGHOBLIGATIONS       ScoreReasonCode = "HIGH_OBLIGATIONS"
+	LARGEREQUEST          ScoreReasonCode = "LARGE_REQUEST"
+	LOWPROFITMARGIN       ScoreReasonCode = "LOW_PROFIT_MARGIN"
+	MANAGEABLEBUREAUDEBT  ScoreReasonCode = "MANAGEABLE_BUREAU_DEBT"
+	NOOVERDUE             ScoreReasonCode = "NO_OVERDUE"
+	RECENTOVERDUE         ScoreReasonCode = "RECENT_OVERDUE"
+	SHORTHISTORY          ScoreReasonCode = "SHORT_HISTORY"
+	STABLEBUSINESS        ScoreReasonCode = "STABLE_BUSINESS"
 )
 
 // Valid indicates whether the value is a known member of the ScoreReasonCode enum.
 func (e ScoreReasonCode) Valid() bool {
 	switch e {
+	case GOODPAYMENTDISCIPLINE:
+		return true
+	case HEALTHYPROFITMARGIN:
+		return true
 	case HIGHBUREAUDEBT:
 		return true
 	case HIGHOBLIGATIONS:
@@ -156,6 +208,8 @@ func (e ScoreReasonCode) Valid() bool {
 	case LARGEREQUEST:
 		return true
 	case LOWPROFITMARGIN:
+		return true
+	case MANAGEABLEBUREAUDEBT:
 		return true
 	case NOOVERDUE:
 		return true
@@ -188,13 +242,35 @@ func (e ScoreReasonDirection) Valid() bool {
 	}
 }
 
+// Defines values for ScoreResultAssessmentStatus.
+const (
+	ASSESSED         ScoreResultAssessmentStatus = "ASSESSED"
+	INSUFFICIENTDATA ScoreResultAssessmentStatus = "INSUFFICIENT_DATA"
+	UNSUPPORTEDINPUT ScoreResultAssessmentStatus = "UNSUPPORTED_INPUT"
+)
+
+// Valid indicates whether the value is a known member of the ScoreResultAssessmentStatus enum.
+func (e ScoreResultAssessmentStatus) Valid() bool {
+	switch e {
+	case ASSESSED:
+		return true
+	case INSUFFICIENTDATA:
+		return true
+	case UNSUPPORTEDINPUT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ScoreResultGrade.
 const (
-	A ScoreResultGrade = "A"
-	B ScoreResultGrade = "B"
-	C ScoreResultGrade = "C"
-	D ScoreResultGrade = "D"
-	E ScoreResultGrade = "E"
+	A           ScoreResultGrade = "A"
+	B           ScoreResultGrade = "B"
+	C           ScoreResultGrade = "C"
+	D           ScoreResultGrade = "D"
+	E           ScoreResultGrade = "E"
+	UNSPECIFIED ScoreResultGrade = "UNSPECIFIED"
 )
 
 // Valid indicates whether the value is a known member of the ScoreResultGrade enum.
@@ -209,6 +285,8 @@ func (e ScoreResultGrade) Valid() bool {
 	case D:
 		return true
 	case E:
+		return true
+	case UNSPECIFIED:
 		return true
 	default:
 		return false
@@ -294,6 +372,8 @@ type BankCase struct {
 	// PublicReason Текст результата
 	PublicReason   *string                 `json:"public_reason,omitempty"`
 	Recommendation *BankCaseRecommendation `json:"recommendation,omitempty"`
+
+	// Score Целевой контракт: последний завершённый доменный ответ scoring для текущих input_revision и attempt_id. При новой попытке прежний результат скрывается; при технической ошибке scoring поле отсутствует, а причина остаётся в аудите. При ASSESSED поле score обязательно, в том числе если score равен 0; grade — A..E, data_issues пуст. При INSUFFICIENT_DATA или UNSUPPORTED_INPUT score отсутствует, grade=UNSPECIFIED, reasons и factor_contributions пусты. UNSPECIFIED assessment_status не является допустимым результатом. Технические gRPC-ошибки не кодируются здесь.
 	Score          *ScoreResult            `json:"score,omitempty"`
 	Status         externalRef0.BankStatus `json:"status"`
 	TriggeredRules *[]string               `json:"triggered_rules,omitempty"`
@@ -360,6 +440,27 @@ type OfferTerms struct {
 	TermMonths int             `json:"term_months"`
 }
 
+// ScoreDataIssue defines model for ScoreDataIssue.
+type ScoreDataIssue struct {
+	Code      ScoreDataIssueCode `json:"code"`
+	FieldPath string             `json:"field_path"`
+}
+
+// ScoreDataIssueCode defines model for ScoreDataIssue.Code.
+type ScoreDataIssueCode string
+
+// ScoreFactorContribution defines model for ScoreFactorContribution.
+type ScoreFactorContribution struct {
+	Description string                            `json:"description"`
+	FactorName  ScoreFactorContributionFactorName `json:"factor_name"`
+
+	// Points Вклад со знаком относительно baseline_score.
+	Points int `json:"points"`
+}
+
+// ScoreFactorContributionFactorName defines model for ScoreFactorContribution.FactorName.
+type ScoreFactorContributionFactorName string
+
 // ScoreReason defines model for ScoreReason.
 type ScoreReason struct {
 	Code ScoreReasonCode `json:"code"`
@@ -376,16 +477,36 @@ type ScoreReasonCode string
 // ScoreReasonDirection defines model for ScoreReason.Direction.
 type ScoreReasonDirection string
 
-// ScoreResult defines model for ScoreResult.
+// ScoreResult Целевой контракт: последний завершённый доменный ответ scoring для текущих input_revision и attempt_id. При новой попытке прежний результат скрывается; при технической ошибке scoring поле отсутствует, а причина остаётся в аудите. При ASSESSED поле score обязательно, в том числе если score равен 0; grade — A..E, data_issues пуст. При INSUFFICIENT_DATA или UNSUPPORTED_INPUT score отсутствует, grade=UNSPECIFIED, reasons и factor_contributions пусты. UNSPECIFIED assessment_status не является допустимым результатом. Технические gRPC-ошибки не кодируются здесь.
 type ScoreResult struct {
-	FeatureSchemaVersion string           `json:"feature_schema_version"`
-	Grade                ScoreResultGrade `json:"grade"`
-	ModelVersion         string           `json:"model_version"`
-	Reasons              []ScoreReason    `json:"reasons"`
+	// AsOfDate Зафиксированная UTC-дата начала попытки оценки.
+	AsOfDate         *openapi_types.Date         `json:"as_of_date,omitempty"`
+	AssessmentStatus ScoreResultAssessmentStatus `json:"assessment_status"`
+	AttemptId        *externalRef0.Id            `json:"attempt_id,omitempty"`
 
-	// Score Чем выше значение
-	Score int `json:"score"`
+	// BaselineScore Базовый score модели; для v1 равен 500.
+	BaselineScore *int `json:"baseline_score,omitempty"`
+
+	// ConfigChecksum SHA-256 использованного конфигурационного артефакта.
+	ConfigChecksum *string          `json:"config_checksum,omitempty"`
+	DataIssues     []ScoreDataIssue `json:"data_issues"`
+
+	// FactorContributions Полное разложение score; для v1 четыре группы, 500 + сумма points = score.
+	FactorContributions  *[]ScoreFactorContribution `json:"factor_contributions,omitempty"`
+	FeatureSchemaVersion string                     `json:"feature_schema_version"`
+	Grade                ScoreResultGrade           `json:"grade"`
+
+	// InputRevision Версия входных данных оценки
+	InputRevision *int64        `json:"input_revision,omitempty"`
+	ModelVersion  string        `json:"model_version"`
+	Reasons       []ScoreReason `json:"reasons"`
+
+	// Score Присутствует только при ASSESSED; чем выше значение
+	Score *int `json:"score,omitempty"`
 }
+
+// ScoreResultAssessmentStatus defines model for ScoreResult.AssessmentStatus.
+type ScoreResultAssessmentStatus string
 
 // ScoreResultGrade defines model for ScoreResult.Grade.
 type ScoreResultGrade string
@@ -451,6 +572,9 @@ type SummarizeCase200JSONResponseBodySource string
 type TakeCaseParams struct {
 	// IdempotencyKey UUID действия. Повтор с другим телом возвращает 409.
 	IdempotencyKey externalRef0.IdempotencyKey `json:"Idempotency-Key"`
+
+	// IfMatch ETag из GET, равный версии ресурса в двойных кавычках.
+	IfMatch externalRef0.IfMatch `json:"If-Match"`
 }
 
 // DecideCaseJSONRequestBody defines body for DecideCase for application/json ContentType.
@@ -854,6 +978,29 @@ func (siw *ServerInterfaceWrapper) TakeCase(w http.ResponseWriter, r *http.Reque
 	} else {
 		err := fmt.Errorf("Header parameter Idempotency-Key is required, but not found")
 		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "Idempotency-Key", Err: err})
+		return
+	}
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch externalRef0.IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
 		return
 	}
 
@@ -1312,16 +1459,74 @@ type TakeCaseResponseObject interface {
 	VisitTakeCaseResponse(w http.ResponseWriter) error
 }
 
-type TakeCase200JSONResponse BankCase
+type TakeCase200ResponseHeaders struct {
+	ETag *string
+}
+
+type TakeCase200JSONResponse struct {
+	Body    BankCase
+	Headers TakeCase200ResponseHeaders
+}
 
 func (response TakeCase200JSONResponse) VisitTakeCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TakeCase400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response TakeCase400ApplicationProblemPlusJSONResponse) VisitTakeCaseResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TakeCase403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response TakeCase403ApplicationProblemPlusJSONResponse) VisitTakeCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TakeCase404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response TakeCase404ApplicationProblemPlusJSONResponse) VisitTakeCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
