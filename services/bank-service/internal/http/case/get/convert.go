@@ -29,7 +29,7 @@ func toBankCase(output getcase.Output) generated.BankCase {
 	for index, documentType := range caseItem.Application.DocumentTypes {
 		documentTypes[index] = common.DocumentType(documentType)
 	}
-	triggeredRules := append([]string(nil), caseItem.TriggeredRules...)
+	triggeredRules := append([]string{}, caseItem.TriggeredRules...)
 
 	result := generated.BankCase{
 		Id:             caseItem.ID,

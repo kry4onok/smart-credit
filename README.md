@@ -93,6 +93,36 @@ make bank-db-up
 паролей в `.env` после первого запуска само по себе не меняет пароли
 существующих ролей.
 
+### Демоданные bank-service
+
+После `make infra-up` и `make bank-db-up` загрузите отдельный seed:
+
+```sh
+make bank-demo-seed
+make bank-up
+make gateway-up
+```
+
+Seed находится в `services/bank-service/seeds/demo.sql` и не входит в миграции.
+Он добавляет два продукта и четыре заявки с фиксированными UUID. Повторный
+запуск не дублирует записи; срок доступной демооферты продлевается на 30 дней.
+Используйте его только в локальной демонстрационной БД.
+
+| Последние цифры UUID заявки | Статус | Что видно в detail |
+|---|---|---|
+| `...0001` | `MANUAL_REVIEW` | Неназначенная заявка, проверки и score `B`. |
+| `...0002` | `MANUAL_REVIEW` | Назначена аналитику `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`, score `C`. |
+| `...0003` | `NEEDS_INFO` | Ошибка БКИ и открытый запрос выписки. |
+| `...0004` | `COUNTER_OFFER` | Активная оферта другого продукта на меньшую сумму и срок. |
+
+Swagger UI: `http://localhost:8000/docs/` → **Bank API**. Проверьте
+`GET /backoffice/applications` и
+`GET /backoffice/applications/10000000-0000-4000-8000-000000000004`.
+В detail должны быть `offer`, `score` и заголовок `ETag: "1"`; для заявки
+`...0003` — `info_request` и `checks.bureau_error`.
+Пока HTTP-аутентификация не передаёт ID текущего сотрудника в bank-service,
+`allowed_actions` содержит только `VIEW`, даже у назначенной заявки.
+
 ## Как добавить Go-сервис в Docker
 
 Для Go-сервисов используется общий `deploy/docker/go-service.Dockerfile`.
