@@ -27,7 +27,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
 help:
@@ -69,6 +69,7 @@ help:
 	@echo 'make bank-demo-seed   Загрузить демоданные в bank_db'
 	@echo 'make bank-submitted-smoke Отправить тестовое ApplicationSubmitted в client.events'
 	@echo 'make bank-info-smoke APPLICATION_ID=<uuid> REQUEST_ID=<uuid> Ответить на запрос банка через client.events'
+	@echo 'make bank-outbox-test Проверить порядок и повторы outbox на bank_db'
 	@echo 'make client-db-up     Применить миграции client_db'
 	@echo 'make client-up        Собрать и запустить client-service в Docker'
 	@echo 'make client-down      Остановить и удалить контейнер client-service'
@@ -131,6 +132,9 @@ bank-submitted-smoke:
 bank-info-smoke:
 	@test -n "$(APPLICATION_ID)" && test -n "$(REQUEST_ID)" || { echo 'Укажите APPLICATION_ID=<uuid> REQUEST_ID=<uuid>' >&2; exit 1; }
 	go run ./services/bank-service/cmd/publish-submitted -brokers "$(or $(BANK_KAFKA_BROKERS),127.0.0.1:9092)" -application-id "$(APPLICATION_ID)" -info-request-id "$(REQUEST_ID)" $(if $(EVENT_ID),-event-id "$(EVENT_ID)") $(if $(CLIENT_EVENT_VERSION),-aggregate-version "$(CLIENT_EVENT_VERSION)")
+
+bank-outbox-test: require-env
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/outbox -run '^TestRelayClaimsInAggregateOrderAndRecoversLease$$' -count=1 -v
 
 assistant-up: require-env
 	$(COMPOSE) up -d --build --wait assistant
