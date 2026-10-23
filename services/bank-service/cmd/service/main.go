@@ -65,6 +65,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); dependencies.ValidationWorker.Run(workerCtx, logger) }()
 	workers.Add(1)
+	go func() { defer workers.Done(); dependencies.OutboxWorker.Run(workerCtx, logger) }()
+	workers.Add(1)
 	go func() { defer workers.Done(); dependencies.ClientEvents.Run(workerCtx, logger) }()
 
 	logger.Info("bank-service started", "address", cfg.HTTP.Address)

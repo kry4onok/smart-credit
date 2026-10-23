@@ -17,6 +17,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
 	enrichmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/enrichment"
+	outboxrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/outbox"
 	receiverepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/receive"
 	scoringrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/scoring"
 	validationrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/validation"
@@ -27,6 +28,7 @@ import (
 	scoringstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/scoring"
 	validationstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	enrichmentworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/enrichment"
+	outboxworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/outbox"
 	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
 	validationworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/validation"
 	"github.com/google/uuid"
@@ -40,10 +42,12 @@ type Container struct {
 	ScoringWorker    *scoringworker.Worker
 	EnrichmentWorker *enrichmentworker.Worker
 	ValidationWorker *validationworker.Worker
+	OutboxWorker     *outboxworker.Worker
 	ClientEvents     *clientevents.Consumer
 	HTTPHandler      http.Handler
 	scoringClient    *scoringclient.Client
 	bureauClient     *bureauclient.Client
+	outboxPublisher  *outboxworker.KafkaPublisher
 
 	closeOnce sync.Once
 }
@@ -114,6 +118,18 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		}
 		enrichment = enrichmentworker.New(enrichmentResults, bureau)
 	}
+	publisher, err := outboxworker.NewKafkaPublisher(brokerAddresses)
+	if err != nil {
+		consumer.Close()
+		if client != nil {
+			_ = client.Close()
+		}
+		if bureau != nil {
+			_ = bureau.Close()
+		}
+		db.Close()
+		return nil, fmt.Errorf("create bank outbox publisher: %w", err)
+	}
 
 	return &Container{
 		DB:               db,
@@ -122,10 +138,12 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		ScoringWorker:    worker,
 		EnrichmentWorker: enrichment,
 		ValidationWorker: validation,
+		OutboxWorker:     outboxworker.New(outboxrepository.New(db), publisher),
 		ClientEvents:     consumer,
 		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
 		scoringClient:    client,
 		bureauClient:     bureau,
+		outboxPublisher:  publisher,
 	}, nil
 }
 
@@ -137,6 +155,9 @@ func (c *Container) Close() {
 	c.closeOnce.Do(func() {
 		if c.ClientEvents != nil {
 			c.ClientEvents.Close()
+		}
+		if c.outboxPublisher != nil {
+			c.outboxPublisher.Close()
 		}
 		if c.scoringClient != nil {
 			_ = c.scoringClient.Close()

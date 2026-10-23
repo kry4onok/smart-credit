@@ -26,8 +26,29 @@ Worker `VALIDATION` проверяет сохранённую заявку по 
 документов. Полная заявка переходит в `ENRICHMENT`. При нехватке данных создаётся
 открытый `info_requests`, дело переходит в `NEEDS_INFO`, а в outbox записывается
 `ApplicationPublicStatePublished` со списком нужных полей и документов. Переход,
-аудит, запрос и событие записываются одной транзакцией. Публикацию outbox в Kafka
-выполнит отдельный relay; пока публичное событие находится только в БД.
+аудит, запрос и событие записываются одной транзакцией. Outbox relay публикует
+сохранённые protobuf-байты в `bank.events` с ключом `aggregate_id`, затем отмечает
+`published_at`. События одной заявки выходят в порядке `aggregate_version`.
+При недоступной Kafka relay повторяет отправку; после сбоя между публикацией и
+отметкой в БД возможно повторное сообщение с тем же `event_id`.
+
+Для проверки SQL-порядка и повторного claim на работающей `bank_db` выполните
+`make bank-outbox-test`. Для ручной проверки доставки отправьте неполную заявку
+и найдите напечатанный `application_id` в `outbox`:
+
+```sh
+make bank-submitted-smoke MISSING_DATA=1
+```
+
+```sql
+SELECT event_id, aggregate_version, attempts, published_at
+FROM outbox
+WHERE aggregate_id = '<application_id>'
+ORDER BY aggregate_version;
+```
+
+У события со статусом `NEEDS_INFO` поле `published_at` должно заполниться после
+подтверждения Kafka. `attempts` может быть больше единицы после сбоя или рестарта.
 
 Для локальной проверки запустите Postgres, Kafka, миграции, seed продуктов и
 новую сборку банка, затем выполните:
