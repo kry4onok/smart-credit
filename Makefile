@@ -9,6 +9,7 @@ COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
 POSTGRES_PORT ?= 5432
 SCORING_PORT ?= 50051
 ASSISTANT_PORT ?= 50052
+BUREAU_PORT ?= 50053
 OLLAMA_MODEL ?= qwen2.5:3b
 SWAGGER_PORT ?= 8081
 GATEWAY_PORT ?= 8000
@@ -27,7 +28,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/bank-service/internal/generated
 
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed
-.PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke
+.PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -41,6 +42,9 @@ help:
 	@echo 'make assistant-up     Собрать и запустить assistant в Docker'
 	@echo 'make assistant-smoke  Проверить оба gRPC-метода assistant'
 	@echo 'make assistant-down   Остановить assistant'
+	@echo 'make bureau-up        Собрать и запустить локальные моки БКИ'
+	@echo 'make bureau-smoke     Проверить gRPC health и сценарии моков'
+	@echo 'make bureau-down      Остановить моки БКИ'
 	@echo 'make scoring-smoke-go Проверить scoring из Go'
 	@echo 'make bank-scoring-smoke Проверить банковский adapter со scoring'
 	@echo 'make bank-scoring-run CASE_ID=<uuid> Оценить подготовленное дело в bank_db'
@@ -130,6 +134,20 @@ assistant-logs: require-env
 
 assistant-smoke: require-env
 	$(COMPOSE) exec -T assistant .venv/bin/python /app/scripts/assistant_smoke.py --target 127.0.0.1:50052 --expect-version $(OLLAMA_MODEL)
+
+BUREAU_TARGET ?= 127.0.0.1:$(BUREAU_PORT)
+
+bureau-up: require-env
+	$(COMPOSE) up -d --build --wait bureau-mocks
+
+bureau-down: require-env
+	$(COMPOSE) rm -sf bureau-mocks
+
+bureau-logs: require-env
+	$(COMPOSE) logs -f bureau-mocks
+
+bureau-smoke:
+	go run ./services/bureau-mocks/cmd/smoke --target $(BUREAU_TARGET)
 
 scoring-evaluate:
 	PYTHONPATH=proto/gen/python $(SCORING_PY) python scripts/evaluate_scoring.py --target $(SCORING_TARGET) --output /tmp/smart-credit-scoring-evaluation.json

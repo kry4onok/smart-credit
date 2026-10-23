@@ -181,6 +181,38 @@ services:
     stop_grace_period: 10s
     restart: unless-stopped
 
+  bureau-mocks:
+    build:
+      context: ..
+      dockerfile: deploy/docker/go-service.Dockerfile
+      args:
+        SERVICE_PATH: services/bureau-mocks
+    environment:
+      BUREAU_GRPC_ADDR: ":50053"
+      BUREAU_PERSONAS_PATH: /etc/smart-credit-personas.yaml
+      BUREAU_ENABLE_REFLECTION: ${BUREAU_ENABLE_REFLECTION:-false}
+    ports:
+      - "127.0.0.1:${BUREAU_PORT:-50053}:50053"
+    volumes:
+      - ../seed/personas.yaml:/etc/smart-credit-personas.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/service", "healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 10s
+    restart: unless-stopped
+
   assistant:
     build:
       context: ..
