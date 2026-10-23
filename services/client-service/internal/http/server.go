@@ -8,6 +8,7 @@ import (
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
+	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
@@ -23,30 +24,32 @@ import (
 var errNotImplemented = errors.New("operation is not implemented")
 
 type server struct {
-	health            *health.Handler
-	company           *companyget.Handler
-	update            *companyupdate.Handler
-	application       *applicationcreate.Handler
-	applicationGet    *applicationget.Handler
-	applicationList   *applicationlist.Handler
-	applicationUpdate *applicationupdate.Handler
-	product           *productget.Handler
-	products          *productlist.Handler
+	health              *health.Handler
+	company             *companyget.Handler
+	update              *companyupdate.Handler
+	application         *applicationcreate.Handler
+	applicationDocument *applicationdocument.Handler
+	applicationGet      *applicationget.Handler
+	applicationList     *applicationlist.Handler
+	applicationUpdate   *applicationupdate.Handler
+	product             *productget.Handler
+	products            *productlist.Handler
 }
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationDocument *applicationdocument.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:            health.New(db, readinessTimeout),
-		company:           company,
-		update:            update,
-		application:       application,
-		applicationGet:    applicationGet,
-		applicationList:   applicationList,
-		applicationUpdate: applicationUpdate,
-		product:           product,
-		products:          products,
+		health:              health.New(db, readinessTimeout),
+		company:             company,
+		update:              update,
+		application:         application,
+		applicationDocument: applicationDocument,
+		applicationGet:      applicationGet,
+		applicationList:     applicationList,
+		applicationUpdate:   applicationUpdate,
+		product:             product,
+		products:            products,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
@@ -90,6 +93,10 @@ func (s *server) UpdateCompany(ctx context.Context, request generated.UpdateComp
 
 func (s *server) CreateApplication(ctx context.Context, request generated.CreateApplicationRequestObject) (generated.CreateApplicationResponseObject, error) {
 	return s.application.Handle(ctx, request)
+}
+
+func (s *server) AddApplicationDocument(ctx context.Context, request generated.AddApplicationDocumentRequestObject) (generated.AddApplicationDocumentResponseObject, error) {
+	return s.applicationDocument.Handle(ctx, request)
 }
 
 func (s *server) GetApplication(ctx context.Context, request generated.GetApplicationRequestObject) (generated.GetApplicationResponseObject, error) {

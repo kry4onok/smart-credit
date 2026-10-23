@@ -97,6 +97,7 @@ services:
     environment:
       CLIENT_HTTP_ADDR: ":8080"
       CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
+      CLIENT_DOCUMENT_STORAGE_PATH: /var/lib/smart-credit/documents
       CLIENT_HTTP_READ_HEADER_TIMEOUT: ${CLIENT_HTTP_READ_HEADER_TIMEOUT}
       CLIENT_HTTP_READ_TIMEOUT: ${CLIENT_HTTP_READ_TIMEOUT}
       CLIENT_HTTP_WRITE_TIMEOUT: ${CLIENT_HTTP_WRITE_TIMEOUT}
@@ -115,6 +116,8 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8083:8080"
+    volumes:
+      - client_documents:/var/lib/smart-credit/documents
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
       interval: 5s
@@ -245,3 +248,4 @@ services:
 
 volumes:
   postgres_data:
+  client_documents:
