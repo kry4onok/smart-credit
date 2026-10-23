@@ -7,10 +7,6 @@ import (
 )
 
 // Business operations stay unimplemented until their use cases are added.
-func (s *server) ListApplications(context.Context, generated.ListApplicationsRequestObject) (generated.ListApplicationsResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) CancelApplication(context.Context, generated.CancelApplicationRequestObject) (generated.CancelApplicationResponseObject, error) {
 	return nil, errNotImplemented
 }
