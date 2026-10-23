@@ -36,3 +36,40 @@ const insertAuditQuery = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, actor_id, reason, details)
 VALUES ($1, $2, 1, 'APPLICATION_SUBMITTED', 'CLIENT', $3, $4,
         jsonb_build_object('event_id', $5::text))`
+
+const selectCaseForInfoQuery = `
+SELECT status, client_event_version
+FROM cases
+WHERE id = $1
+FOR UPDATE`
+
+const selectOpenInfoRequestQuery = `
+SELECT id
+FROM info_requests
+WHERE case_id = $1 AND status = 'OPEN'
+FOR UPDATE`
+
+const fulfillInfoRequestQuery = `
+UPDATE info_requests
+SET status = 'FULFILLED', responded_at = now()
+WHERE id = $1 AND case_id = $2 AND status = 'OPEN'`
+
+const updateCaseFromInfoQuery = `
+UPDATE cases
+SET company_inn = $2, company_name = $3,
+    company_snapshot = $4::jsonb, application_snapshot = $5::jsonb,
+    documents_snapshot = $6::jsonb, requested_amount_kopecks = $7,
+    requested_term_months = $8, purpose_tag = $9,
+    status = 'VALIDATION', recommendation = NULL, public_reason = NULL,
+    triggered_rules = '{}', next_run_at = now(), lease_until = NULL,
+    scoring_input_revision = scoring_input_revision + 1,
+    current_scoring_attempt_id = NULL,
+    client_event_version = $10, version = version + 1,
+    audit_version = audit_version + 1, updated_at = now()
+WHERE id = $1 AND status = 'NEEDS_INFO' AND client_event_version < $10
+RETURNING version`
+
+const insertInfoProvidedAuditQuery = `
+INSERT INTO audit_log (id, case_id, case_version, action, actor_type, details)
+VALUES ($1, $2, $3, 'INFO_PROVIDED', 'CLIENT',
+        jsonb_build_object('event_id', $4::text, 'request_id', $5::text))`
