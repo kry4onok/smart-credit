@@ -12,6 +12,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/health"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/middleware"
+	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
 	productlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/list"
 )
 
@@ -21,16 +22,18 @@ type server struct {
 	health   *health.Handler
 	company  *companyget.Handler
 	update   *companyupdate.Handler
+	product  *productget.Handler
 	products *productlist.Handler
 }
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
 		health:   health.New(db, readinessTimeout),
 		company:  company,
 		update:   update,
+		product:  product,
 		products: products,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
@@ -75,4 +78,8 @@ func (s *server) UpdateCompany(ctx context.Context, request generated.UpdateComp
 
 func (s *server) ListClientProducts(ctx context.Context, request generated.ListClientProductsRequestObject) (generated.ListClientProductsResponseObject, error) {
 	return s.products.Handle(ctx, request)
+}
+
+func (s *server) GetClientProduct(ctx context.Context, request generated.GetClientProductRequestObject) (generated.GetClientProductResponseObject, error) {
+	return s.product.Handle(ctx, request)
 }

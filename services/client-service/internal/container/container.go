@@ -9,6 +9,7 @@ import (
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
+	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
 	productlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/list"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/infra/jwt"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/infra/postgres"
@@ -16,6 +17,7 @@ import (
 	productrepo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/product"
 	getcompany "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/company/get"
 	updatecompany "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/company/update"
+	getproduct "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/product/get"
 	listproducts "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/product/list"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -35,6 +37,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout,
 			companyget.New(getcompany.New(company.New(db))),
 			companyupdate.New(updatecompany.New(company.New(db))),
+			productget.New(getproduct.New(productrepo.New(db))),
 			productlist.New(listproducts.New(productrepo.New(db))),
 			jwt.New(cfg.JWT.JWKSURL, cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.Timeout, cfg.JWT.CacheTTL)),
 	}, nil
