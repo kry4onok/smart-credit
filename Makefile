@@ -43,6 +43,7 @@ help:
 	@echo 'make assistant-down   Остановить assistant'
 	@echo 'make scoring-smoke-go Проверить scoring из Go'
 	@echo 'make bank-scoring-smoke Проверить банковский adapter со scoring'
+	@echo 'make bank-scoring-run CASE_ID=<uuid> Оценить подготовленное дело в bank_db'
 	@echo 'make lint             Проверить Go-код линтерами и форматтерами'
 	@echo 'make docs-up          Запустить Swagger UI для всех API'
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
@@ -85,7 +86,7 @@ gen-proto:
 gen-proto-check:
 	uv run --no-project --python 3.12.12 scripts/generate_proto.py --check
 
-.PHONY: scoring-test scoring-lint scoring-run scoring-up scoring-down scoring-smoke scoring-smoke-go bank-scoring-smoke scoring-evaluate
+.PHONY: scoring-test scoring-lint scoring-run scoring-up scoring-down scoring-smoke scoring-smoke-go bank-scoring-smoke bank-scoring-run scoring-evaluate
 SCORING_TARGET ?= 127.0.0.1:$(SCORING_PORT)
 SCORING_PY := uv run --project ml/scoring --locked
 
@@ -113,6 +114,10 @@ scoring-smoke-go:
 
 bank-scoring-smoke:
 	BANK_SCORING_TARGET=$(SCORING_TARGET) go test ./services/bank-service/internal/client/scoring -run '^TestLiveScoringAdapter$$' -count=1 -v
+
+bank-scoring-run: require-env
+	@test -n "$(CASE_ID)" || { echo 'Укажите CASE_ID=<uuid>' >&2; exit 1; }
+	BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go run ./services/bank-service/cmd/scoring-stage -case-id "$(CASE_ID)" -scoring-target "$(SCORING_TARGET)"
 
 assistant-up: require-env
 	$(COMPOSE) up -d --build --wait assistant

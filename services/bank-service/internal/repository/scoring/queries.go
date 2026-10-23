@@ -1,10 +1,28 @@
 package scoringrepository
 
 const lockCaseRevisionQuery = `
-SELECT scoring_input_revision
-FROM cases
-WHERE id = $1
-FOR UPDATE`
+SELECT c.scoring_input_revision, a.status
+FROM cases AS c
+LEFT JOIN scoring_attempts AS a ON a.id = c.current_scoring_attempt_id
+WHERE c.id = $1
+FOR UPDATE OF c`
+
+const loadInputQuery = `
+SELECT c.product_id, c.scoring_input_revision, c.company_snapshot,
+       company_check.outcome, company_check.result,
+       credit_check.outcome, credit_check.result
+FROM cases AS c
+LEFT JOIN LATERAL (
+    SELECT outcome, result FROM enrichment_results
+    WHERE case_id = c.id AND source = 'COMPANY'
+    ORDER BY created_at DESC, id DESC LIMIT 1
+) AS company_check ON true
+LEFT JOIN LATERAL (
+    SELECT outcome, result FROM enrichment_results
+    WHERE case_id = c.id AND source = 'CREDIT_HISTORY'
+    ORDER BY created_at DESC, id DESC LIMIT 1
+) AS credit_check ON true
+WHERE c.id = $1`
 
 const insertAttemptQuery = `
 INSERT INTO scoring_attempts (id, case_id, input_revision, as_of_date, request)

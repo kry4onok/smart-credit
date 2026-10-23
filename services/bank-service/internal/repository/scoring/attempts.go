@@ -19,6 +19,7 @@ var (
 	ErrStaleInput       = errors.New("scoring input revision changed")
 	ErrAttemptNotFound  = errors.New("scoring attempt not found")
 	ErrAttemptCompleted = errors.New("scoring attempt already completed")
+	ErrCurrentAttempt   = errors.New("current scoring attempt already exists")
 )
 
 type Attempt struct {
@@ -80,7 +81,8 @@ func validateAttempt(attempt Attempt) error {
 
 func lockCurrentRevision(ctx context.Context, queryer transaction.Queryer, caseID uuid.UUID, expected int64) error {
 	var revision int64
-	err := queryer.QueryRow(ctx, lockCaseRevisionQuery, caseID).Scan(&revision)
+	var status *string
+	err := queryer.QueryRow(ctx, lockCaseRevisionQuery, caseID).Scan(&revision, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrCaseNotFound
 	}
@@ -89,6 +91,9 @@ func lockCurrentRevision(ctx context.Context, queryer transaction.Queryer, caseI
 	}
 	if revision != expected {
 		return ErrStaleInput
+	}
+	if status != nil && *status != "TECHNICAL_ERROR" {
+		return ErrCurrentAttempt
 	}
 	return nil
 }
