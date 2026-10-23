@@ -103,3 +103,10 @@ type AddApplicationDocumentParams struct {
 	FileName       string
 	Content        []byte
 }
+
+type SubmitApplicationParams struct {
+	OrgID         uuid.UUID
+	UserID        uuid.UUID
+	ApplicationID uuid.UUID
+	IdempotencyID uuid.UUID
+}

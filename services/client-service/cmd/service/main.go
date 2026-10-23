@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/config"
@@ -38,14 +39,31 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	server := httpserver.New(cfg.HTTP, dependencies.HTTPHandler)
 	serverErrors := make(chan error, 1)
 	go func() { serverErrors <- server.Run() }()
+	workerCtx, stopWorkers := context.WithCancel(ctx)
+	defer stopWorkers()
+	var workers sync.WaitGroup
+	workers.Add(1)
+	go func() {
+		defer workers.Done()
+		dependencies.Outbox.Run(workerCtx, logger)
+	}()
+	workers.Add(1)
+	go func() {
+		defer workers.Done()
+		dependencies.BankEvents.Run(workerCtx, logger)
+	}()
 	logger.Info("client-service started", "address", cfg.HTTP.Address)
 
 	select {
 	case err := <-serverErrors:
+		stopWorkers()
+		workers.Wait()
 		return err
 	case <-ctx.Done():
 		logger.Info("client-service shutdown started")
 	}
+	stopWorkers()
+	workers.Wait()
 	shutdownContext, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(shutdownContext); err != nil {

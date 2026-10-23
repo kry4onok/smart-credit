@@ -27,10 +27,6 @@ func (s *server) SignContract(context.Context, generated.SignContractRequestObje
 	return nil, errNotImplemented
 }
 
-func (s *server) SubmitApplication(context.Context, generated.SubmitApplicationRequestObject) (generated.SubmitApplicationResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) GetApplicationTimeline(context.Context, generated.GetApplicationTimelineRequestObject) (generated.GetApplicationTimelineResponseObject, error) {
 	return nil, errNotImplemented
 }
