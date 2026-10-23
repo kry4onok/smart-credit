@@ -69,6 +69,7 @@ services:
       BANK_READINESS_TIMEOUT: ${BANK_READINESS_TIMEOUT}
       BANK_SHUTDOWN_TIMEOUT: ${BANK_SHUTDOWN_TIMEOUT}
       BANK_DEMO_ANALYST_ID: ${BANK_DEMO_ANALYST_ID:-}
+      BANK_ASSISTANT_GRPC_ADDR: assistant:50052
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,6 +172,31 @@ services:
       - /tmp:size=16m,mode=1777
     mem_limit: 256m
     cpus: 1
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 10s
+    restart: unless-stopped
+
+  assistant:
+    build:
+      context: ..
+      dockerfile: deploy/docker/assistant.Dockerfile
+    ports:
+      - "127.0.0.1:${ASSISTANT_PORT:-50052}:50052"
+    environment:
+      ASSISTANT_ADDR: "0.0.0.0:50052"
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    mem_limit: 512m
+    cpus: 2
     pids_limit: 128
     security_opt:
       - no-new-privileges:true

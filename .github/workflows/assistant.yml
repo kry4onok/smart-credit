@@ -1,0 +1,34 @@
+name: Assistant
+
+on:
+  push:
+    branches: [main, feat/ml-assistant]
+    paths: ["ml/assistant/**", "proto/assistant/**", "proto/gen/python/proto/assistant/**", "scripts/assistant_smoke.py", "deploy/docker/assistant.Dockerfile", "deploy/docker-compose.yml", "Makefile", ".dockerignore", ".env.example", ".github/workflows/assistant.yml"]
+  pull_request:
+    paths: ["ml/assistant/**", "proto/assistant/**", "proto/gen/python/proto/assistant/**", "scripts/assistant_smoke.py", "deploy/docker/assistant.Dockerfile", "deploy/docker-compose.yml", "Makefile", ".dockerignore", ".env.example", ".github/workflows/assistant.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  assistant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.3"
+      - name: Unit tests
+        run: PYTHONPATH=proto/gen/python uv run --project ml/assistant --locked python -m unittest discover -s ml/assistant/tests -v
+      - name: Build and start assistant without Ollama
+        run: OLLAMA_URL=http://host.docker.internal:1 docker compose --env-file .env -f deploy/docker-compose.yml up -d --build --wait assistant
+      - name: Verify gRPC template fallback
+        run: docker compose --env-file .env -f deploy/docker-compose.yml exec -T assistant .venv/bin/python /app/scripts/assistant_smoke.py --expect-version template
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color assistant
+      - name: Stop assistant
+        if: always()
+        run: docker compose --env-file .env -f deploy/docker-compose.yml rm -sf assistant
