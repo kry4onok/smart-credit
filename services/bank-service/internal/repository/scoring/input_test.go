@@ -4,8 +4,11 @@ import (
 	"testing"
 	"time"
 
+	bureaupb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau"
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	scoringclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/scoring"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestSavedCreditHistoryPreservesMissingAndKnownZero(t *testing.T) {
@@ -40,5 +43,36 @@ func TestSavedCreditHistoryPreservesMissingAndKnownZero(t *testing.T) {
 				t.Fatalf("known zero debt changed: %+v", request.Features.TotalDebt)
 			}
 		})
+	}
+}
+
+func TestScoringReadsRawBureauProtoJSON(t *testing.T) {
+	profile, err := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(&bureaupb.CompanyProfileResponse{
+		Status: bureaupb.CompanyStatus_COMPANY_STATUS_ACTIVE, RegisteredAt: "2019-04-15", Okved: "10.71",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	zero := int32(0)
+	credit, err := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(&bureaupb.CreditHistoryResponse{
+		TotalDebt: &commonpb.Money{Currency: "RUB"}, OverdueCount_12M: &zero, MaxOverdueDays: &zero,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := decodeSavedInput(
+		uuid.MustParse("10000000-0000-4000-8000-000000000006"),
+		uuid.MustParse("11111111-1111-4111-8111-111111111111"),
+		[]byte(`{"revenue_12m":{"amount_kopecks":840000000,"currency":"RUB"},"profit_12m":{"amount_kopecks":96000000,"currency":"RUB"}}`),
+		profile, credit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input.AsOfDate = time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC)
+	request, err := scoringclient.BuildRequest(input)
+	if err != nil || request.Features.TotalDebt == nil || request.Features.OverdueCount_12M == nil ||
+		*request.Features.OverdueCount_12M != 0 {
+		t.Fatalf("raw bureau response was not usable for scoring: request=%v err=%v", request, err)
 	}
 }

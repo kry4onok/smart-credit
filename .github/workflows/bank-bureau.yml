@@ -1,0 +1,104 @@
+name: Bank bureau integration
+
+on:
+  push:
+    branches: [main, feat/bank-bureau-enrichment]
+    paths:
+      - ".github/workflows/bank-bureau.yml"
+      - ".env.example"
+      - ".golangci.yml"
+      - "Makefile"
+      - "api/**"
+      - "deploy/docker-compose.yml"
+      - "deploy/docker/**"
+      - "go.mod"
+      - "go.sum"
+      - "ml/scoring/**"
+      - "pkg/api/**"
+      - "proto/**"
+      - "seed/**"
+      - "services/bank-service/**"
+      - "services/bureau-mocks/**"
+  pull_request:
+    paths:
+      - ".github/workflows/bank-bureau.yml"
+      - ".env.example"
+      - ".golangci.yml"
+      - "Makefile"
+      - "api/**"
+      - "deploy/docker-compose.yml"
+      - "deploy/docker/**"
+      - "go.mod"
+      - "go.sum"
+      - "ml/scoring/**"
+      - "pkg/api/**"
+      - "proto/**"
+      - "seed/**"
+      - "services/bank-service/**"
+      - "services/bureau-mocks/**"
+
+permissions:
+  contents: read
+
+jobs:
+  bank-bureau:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Prepare local configuration
+        run: cp .env.example .env
+      - name: Unit tests
+        run: go test ./services/bank-service/... ./services/bureau-mocks/...
+      - name: Go lint
+        run: make lint
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env -f deploy/docker-compose.yml config --quiet
+      - name: Start scoring and bank with bureau mocks
+        run: make scoring-up bank-up bank-demo-seed
+      - name: Verify enrichment outcomes through bank API
+        run: |
+          python3 - <<'PY'
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          cases = {
+              6: ("DECISION", None, True),
+              7: ("MANUAL_REVIEW", "BUREAU_TIMEOUT", False),
+          }
+          deadline = time.monotonic() + 120
+          while time.monotonic() < deadline:
+              pending = []
+              for number, (status, bureau_error, has_score) in cases.items():
+                  case_id = f"10000000-0000-4000-8000-{number:012d}"
+                  url = f"http://127.0.0.1:8080/backoffice/applications/{case_id}"
+                  try:
+                      with urllib.request.urlopen(url, timeout=5) as response:
+                          case = json.load(response)
+                  except (OSError, urllib.error.URLError, ValueError) as error:
+                      pending.append(f"{case_id}: {error}")
+                      continue
+                  checks = case.get("checks") or {}
+                  actual = (case.get("status"), checks.get("bureau_error"), bool(case.get("score")))
+                  expected = (status, bureau_error, has_score)
+                  if actual != expected:
+                      pending.append(f"{case_id}: got {actual}, want {expected}")
+              if not pending:
+                  print("Bank bureau integration passed: success and timeout cases")
+                  break
+              time.sleep(2)
+          else:
+              raise SystemExit("Bank bureau integration failed: " + "; ".join(pending))
+          PY
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color --tail=200 postgres scoring bureau-mocks bank-service
+      - name: Stop containers
+        if: always()
+        run: docker compose --env-file .env -f deploy/docker-compose.yml down --volumes --remove-orphans

@@ -53,6 +53,9 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	if dependencies.ScoringWorker != nil {
 		go dependencies.ScoringWorker.Run(ctx, logger)
 	}
+	if dependencies.EnrichmentWorker != nil {
+		go dependencies.EnrichmentWorker.Run(ctx, logger)
+	}
 
 	logger.Info("bank-service started", "address", cfg.HTTP.Address)
 
