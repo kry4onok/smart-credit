@@ -116,15 +116,44 @@ func toScore(score model.ScoreResult) *generated.ScoreResult {
 		}
 	}
 
-	return &generated.ScoreResult{
-		AssessmentStatus:     generated.ScoreResultAssessmentStatus("ASSESSED"),
-		Score:                &score.Score,
+	issues := make([]generated.ScoreDataIssue, len(score.DataIssues))
+	for index, issue := range score.DataIssues {
+		issues[index] = generated.ScoreDataIssue{
+			Code: generated.ScoreDataIssueCode(issue.Code), FieldPath: issue.FieldPath,
+		}
+	}
+
+	factors := make([]generated.ScoreFactorContribution, len(score.FactorContributions))
+	for index, factor := range score.FactorContributions {
+		factors[index] = generated.ScoreFactorContribution{
+			FactorName:  generated.ScoreFactorContributionFactorName(factor.FactorName),
+			Points:      factor.Points,
+			Description: factor.Description,
+		}
+	}
+
+	result := &generated.ScoreResult{
+		AssessmentStatus:     generated.ScoreResultAssessmentStatus(score.AssessmentStatus),
+		Score:                score.Score,
 		Grade:                generated.ScoreResultGrade(score.Grade),
 		Reasons:              reasons,
 		ModelVersion:         score.ModelVersion,
 		FeatureSchemaVersion: score.FeatureSchemaVersion,
-		DataIssues:           []generated.ScoreDataIssue{},
+		DataIssues:           issues,
+		BaselineScore:        score.BaselineScore,
+		ConfigChecksum:       score.ConfigChecksum,
+		AttemptId:            score.AttemptID,
+		InputRevision:        score.InputRevision,
 	}
+
+	if score.AsOfDate != nil {
+		result.AsOfDate = &openapi_types.Date{Time: *score.AsOfDate}
+	}
+	if score.FactorContributions != nil {
+		result.FactorContributions = &factors
+	}
+
+	return result
 }
 
 func toInfoRequest(infoRequest model.InfoRequest) *common.InfoRequest {

@@ -12,6 +12,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
+	scoringrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/scoring"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
@@ -22,6 +23,7 @@ import (
 type Container struct {
 	DB           *pgxpool.Pool
 	Transactions *transaction.Manager
+	Scoring      *scoringrepository.Repository
 	HTTPHandler  http.Handler
 
 	closeOnce sync.Once
@@ -44,6 +46,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	listCases := listcase.New(caseRepository)
 	getCase := getcase.New(caseRepository)
 	transactions := transaction.New(db)
+	scoringAttempts := scoringrepository.New(db, transactions)
 	takeCase := takecase.New(caseRepository, transactions)
 	demoAnalystID := uuid.Nil
 	if cfg.DemoAnalystID != "" {
@@ -57,6 +60,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	return &Container{
 		DB:           db,
 		Transactions: transactions,
+		Scoring:      scoringAttempts,
 		HTTPHandler:  authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
 	}, nil
 }

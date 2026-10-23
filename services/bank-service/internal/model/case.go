@@ -89,11 +89,30 @@ type Checks struct {
 type CompanyStatus string
 
 type ScoreResult struct {
-	Score                int
+	AssessmentStatus     string
+	Score                *int
 	Grade                ScoreGrade
 	Reasons              []ScoreReason
+	DataIssues           []ScoreDataIssue
+	FactorContributions  []ScoreFactorContribution
 	ModelVersion         string
 	FeatureSchemaVersion string
+	BaselineScore        *int
+	ConfigChecksum       *string
+	AttemptID            *uuid.UUID
+	InputRevision        *int64
+	AsOfDate             *time.Time
+}
+
+type ScoreDataIssue struct {
+	Code      string
+	FieldPath string
+}
+
+type ScoreFactorContribution struct {
+	FactorName  string
+	Points      int
+	Description string
 }
 
 type ScoreReason struct {
