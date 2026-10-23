@@ -24,6 +24,8 @@ type Scorer interface {
 	Score(context.Context, scoringclient.Input) (*scoringpb.ScoreResponse, error)
 }
 
+var ErrInvalidInput = errors.New("scoring input cannot be built")
+
 type Runner struct {
 	attempts Attempts
 	scorer   Scorer
@@ -34,8 +36,6 @@ func New(attempts Attempts, scorer Scorer) *Runner {
 	return &Runner{attempts: attempts, scorer: scorer, now: time.Now}
 }
 
-// Run persists the fixed request before calling gRPC. Start and Complete each
-// own short transactions; no SQL transaction spans the scoring call.
 func (r *Runner) Run(ctx context.Context, caseID uuid.UUID) (uuid.UUID, bool, error) {
 	saved, err := r.attempts.LoadInput(ctx, caseID)
 	if err != nil {
@@ -44,7 +44,7 @@ func (r *Runner) Run(ctx context.Context, caseID uuid.UUID) (uuid.UUID, bool, er
 	saved.Input.AsOfDate = r.now().UTC().Truncate(24 * time.Hour)
 	request, err := scoringclient.BuildRequest(saved.Input)
 	if err != nil {
-		return uuid.Nil, false, fmt.Errorf("build saved scoring input: %w", err)
+		return uuid.Nil, false, fmt.Errorf("%w: %w", ErrInvalidInput, err)
 	}
 	attemptID := uuid.New()
 	if err := r.attempts.Start(ctx, scoringrepository.Attempt{

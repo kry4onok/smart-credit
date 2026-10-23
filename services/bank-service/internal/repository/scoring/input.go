@@ -15,12 +15,12 @@ import (
 )
 
 var ErrInputNotReady = errors.New("latest company and credit checks must both be successful")
+var ErrMalformedInput = errors.New("saved scoring input is malformed")
 
 type SavedInput struct {
 	Input    scoringclient.Input
 	Revision int64
 }
-
 
 func (r *Repository) LoadInput(ctx context.Context, caseID uuid.UUID) (SavedInput, error) {
 	if caseID == uuid.Nil {
@@ -46,7 +46,7 @@ func (r *Repository) LoadInput(ctx context.Context, caseID uuid.UUID) (SavedInpu
 	}
 	input, err := decodeSavedInput(caseID, productID, companyJSON, profileJSON, creditJSON)
 	if err != nil {
-		return SavedInput{}, err
+		return SavedInput{}, fmt.Errorf("%w: %w", ErrMalformedInput, err)
 	}
 	return SavedInput{Input: input, Revision: revision}, nil
 }

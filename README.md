@@ -100,13 +100,14 @@ make bank-db-up
 После `make infra-up` и `make bank-db-up` загрузите отдельный seed:
 
 ```sh
+make scoring-up
 make bank-demo-seed
 make bank-up
 make gateway-up
 ```
 
 Seed находится в `services/bank-service/seeds/demo.sql` и не входит в миграции.
-Он добавляет два продукта и четыре заявки с фиксированными UUID. Повторный
+Он добавляет два продукта и пять заявок с фиксированными UUID. Повторный
 запуск не дублирует записи; срок доступной демооферты продлевается на 30 дней.
 Используйте его только в локальной демонстрационной БД.
 
@@ -116,6 +117,7 @@ Seed находится в `services/bank-service/seeds/demo.sql` и не вхо
 | `...0002` | `MANUAL_REVIEW` | Назначена аналитику `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`, score `C`. |
 | `...0003` | `NEEDS_INFO` | Ошибка БКИ и открытый запрос выписки. |
 | `...0004` | `COUNTER_OFFER` | Активная оферта другого продукта на меньшую сумму и срок. |
+| `...0005` | `SCORING → DECISION` | Worker автоматически сохраняет реальный score; банковские правила ещё не запущены. |
 
 Swagger UI: `http://localhost:8000/docs/` → **Bank API**. Проверьте
 `GET /backoffice/applications` и
@@ -235,7 +237,14 @@ make bank-scoring-run CASE_ID=10000000-0000-4000-8000-000000000001
 После успешной оценки карточка этого дела в Swagger показывает
 `model_version: monotone-scorecard-v1`. Повторный запуск дела с завершённой
 оценкой запрещён до смены `scoring_input_revision`; техническую ошибку можно
-повторить. Автоматический worker и Kafka consumer пока не подключены.
+повторить. При запуске bank-service из Compose scoring worker автоматически
+подбирает дела в статусе `SCORING` (например, `...0005`) каждые 2 секунды.
+После оценки `ASSESSED` дело переходит в `DECISION`; недостаток данных или
+техническая ошибка ведут в `MANUAL_REVIEW` с записью в аудите. Worker использует
+короткую аренду в `bank_db` и после перезапуска завершает зависшую попытку как
+техническую ошибку. Для локального `make bank-run` задайте
+`BANK_SCORING_GRPC_ADDR=127.0.0.1:50051` в `.env`; без адреса worker выключен.
+Решение по правилам банка, вызовы БКИ и Kafka consumer пока не подключены.
 
 ## Scoring v1
 

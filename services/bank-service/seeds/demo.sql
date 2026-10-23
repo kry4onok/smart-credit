@@ -63,7 +63,14 @@ WITH demo_cases (
      1100000000, 120000000, 210000000, 600000000, 30,
      'COUNTER_OFFER', 'COUNTER', NULL::uuid,
      'Предлагаем меньшую сумму по другому продукту.',
-     ARRAY['LARGE_REQUEST']::text[], now() - interval '1 day')
+     ARRAY['LARGE_REQUEST']::text[], now() - interval '1 day'),
+    ('10000000-0000-4000-8000-000000000005'::uuid,
+     '20000000-0000-4000-8000-000000000005'::uuid,
+     '30000000-0000-4000-8000-000000000005'::uuid,
+     '7707083893', 'ООО «Северная пекарня» — автооценка', '10.71', '2019-04-15'::date,
+     840000000, 96000000, 120000000, 300000000, 18,
+     'SCORING', NULL::text, NULL::uuid, NULL::text,
+     ARRAY[]::text[], now() - interval '2 hours')
 )
 INSERT INTO cases (
     id, org_id, client_user_id, product_id, product_version,
@@ -114,7 +121,11 @@ JOIN (VALUES
     ('10000000-0000-4000-8000-000000000004'::uuid, 'COMPANY',
      '{"status":"ACTIVE","registered_at":"2018-11-05","okved":"25.62"}'::jsonb),
     ('10000000-0000-4000-8000-000000000004'::uuid, 'CREDIT_HISTORY',
-     '{"total_debt":{"amount_kopecks":210000000,"currency":"RUB"},"overdue_count_12m":0,"max_overdue_days":0}'::jsonb)
+     '{"total_debt":{"amount_kopecks":210000000,"currency":"RUB"},"overdue_count_12m":0,"max_overdue_days":0}'::jsonb),
+    ('10000000-0000-4000-8000-000000000005'::uuid, 'COMPANY',
+     '{"status":"ACTIVE","registered_at":"2019-04-15","okved":"10.71"}'::jsonb),
+    ('10000000-0000-4000-8000-000000000005'::uuid, 'CREDIT_HISTORY',
+     '{"total_debt":{"amount_kopecks":120000000,"currency":"RUB"},"overdue_count_12m":0,"max_overdue_days":0}'::jsonb)
 ) AS e(case_id, source, result) ON e.case_id = c.id
 WHERE NOT EXISTS (
     SELECT 1 FROM enrichment_results AS existing
@@ -206,7 +217,8 @@ WHERE c.id IN (
     '10000000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000002',
     '10000000-0000-4000-8000-000000000003',
-    '10000000-0000-4000-8000-000000000004'
+    '10000000-0000-4000-8000-000000000004',
+    '10000000-0000-4000-8000-000000000005'
 )
 ON CONFLICT (id) DO NOTHING;
 
