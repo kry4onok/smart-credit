@@ -1,0 +1,58 @@
+name: Client service
+
+on:
+  push:
+    paths:
+      - ".github/workflows/client.yml"
+      - ".env.example"
+      - ".golangci.yml"
+      - "Makefile"
+      - "api/client.yaml"
+      - "api/common.yaml"
+      - "deploy/docker-compose.yml"
+      - "deploy/docker/**"
+      - "go.mod"
+      - "go.sum"
+      - "pkg/api/**"
+      - "proto/**"
+      - "services/client-service/**"
+  pull_request:
+    paths:
+      - ".github/workflows/client.yml"
+      - ".env.example"
+      - ".golangci.yml"
+      - "Makefile"
+      - "api/client.yaml"
+      - "api/common.yaml"
+      - "deploy/docker-compose.yml"
+      - "deploy/docker/**"
+      - "go.mod"
+      - "go.sum"
+      - "pkg/api/**"
+      - "proto/**"
+      - "services/client-service/**"
+
+permissions:
+  contents: read
+
+jobs:
+  client-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Prepare local configuration
+        run: cp .env.example .env
+      - name: Unit tests
+        run: go test ./services/client-service/...
+      - name: Go lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.15.0
+          args: ./services/client-service/...
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env -f deploy/docker-compose.yml config --quiet
