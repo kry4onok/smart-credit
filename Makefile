@@ -125,7 +125,7 @@ bank-scoring-run: require-env
 	BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go run ./services/bank-service/cmd/scoring-stage -case-id "$(CASE_ID)" -scoring-target "$(SCORING_TARGET)"
 
 bank-submitted-smoke:
-	go run ./services/bank-service/cmd/publish-submitted -brokers "$(or $(BANK_KAFKA_BROKERS),127.0.0.1:9092)" $(if $(APPLICATION_ID),-application-id "$(APPLICATION_ID)") $(if $(EVENT_ID),-event-id "$(EVENT_ID)")
+	go run ./services/bank-service/cmd/publish-submitted -brokers "$(or $(BANK_KAFKA_BROKERS),127.0.0.1:9092)" $(if $(APPLICATION_ID),-application-id "$(APPLICATION_ID)") $(if $(EVENT_ID),-event-id "$(EVENT_ID)") $(if $(filter 1 true,$(MISSING_DATA)),-missing-data)
 
 assistant-up: require-env
 	$(COMPOSE) up -d --build --wait assistant

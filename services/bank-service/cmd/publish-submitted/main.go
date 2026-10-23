@@ -20,14 +20,15 @@ func main() {
 	brokers := flag.String("brokers", "127.0.0.1:9092", "comma-separated Kafka broker addresses")
 	applicationID := flag.String("application-id", uuid.NewString(), "application UUID (reuse to test a duplicate)")
 	eventID := flag.String("event-id", uuid.NewString(), "event UUID (reuse to test a duplicate)")
+	missingData := flag.Bool("missing-data", false, "omit revenue and documents to exercise NEEDS_INFO")
 	flag.Parse()
-	if err := run(*brokers, *applicationID, *eventID); err != nil {
+	if err := run(*brokers, *applicationID, *eventID, *missingData); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(brokers, applicationID, eventID string) error {
+func run(brokers, applicationID, eventID string, missingData bool) error {
 	if _, err := uuid.Parse(applicationID); err != nil {
 		return fmt.Errorf("invalid application ID: %w", err)
 	}
@@ -64,6 +65,10 @@ func run(brokers, applicationID, eventID string) error {
 				UploadedAt: timestamppb.Now(), IsMock: true,
 			}},
 		}},
+	}
+	if missingData {
+		content.GetApplicationSubmitted().Company.Revenue_12M = nil
+		content.GetApplicationSubmitted().Documents = nil
 	}
 	value, err := proto.Marshal(content)
 	if err != nil {

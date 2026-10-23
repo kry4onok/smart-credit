@@ -21,7 +21,7 @@ func submittedEvent() *eventspb.Event {
 			ClientUserId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
 			ProductId:    "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", ProductVersion: 2,
 			Company: &commonpb.CompanySnapshot{
-				Inn: "7707083893", Name: "Test", RegisteredAt: "2020-01-01",
+				Inn: "7707083893", Name: "Test", Okved: "10.71", RegisteredAt: "2020-01-01",
 				Revenue_12M: &commonpb.Money{AmountKopecks: 100, Currency: "RUB"},
 				Profit_12M:  &commonpb.Money{AmountKopecks: -10, Currency: "RUB"},
 				Obligations: &commonpb.Money{AmountKopecks: 50, Currency: "RUB"},
@@ -63,6 +63,24 @@ func TestParseSubmittedEventPreservesSnapshots(t *testing.T) {
 	}
 }
 
+func TestParseSubmittedEventAllowsMissingFinancialFields(t *testing.T) {
+	event := submittedEvent()
+	event.GetApplicationSubmitted().Company.Revenue_12M = nil
+	event.GetApplicationSubmitted().Company.Profit_12M = nil
+	event.GetApplicationSubmitted().Company.Obligations = nil
+	input, err := parse(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var company commonpb.CompanySnapshot
+	if err := protojson.Unmarshal(input.CompanyJSON, &company); err != nil {
+		t.Fatal(err)
+	}
+	if company.GetRevenue_12M() != nil || company.GetProfit_12M() != nil || company.GetObligations() != nil {
+		t.Fatalf("missing fields became values: %v", &company)
+	}
+}
+
 func TestParseRejectsInvalidSubmittedEvent(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -76,6 +94,7 @@ func TestParseRejectsInvalidSubmittedEvent(t *testing.T) {
 		}},
 		{"missing amount", func(e *eventspb.Event) { e.GetApplicationSubmitted().Form.Amount = nil }},
 		{"invalid date", func(e *eventspb.Event) { e.GetApplicationSubmitted().Company.RegisteredAt = "2020-02-30" }},
+		{"missing okved", func(e *eventspb.Event) { e.GetApplicationSubmitted().Company.Okved = "" }},
 		{"invalid document", func(e *eventspb.Event) {
 			e.GetApplicationSubmitted().Documents[0].DocumentType = commonpb.DocumentType_DOCUMENT_TYPE_UNSPECIFIED
 		}},

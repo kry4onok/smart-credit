@@ -102,8 +102,9 @@ func parse(event *eventspb.Event) (Input, error) {
 	company := submitted.GetCompany()
 	form := submitted.GetForm()
 	if !innPattern.MatchString(company.GetInn()) || strings.TrimSpace(company.GetName()) == "" ||
-		!validDate(company.GetRegisteredAt()) || !validMoney(company.GetRevenue_12M(), false) ||
-		!validMoney(company.GetProfit_12M(), true) || !validMoney(company.GetObligations(), false) ||
+		len(strings.TrimSpace(company.GetOkved())) < 2 || len(strings.TrimSpace(company.GetOkved())) > 16 ||
+		!validDate(company.GetRegisteredAt()) || !validOptionalMoney(company.GetRevenue_12M(), false) ||
+		!validOptionalMoney(company.GetProfit_12M(), true) || !validOptionalMoney(company.GetObligations(), false) ||
 		!validMoney(form.GetAmount(), false) || form.GetAmount().GetAmountKopecks() <= 0 ||
 		form.GetTermMonths() <= 0 {
 		return Input{}, fmt.Errorf("%w: company or form", ErrInvalidEvent)
@@ -182,6 +183,10 @@ func nonzeroUUID(value string) (uuid.UUID, error) {
 
 func validMoney(value *commonpb.Money, allowNegative bool) bool {
 	return value != nil && value.GetCurrency() == "RUB" && (allowNegative || value.GetAmountKopecks() >= 0)
+}
+
+func validOptionalMoney(value *commonpb.Money, allowNegative bool) bool {
+	return value == nil || validMoney(value, allowNegative)
 }
 
 func validDate(value string) bool {
