@@ -21,7 +21,6 @@ type SavedInput struct {
 	Revision int64
 }
 
-
 func (r *Repository) LoadInput(ctx context.Context, caseID uuid.UUID) (SavedInput, error) {
 	if caseID == uuid.Nil {
 		return SavedInput{}, errors.New("invalid scoring case ID")
