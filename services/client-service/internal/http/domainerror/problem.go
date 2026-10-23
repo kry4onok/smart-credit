@@ -40,8 +40,12 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusConflict, "COMPANY_ALREADY_EXISTS", "Профиль компании уже существует; укажите актуальный If-Match.")
 	case errors.Is(err, domain.ErrCompanyVersionConflict):
 		return Problem(ctx, http.StatusConflict, "COMPANY_VERSION_CONFLICT", "Профиль компании уже изменён; обновите данные и повторите запрос.")
+	case errors.Is(err, domain.ErrIdempotencyConflict):
+		return Problem(ctx, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Этот Idempotency-Key уже использован с другим запросом.")
 	case errors.Is(err, domain.ErrInvalidCompanyProfile):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_COMPANY_PROFILE", "Профиль компании заполнен некорректно.")
+	case errors.Is(err, domain.ErrInvalidApplication):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION", "Заявка не может быть создана.")
 	}
 	return Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
 }
