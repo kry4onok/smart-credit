@@ -7,7 +7,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func toResponse(value model.Application) generated.ClientApplication {
+func ToResponse(value model.Application) generated.ClientApplication {
 	response := generated.ClientApplication{
 		Id:             common.Id(value.ID),
 		ProductId:      common.Id(value.ProductID),

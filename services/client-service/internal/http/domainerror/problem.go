@@ -38,6 +38,10 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusNotFound, "PRODUCT_NOT_FOUND", "Продукт не найден.")
 	case errors.Is(err, domain.ErrApplicationNotFound):
 		return Problem(ctx, http.StatusNotFound, "APPLICATION_NOT_FOUND", "Заявка не найдена.")
+	case errors.Is(err, domain.ErrApplicationVersionConflict):
+		return Problem(ctx, http.StatusConflict, "APPLICATION_VERSION_CONFLICT", "Заявка уже изменена; обновите карточку и повторите запрос.")
+	case errors.Is(err, domain.ErrApplicationNotDraft):
+		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Редактировать можно только черновик заявки.")
 	case errors.Is(err, domain.ErrCompanyAlreadyExists):
 		return Problem(ctx, http.StatusConflict, "COMPANY_ALREADY_EXISTS", "Профиль компании уже существует; укажите актуальный If-Match.")
 	case errors.Is(err, domain.ErrCompanyVersionConflict):
@@ -48,6 +52,8 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_COMPANY_PROFILE", "Профиль компании заполнен некорректно.")
 	case errors.Is(err, domain.ErrInvalidApplication):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION", "Заявка не может быть создана.")
+	case errors.Is(err, domain.ErrInvalidApplicationPatch):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION_FORM", "Форма заявки заполнена некорректно.")
 	}
 	return Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
 }
