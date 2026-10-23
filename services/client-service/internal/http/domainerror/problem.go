@@ -36,6 +36,8 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusNotFound, "COMPANY_NOT_FOUND", "Профиль компании не найден.")
 	case errors.Is(err, domain.ErrProductNotFound):
 		return Problem(ctx, http.StatusNotFound, "PRODUCT_NOT_FOUND", "Продукт не найден.")
+	case errors.Is(err, domain.ErrApplicationNotFound):
+		return Problem(ctx, http.StatusNotFound, "APPLICATION_NOT_FOUND", "Заявка не найдена.")
 	case errors.Is(err, domain.ErrCompanyAlreadyExists):
 		return Problem(ctx, http.StatusConflict, "COMPANY_ALREADY_EXISTS", "Профиль компании уже существует; укажите актуальный If-Match.")
 	case errors.Is(err, domain.ErrCompanyVersionConflict):

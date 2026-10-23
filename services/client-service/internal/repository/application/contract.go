@@ -16,10 +16,14 @@ type Tx interface {
 
 type DB interface {
 	Begin(context.Context) (Tx, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
 type Pool interface {
 	Begin(context.Context) (pgx.Tx, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
 type poolAdapter struct{ pool Pool }
@@ -27,3 +31,11 @@ type poolAdapter struct{ pool Pool }
 func Adapt(pool Pool) DB { return poolAdapter{pool: pool} }
 
 func (a poolAdapter) Begin(ctx context.Context) (Tx, error) { return a.pool.Begin(ctx) }
+
+func (a poolAdapter) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
+	return a.pool.Query(ctx, query, args...)
+}
+
+func (a poolAdapter) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	return a.pool.QueryRow(ctx, query, args...)
+}
