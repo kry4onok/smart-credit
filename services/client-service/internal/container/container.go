@@ -9,6 +9,7 @@ import (
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
+	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
 	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
@@ -20,6 +21,7 @@ import (
 	productrepo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/product"
 	createapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/create"
 	getapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/get"
+	updateapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/update"
 	getcompany "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/company/get"
 	updatecompany "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/company/update"
 	getproduct "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/product/get"
@@ -45,6 +47,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			companyupdate.New(updatecompany.New(company.New(db))),
 			applicationcreate.New(createapplication.New(applicationRepository)),
 			applicationget.New(getapplication.New(applicationRepository)),
+			applicationupdate.New(updateapplication.New(applicationRepository)),
 			productget.New(getproduct.New(productrepo.New(db))),
 			productlist.New(listproducts.New(productrepo.New(db))),
 			jwt.New(cfg.JWT.JWKSURL, cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.Timeout, cfg.JWT.CacheTTL)),

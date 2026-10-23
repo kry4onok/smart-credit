@@ -68,3 +68,17 @@ type CreateApplicationParams struct {
 	ProductID     uuid.UUID
 	IdempotencyID uuid.UUID
 }
+
+type ApplicationPatch struct {
+	AmountKopecks  *int64
+	AmountCurrency string
+	TermMonths     *int
+	Purpose        *string
+}
+
+type UpdateApplicationParams struct {
+	OrgID           uuid.UUID
+	ApplicationID   uuid.UUID
+	ExpectedVersion int64
+	Patch           ApplicationPatch
+}

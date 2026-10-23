@@ -20,7 +20,7 @@ func (h *Handler) Handle(ctx context.Context, request generated.GetApplicationRe
 	if err != nil {
 		return problemResponse{domainerror.Map(ctx, err)}, nil
 	}
-	return applicationResponse{generated.ClientApplication(toResponse(application)), application.Version}, nil
+	return applicationResponse{generated.ClientApplication(ToResponse(application)), application.Version}, nil
 }
 
 type applicationResponse struct {
