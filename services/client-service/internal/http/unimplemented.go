@@ -55,10 +55,6 @@ func (s *server) GetApplicationTimeline(context.Context, generated.GetApplicatio
 	return nil, errNotImplemented
 }
 
-func (s *server) UpdateCompany(context.Context, generated.UpdateCompanyRequestObject) (generated.UpdateCompanyResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) ListClientProducts(context.Context, generated.ListClientProductsRequestObject) (generated.ListClientProductsResponseObject, error) {
 	return nil, errNotImplemented
 }

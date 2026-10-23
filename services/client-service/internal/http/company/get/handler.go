@@ -27,13 +27,17 @@ func (h *Handler) Handle(ctx context.Context, _ generated.GetCompanyRequestObjec
 	return companyResponse{convert(company)}, nil
 }
 
-// The generated response has no ETag field; keep generated code untouched.
 type companyResponse struct{ generated.VersionedCompany }
 
 func (r companyResponse) VisitGetCompanyResponse(w http.ResponseWriter) error {
-	w.Header().Set("ETag", fmt.Sprintf(`"%d"`, r.Version))
+	etag := fmt.Sprintf(`"%d"`, r.Version)
 	w.Header().Set("Cache-Control", "no-store")
-	return generated.GetCompany200JSONResponse(r.VersionedCompany).VisitGetCompanyResponse(w)
+	return generated.GetCompany200JSONResponse{
+		Body: r.VersionedCompany,
+		Headers: generated.GetCompany200ResponseHeaders{
+			ETag: &etag,
+		},
+	}.VisitGetCompanyResponse(w)
 }
 
 type problemResponse struct{ common.Problem }
