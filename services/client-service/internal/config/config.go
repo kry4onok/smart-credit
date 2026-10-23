@@ -12,10 +12,20 @@ import (
 )
 
 type Config struct {
+	JWT              JWTConfig
 	HTTP             HTTPConfig
 	Database         DatabaseConfig
 	ReadinessTimeout time.Duration `env:"CLIENT_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
 	ShutdownTimeout  time.Duration `env:"CLIENT_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
+}
+
+// JWTConfig must match the access token issuer and audience configured in auth.
+type JWTConfig struct {
+	JWKSURL  string        `env:"CLIENT_JWKS_URL" env-default:"http://127.0.0.1:8082/.well-known/jwks.json" validate:"required,http_url"`
+	Issuer   string        `env:"CLIENT_JWT_ISSUER" env-default:"smart-credit-auth" validate:"required"`
+	Audience string        `env:"CLIENT_JWT_AUDIENCE" env-default:"smart-credit" validate:"required"`
+	Timeout  time.Duration `env:"CLIENT_JWKS_TIMEOUT" env-default:"2s" validate:"gt=0"`
+	CacheTTL time.Duration `env:"CLIENT_JWKS_CACHE_TTL" env-default:"5m" validate:"gt=0"`
 }
 
 type HTTPConfig struct {
