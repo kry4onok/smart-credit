@@ -13,6 +13,10 @@
 - `../proto/scoring/scoring.proto`, `../proto/bureau/bureau.proto` — обязательные gRPC вызовы банка.
 - `../proto/assistant/assistant.proto` — gRPC сервис объяснений и резюме для MVP.
 
+Для `BureauService` неизвестный валидный ИНН даёт gRPC `NOT_FOUND`, неверная
+контрольная сумма — `INVALID_ARGUMENT`; настроенный сбой источника даёт
+`UNAVAILABLE`. Моковые сценарии находятся в `../seed/personas.yaml`.
+
 ## Как менять
 
 1. Описать пользовательское действие и владельца данных. Решить, HTTP это, событие Kafka или gRPC. Между `client-service` и `bank-service` допускается только Kafka.

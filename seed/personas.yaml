@@ -1,0 +1,99 @@
+# Synthetic bureau profiles. Values are fictional and deterministic.
+version: 1
+personas:
+  - inn: "7707083893"
+    profile:
+      status: ACTIVE
+      registered_at: "2019-04-15"
+      okved: "10.71"
+      director_name: "Ирина Тестовая"
+      founder_names: ["Ирина Тестовая"]
+      address: "Демо-город, улица Примерная, 1"
+    credit_history:
+      total_debt: {amount_kopecks: 120000000, currency: RUB}
+      obligations:
+        - kind: BUSINESS_LOAN
+          outstanding: {amount_kopecks: 120000000, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+
+  - inn: "7810755500"
+    profile:
+      status: ACTIVE
+      registered_at: "2016-09-20"
+      okved: "52.10"
+      director_name: "Алексей Тестовый"
+      founder_names: ["Алексей Тестовый"]
+      address: "Демо-город, улица Примерная, 2"
+    credit_history:
+      total_debt: {amount_kopecks: 350000000, currency: RUB}
+      obligations:
+        - kind: BUSINESS_LOAN
+          outstanding: {amount_kopecks: 350000000, currency: RUB}
+      overdue_count_12m: 1
+      max_overdue_days: 12
+
+  - inn: "5401010012"
+    profile:
+      status: ACTIVE
+      registered_at: "2021-02-10"
+      okved: "43.21"
+      director_name: "Мария Тестовая"
+      address: "Демо-город, улица Примерная, 3"
+    credit_history:
+      total_debt: {amount_kopecks: 90000000, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+    behavior:
+      credit_delay_ms: 2500
+
+  - inn: "6671160003"
+    profile:
+      status: ACTIVE
+      registered_at: "2018-11-05"
+      okved: "25.62"
+      director_name: "Павел Тестовый"
+      address: "Демо-город, улица Примерная, 4"
+    credit_history:
+      total_debt: {amount_kopecks: 210000000, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+
+  - inn: "1234567894"
+    profile:
+      status: ACTIVE
+      registered_at: "2020-05-12"
+      okved: "62.01"
+    credit_history:
+      total_debt: {amount_kopecks: 20000000, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+    behavior:
+      credit_unavailable: true
+
+  - inn: "1111111117"
+    profile:
+      status: LIQUIDATING
+      registered_at: "2020-01-15"
+      okved: "46.90"
+    credit_history:
+      total_debt: {amount_kopecks: 0, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+
+  - inn: "9876543210"
+    profile:
+      status: ACTIVE
+      registered_at: "2023-10-22"
+      okved: "47.91"
+    credit_history:
+      total_debt: {amount_kopecks: 0, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+
+  - inn: "500100732259"
+    profile:
+      status: ACTIVE
+      registered_at: "2022-01-10"
+      okved: "62.02"
+    credit_history: {} # Missing values stay absent in protobuf.
