@@ -57,6 +57,8 @@ services:
       BANK_DATABASE_URL: postgres://bank_user:${BANK_DB_PASSWORD:?Copy .env.example to .env}@postgres:5432/bank_db?sslmode=disable
       BANK_SCORING_GRPC_ADDR: scoring:50051
       BANK_BUREAU_GRPC_ADDR: bureau-mocks:50053
+      BANK_KAFKA_BROKERS: kafka:19092
+      BANK_KAFKA_CONSUMER_GROUP: bank-service
       BANK_HTTP_READ_HEADER_TIMEOUT: ${BANK_HTTP_READ_HEADER_TIMEOUT}
       BANK_HTTP_READ_TIMEOUT: ${BANK_HTTP_READ_TIMEOUT}
       BANK_HTTP_WRITE_TIMEOUT: ${BANK_HTTP_WRITE_TIMEOUT}
