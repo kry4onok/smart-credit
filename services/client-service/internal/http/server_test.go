@@ -13,6 +13,7 @@ import (
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
+	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
@@ -100,8 +101,14 @@ func (applicationDocumentMock) Execute(_ context.Context, _ model.AddApplication
 	return model.ApplicationDocument{ID: uuid.New(), DocumentType: "BANK_STATEMENT", FileName: "statement.pdf", Sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", IsMock: true, UploadedAt: time.Now().UTC()}, nil
 }
 
+type applicationInfoMock struct{}
+
+func (applicationInfoMock) Execute(_ context.Context, params model.ProvideInfoParams) (model.ActionAccepted, error) {
+	return model.ActionAccepted{ApplicationID: params.ApplicationID, PendingAction: "INFO_SENT"}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationinfo.New(applicationInfoMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		method, path, authorization string
 		status                      int
