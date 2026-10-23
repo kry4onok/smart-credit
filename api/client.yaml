@@ -39,6 +39,10 @@ paths:
       responses:
         '200':
           description: Профиль организации из JWT.
+          headers:
+            ETag:
+              description: Текущая версия профиля в двойных кавычках.
+              schema: { type: string, pattern: '^"[0-9]+"$' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/VersionedCompany' }
@@ -64,9 +68,16 @@ paths:
       responses:
         '200':
           description: Обновлённый профиль.
+          headers:
+            ETag:
+              description: Версия сохранённого профиля в двойных кавычках.
+              schema: { type: string, pattern: '^"[0-9]+"$' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/VersionedCompany' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /client/products:
