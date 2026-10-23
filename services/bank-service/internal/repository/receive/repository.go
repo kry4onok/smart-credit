@@ -12,6 +12,7 @@ import (
 )
 
 var ErrEventConflict = errors.New("client event ID or aggregate version conflicts with a different event")
+var ErrInfoProvidedConflict = errors.New("InfoProvided does not match an open request on a NEEDS_INFO case")
 
 type Repository struct {
 	db transaction.Queryer
@@ -44,6 +45,9 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 	}
 	if err != nil {
 		return false, fmt.Errorf("reserve event: %w", err)
+	}
+	if input.InfoProvided {
+		return r.applyInfoProvided(ctx, q, input)
 	}
 
 	status := "VALIDATION"
@@ -82,6 +86,53 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 		reason(status), input.EventID.String())
 	if err != nil {
 		return false, fmt.Errorf("audit submitted application: %w", err)
+	}
+	return true, nil
+}
+
+func (r *Repository) applyInfoProvided(ctx context.Context, q transaction.Queryer, input receive.Input) (bool, error) {
+	var status string
+	var clientEventVersion int64
+	err := q.QueryRow(ctx, selectCaseForInfoQuery, input.ApplicationID).Scan(&status, &clientEventVersion)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrInfoProvidedConflict
+	}
+	if err != nil {
+		return false, fmt.Errorf("lock case for InfoProvided: %w", err)
+	}
+	if status != "NEEDS_INFO" || input.AggregateVersion <= clientEventVersion {
+		return false, ErrInfoProvidedConflict
+	}
+	var requestID uuid.UUID
+	err = q.QueryRow(ctx, selectOpenInfoRequestQuery, input.ApplicationID).Scan(&requestID)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && requestID != input.RequestID) {
+		return false, ErrInfoProvidedConflict
+	}
+	if err != nil {
+		return false, fmt.Errorf("lock open info request: %w", err)
+	}
+	result, err := q.Exec(ctx, fulfillInfoRequestQuery, input.RequestID, input.ApplicationID)
+	if err != nil {
+		return false, fmt.Errorf("fulfill info request: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return false, ErrInfoProvidedConflict
+	}
+	var version int64
+	err = q.QueryRow(ctx, updateCaseFromInfoQuery,
+		input.ApplicationID, input.CompanyINN, input.CompanyName,
+		string(input.CompanyJSON), string(input.FormJSON), string(input.DocumentsJSON),
+		input.AmountKopecks, input.TermMonths, input.PurposeTag, input.AggregateVersion).Scan(&version)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrInfoProvidedConflict
+	}
+	if err != nil {
+		return false, fmt.Errorf("update case from InfoProvided: %w", err)
+	}
+	_, err = q.Exec(ctx, insertInfoProvidedAuditQuery, uuid.New(), input.ApplicationID, version,
+		input.EventID.String(), input.RequestID.String())
+	if err != nil {
+		return false, fmt.Errorf("audit InfoProvided: %w", err)
 	}
 	return true, nil
 }

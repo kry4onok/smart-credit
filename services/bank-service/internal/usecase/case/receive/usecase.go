@@ -15,10 +15,12 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-var ErrInvalidEvent = errors.New("invalid ApplicationSubmitted event")
+var ErrInvalidEvent = errors.New("invalid client event")
 var innPattern = regexp.MustCompile(`^[0-9]{10}([0-9]{2})?$`)
 
 type Input struct {
+	InfoProvided     bool
+	RequestID        uuid.UUID
 	EventID          uuid.UUID
 	ApplicationID    uuid.UUID
 	AggregateVersion int64
@@ -65,7 +67,7 @@ func (uc *UseCase) Execute(ctx context.Context, event *eventspb.Event) (bool, er
 		return applyErr
 	})
 	if err != nil {
-		return false, fmt.Errorf("receive ApplicationSubmitted: %w", err)
+		return false, fmt.Errorf("receive client event: %w", err)
 	}
 	return applied, nil
 }
@@ -88,19 +90,35 @@ func parse(event *eventspb.Event) (Input, error) {
 	}
 
 	submitted := event.GetApplicationSubmitted()
-	if submitted == nil || submitted.GetCompany() == nil || submitted.GetForm() == nil {
+	provided := event.GetInfoProvided()
+	if (submitted == nil && provided == nil) || (submitted != nil && provided != nil) {
 		return Input{}, fmt.Errorf("%w: payload", ErrInvalidEvent)
 	}
-
-	orgID, orgErr := nonzeroUUID(submitted.GetOrgId())
-	clientUserID, userErr := nonzeroUUID(submitted.GetClientUserId())
-	productID, productErr := nonzeroUUID(submitted.GetProductId())
-	if orgErr != nil || userErr != nil || productErr != nil || submitted.GetProductVersion() <= 0 {
-		return Input{}, fmt.Errorf("%w: identifiers", ErrInvalidEvent)
+	input := Input{EventID: eventID, ApplicationID: applicationID, AggregateVersion: event.GetAggregateVersion()}
+	var company *commonpb.CompanySnapshot
+	var form *commonpb.ApplicationForm
+	var documentsInput []*commonpb.DocumentMetadata
+	if submitted != nil {
+		var orgErr, userErr, productErr error
+		input.OrgID, orgErr = nonzeroUUID(submitted.GetOrgId())
+		input.ClientUserID, userErr = nonzeroUUID(submitted.GetClientUserId())
+		input.ProductID, productErr = nonzeroUUID(submitted.GetProductId())
+		if orgErr != nil || userErr != nil || productErr != nil || submitted.GetProductVersion() <= 0 {
+			return Input{}, fmt.Errorf("%w: identifiers", ErrInvalidEvent)
+		}
+		input.ProductVersion = submitted.GetProductVersion()
+		company, form, documentsInput = submitted.GetCompany(), submitted.GetForm(), submitted.GetDocuments()
+	} else {
+		input.InfoProvided = true
+		input.RequestID, err = nonzeroUUID(provided.GetRequestId())
+		if err != nil {
+			return Input{}, fmt.Errorf("%w: request_id", ErrInvalidEvent)
+		}
+		company, form, documentsInput = provided.GetCompany(), provided.GetForm(), provided.GetDocuments()
 	}
-
-	company := submitted.GetCompany()
-	form := submitted.GetForm()
+	if company == nil || form == nil {
+		return Input{}, fmt.Errorf("%w: snapshots", ErrInvalidEvent)
+	}
 	if !innPattern.MatchString(company.GetInn()) || strings.TrimSpace(company.GetName()) == "" ||
 		len(strings.TrimSpace(company.GetOkved())) < 2 || len(strings.TrimSpace(company.GetOkved())) > 16 ||
 		!validDate(company.GetRegisteredAt()) || !validOptionalMoney(company.GetRevenue_12M(), false) ||
@@ -127,8 +145,8 @@ func parse(event *eventspb.Event) (Input, error) {
 		return Input{}, fmt.Errorf("encode application snapshot: %w", err)
 	}
 
-	documents := make([]documentSnapshot, 0, len(submitted.GetDocuments()))
-	for _, document := range submitted.GetDocuments() {
+	documents := make([]documentSnapshot, 0, len(documentsInput))
+	for _, document := range documentsInput {
 		if document == nil || document.GetUploadedAt() == nil || document.GetUploadedAt().CheckValid() != nil {
 			return Input{}, fmt.Errorf("%w: document", ErrInvalidEvent)
 		}
@@ -154,14 +172,10 @@ func parse(event *eventspb.Event) (Input, error) {
 	if err != nil {
 		return Input{}, fmt.Errorf("encode documents snapshot: %w", err)
 	}
-	return Input{
-		EventID: eventID, ApplicationID: applicationID, AggregateVersion: event.GetAggregateVersion(),
-		OrgID: orgID, ClientUserID: clientUserID, ProductID: productID,
-		ProductVersion: submitted.GetProductVersion(), CompanyINN: company.GetInn(),
-		CompanyName: company.GetName(), CompanyJSON: companyJSON, FormJSON: formJSON,
-		DocumentsJSON: documentsJSON, AmountKopecks: form.GetAmount().GetAmountKopecks(),
-		TermMonths: form.GetTermMonths(), PurposeTag: purpose,
-	}, nil
+	input.CompanyINN, input.CompanyName = company.GetInn(), company.GetName()
+	input.CompanyJSON, input.FormJSON, input.DocumentsJSON = companyJSON, formJSON, documentsJSON
+	input.AmountKopecks, input.TermMonths, input.PurposeTag = form.GetAmount().GetAmountKopecks(), form.GetTermMonths(), purpose
+	return input, nil
 }
 
 type documentSnapshot struct {

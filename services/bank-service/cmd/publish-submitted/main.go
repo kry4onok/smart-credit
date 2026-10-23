@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -21,19 +22,38 @@ func main() {
 	applicationID := flag.String("application-id", uuid.NewString(), "application UUID (reuse to test a duplicate)")
 	eventID := flag.String("event-id", uuid.NewString(), "event UUID (reuse to test a duplicate)")
 	missingData := flag.Bool("missing-data", false, "omit revenue and documents to exercise NEEDS_INFO")
+	infoRequestID := flag.String("info-request-id", "", "open info request UUID; publish InfoProvided when set")
+	aggregateVersion := flag.Int64("aggregate-version", 0, "client event version (default: 1 for submit, 2 for info)")
 	flag.Parse()
-	if err := run(*brokers, *applicationID, *eventID, *missingData); err != nil {
+	if err := run(*brokers, *applicationID, *eventID, *infoRequestID, *aggregateVersion, *missingData); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(brokers, applicationID, eventID string, missingData bool) error {
+func run(brokers, applicationID, eventID, infoRequestID string, aggregateVersion int64, missingData bool) error {
 	if _, err := uuid.Parse(applicationID); err != nil {
 		return fmt.Errorf("invalid application ID: %w", err)
 	}
 	if _, err := uuid.Parse(eventID); err != nil {
 		return fmt.Errorf("invalid event ID: %w", err)
+	}
+	if infoRequestID != "" {
+		if _, err := uuid.Parse(infoRequestID); err != nil {
+			return fmt.Errorf("invalid info request ID: %w", err)
+		}
+		if missingData {
+			return errors.New("-missing-data is only valid for ApplicationSubmitted")
+		}
+	}
+	if aggregateVersion == 0 {
+		aggregateVersion = 1
+		if infoRequestID != "" {
+			aggregateVersion = 2
+		}
+	}
+	if aggregateVersion < 1 {
+		return errors.New("aggregate version must be positive")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -44,7 +64,7 @@ func run(brokers, applicationID, eventID string, missingData bool) error {
 	defer client.Close()
 	content := &eventspb.Event{
 		EventId: eventID, AggregateType: "APPLICATION", AggregateId: applicationID,
-		AggregateVersion: 1, OccurredAt: timestamppb.Now(), CorrelationId: uuid.NewString(),
+		AggregateVersion: aggregateVersion, OccurredAt: timestamppb.Now(), CorrelationId: uuid.NewString(),
 		Payload: &eventspb.Event_ApplicationSubmitted{ApplicationSubmitted: &eventspb.ApplicationSubmitted{
 			OrgId: "20000000-0000-4000-8000-000000000001", ClientUserId: "30000000-0000-4000-8000-000000000001",
 			ProductId: "11111111-1111-4111-8111-111111111111", ProductVersion: 1,
@@ -70,6 +90,13 @@ func run(brokers, applicationID, eventID string, missingData bool) error {
 		content.GetApplicationSubmitted().Company.Revenue_12M = nil
 		content.GetApplicationSubmitted().Documents = nil
 	}
+	if infoRequestID != "" {
+		submitted := content.GetApplicationSubmitted()
+		content.Payload = &eventspb.Event_InfoProvided{InfoProvided: &eventspb.InfoProvided{
+			RequestId: infoRequestID,
+			Company:   submitted.Company, Form: submitted.Form, Documents: submitted.Documents,
+		}}
+	}
 	value, err := proto.Marshal(content)
 	if err != nil {
 		return fmt.Errorf("encode event: %w", err)
@@ -79,6 +106,11 @@ func run(brokers, applicationID, eventID string, missingData bool) error {
 	}).FirstErr(); err != nil {
 		return fmt.Errorf("publish event: %w", err)
 	}
-	fmt.Printf("application_id=%s event_id=%s\n", applicationID, eventID)
+	if infoRequestID != "" {
+		fmt.Printf("application_id=%s request_id=%s event_id=%s aggregate_version=%d\n",
+			applicationID, infoRequestID, eventID, aggregateVersion)
+	} else {
+		fmt.Printf("application_id=%s event_id=%s\n", applicationID, eventID)
+	}
 	return nil
 }

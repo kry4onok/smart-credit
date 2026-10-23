@@ -110,3 +110,66 @@ func TestParseRejectsInvalidSubmittedEvent(t *testing.T) {
 		})
 	}
 }
+
+func providedEvent() *eventspb.Event {
+	event := submittedEvent()
+	event.EventId = "11111111-1111-4111-8111-111111111111"
+	event.AggregateVersion = 2
+	submitted := event.GetApplicationSubmitted()
+	event.Payload = &eventspb.Event_InfoProvided{InfoProvided: &eventspb.InfoProvided{
+		RequestId: "22222222-2222-4222-8222-222222222222",
+		Company:   submitted.Company, Form: submitted.Form, Documents: submitted.Documents,
+	}}
+	return event
+}
+
+func TestParseInfoProvidedPreservesFullSnapshots(t *testing.T) {
+	event := providedEvent()
+	event.GetInfoProvided().Company.Revenue_12M = nil
+	input, err := parse(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !input.InfoProvided || input.RequestID.String() != event.GetInfoProvided().GetRequestId() ||
+		input.AmountKopecks != 1000 || input.PurposeTag != "WORKING_CAPITAL" {
+		t.Fatalf("InfoProvided input = %+v", input)
+	}
+	var company commonpb.CompanySnapshot
+	if err := protojson.Unmarshal(input.CompanyJSON, &company); err != nil {
+		t.Fatal(err)
+	}
+	if company.GetRevenue_12M() != nil {
+		t.Fatal("missing revenue became a value")
+	}
+	var documents []map[string]any
+	if err := json.Unmarshal(input.DocumentsJSON, &documents); err != nil {
+		t.Fatal(err)
+	}
+	if len(documents) != 1 || documents[0]["document_type"] != "BANK_STATEMENT" {
+		t.Fatalf("documents = %v", documents)
+	}
+}
+
+func TestParseRejectsInvalidInfoProvided(t *testing.T) {
+	tests := []struct {
+		name   string
+		change func(*eventspb.Event)
+	}{
+		{"missing request ID", func(e *eventspb.Event) { e.GetInfoProvided().RequestId = "" }},
+		{"missing company", func(e *eventspb.Event) { e.GetInfoProvided().Company = nil }},
+		{"missing form", func(e *eventspb.Event) { e.GetInfoProvided().Form = nil }},
+		{"invalid document", func(e *eventspb.Event) {
+			e.GetInfoProvided().Documents[0].DocumentType = commonpb.DocumentType_DOCUMENT_TYPE_UNSPECIFIED
+		}},
+		{"stale version", func(e *eventspb.Event) { e.AggregateVersion = 0 }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event := providedEvent()
+			tt.change(event)
+			if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+				t.Fatalf("parse error = %v, want ErrInvalidEvent", err)
+			}
+		})
+	}
+}
