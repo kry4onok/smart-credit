@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	bureauclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/bureau"
 	scoringclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/scoring"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
@@ -13,23 +14,27 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
+	enrichmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/enrichment"
 	scoringrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/scoring"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
 	scoringstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/scoring"
+	enrichmentworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/enrichment"
 	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Container struct {
-	DB            *pgxpool.Pool
-	Transactions  *transaction.Manager
-	Scoring       *scoringrepository.Repository
-	ScoringWorker *scoringworker.Worker
-	HTTPHandler   http.Handler
-	scoringClient *scoringclient.Client
+	DB               *pgxpool.Pool
+	Transactions     *transaction.Manager
+	Scoring          *scoringrepository.Repository
+	ScoringWorker    *scoringworker.Worker
+	EnrichmentWorker *enrichmentworker.Worker
+	HTTPHandler      http.Handler
+	scoringClient    *scoringclient.Client
+	bureauClient     *bureauclient.Client
 
 	closeOnce sync.Once
 }
@@ -52,6 +57,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	getCase := getcase.New(caseRepository)
 	transactions := transaction.New(db)
 	scoringAttempts := scoringrepository.New(db, transactions)
+	enrichmentResults := enrichmentrepository.New(db, transactions)
 	takeCase := takecase.New(caseRepository, transactions)
 	demoAnalystID := uuid.Nil
 	if cfg.DemoAnalystID != "" {
@@ -63,6 +69,8 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	}
 	var client *scoringclient.Client
 	var worker *scoringworker.Worker
+	var bureau *bureauclient.Client
+	var enrichment *enrichmentworker.Worker
 	if cfg.ScoringTarget != "" {
 		client, err = scoringclient.Dial(cfg.ScoringTarget)
 		if err != nil {
@@ -71,14 +79,27 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		}
 		worker = scoringworker.New(scoringAttempts, scoringstage.New(scoringAttempts, client), scoringAttempts)
 	}
+	if cfg.BureauTarget != "" {
+		bureau, err = bureauclient.Dial(cfg.BureauTarget)
+		if err != nil {
+			if client != nil {
+				_ = client.Close()
+			}
+			db.Close()
+			return nil, fmt.Errorf("create bureau dependency: %w", err)
+		}
+		enrichment = enrichmentworker.New(enrichmentResults, bureau)
+	}
 
 	return &Container{
-		DB:            db,
-		Transactions:  transactions,
-		Scoring:       scoringAttempts,
-		ScoringWorker: worker,
-		HTTPHandler:   authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
-		scoringClient: client,
+		DB:               db,
+		Transactions:     transactions,
+		Scoring:          scoringAttempts,
+		ScoringWorker:    worker,
+		EnrichmentWorker: enrichment,
+		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
+		scoringClient:    client,
+		bureauClient:     bureau,
 	}, nil
 }
 
@@ -90,6 +111,9 @@ func (c *Container) Close() {
 	c.closeOnce.Do(func() {
 		if c.scoringClient != nil {
 			_ = c.scoringClient.Close()
+		}
+		if c.bureauClient != nil {
+			_ = c.bureauClient.Close()
 		}
 		if c.DB != nil {
 			c.DB.Close()

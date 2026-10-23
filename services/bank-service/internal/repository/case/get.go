@@ -36,7 +36,7 @@ SELECT
     company_check.id IS NOT NULL OR credit_check.id IS NOT NULL,
     COALESCE(
         CASE WHEN company_check.outcome = 'SUCCESS'
-            THEN company_check.result->>'status'
+            THEN replace(company_check.result->>'status', 'COMPANY_STATUS_', '')
         END,
         'UNKNOWN'
     ),
