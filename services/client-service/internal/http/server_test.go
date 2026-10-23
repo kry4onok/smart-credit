@@ -10,11 +10,13 @@ import (
 
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
+	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
 	productlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/list"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
+	listapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/list"
 	"github.com/google/uuid"
 )
 
@@ -73,8 +75,14 @@ func (applicationUpdateMock) Execute(_ context.Context, _ uuid.UUID, application
 	}, Status: "DRAFT", StageLabel: "Черновик", NextAction: "Заполните заявку", Version: 2}, nil
 }
 
+type applicationListMock struct{}
+
+func (applicationListMock) Execute(_ context.Context, _ listapplication.Input) (listapplication.Output, error) {
+	return listapplication.Output{}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationget.New(applicationGetMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		method, path, authorization string
 		status                      int
@@ -84,12 +92,13 @@ func TestRoutes(t *testing.T) {
 		{http.MethodGet, "/client/products", "Bearer test", 200},
 		{http.MethodGet, "/client/products/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 		{http.MethodPost, "/client/applications", "Bearer test", 201},
+		{http.MethodGet, "/client/applications", "Bearer test", 200},
 		{http.MethodGet, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 		{http.MethodPatch, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 	} {
 		t.Run(tc.method+tc.path+tc.authorization, func(t *testing.T) {
 			request := httptest.NewRequest(tc.method, tc.path, nil)
-			if tc.path == "/client/applications" {
+			if tc.method == http.MethodPost && tc.path == "/client/applications" {
 				request = httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(`{"product_id":"00000000-0000-0000-0000-000000000001"}`))
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000002")

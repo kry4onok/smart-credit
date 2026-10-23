@@ -9,6 +9,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
+	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
@@ -27,6 +28,7 @@ type server struct {
 	update            *companyupdate.Handler
 	application       *applicationcreate.Handler
 	applicationGet    *applicationget.Handler
+	applicationList   *applicationlist.Handler
 	applicationUpdate *applicationupdate.Handler
 	product           *productget.Handler
 	products          *productlist.Handler
@@ -34,13 +36,14 @@ type server struct {
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationGet *applicationget.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
 		health:            health.New(db, readinessTimeout),
 		company:           company,
 		update:            update,
 		application:       application,
 		applicationGet:    applicationGet,
+		applicationList:   applicationList,
 		applicationUpdate: applicationUpdate,
 		product:           product,
 		products:          products,
@@ -91,6 +94,10 @@ func (s *server) CreateApplication(ctx context.Context, request generated.Create
 
 func (s *server) GetApplication(ctx context.Context, request generated.GetApplicationRequestObject) (generated.GetApplicationResponseObject, error) {
 	return s.applicationGet.Handle(ctx, request)
+}
+
+func (s *server) ListApplications(ctx context.Context, request generated.ListApplicationsRequestObject) (generated.ListApplicationsResponseObject, error) {
+	return s.applicationList.Handle(ctx, request)
 }
 
 func (s *server) UpdateApplication(ctx context.Context, request generated.UpdateApplicationRequestObject) (generated.UpdateApplicationResponseObject, error) {

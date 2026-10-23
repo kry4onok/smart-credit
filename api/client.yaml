@@ -167,6 +167,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApplicationPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /client/applications/{application_id}:
     parameters:
       - { $ref: './common.yaml#/components/parameters/ApplicationId' }

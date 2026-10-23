@@ -26,6 +26,15 @@ type Application struct {
 	Version        int64                   `json:"version"`
 }
 
+type ApplicationListItem struct {
+	ID            uuid.UUID
+	ProductID     uuid.UUID
+	AmountKopecks *int64
+	Status        string
+	NextAction    string
+	CreatedAt     time.Time
+}
+
 type ApplicationForm struct {
 	AmountKopecks int64  `json:"amount_kopecks"`
 	TermMonths    int    `json:"term_months"`
