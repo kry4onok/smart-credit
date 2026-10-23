@@ -7,17 +7,59 @@ import (
 )
 
 type Application struct {
+	ID             uuid.UUID               `json:"id"`
+	ProductID      uuid.UUID               `json:"product_id"`
+	ProductVersion int64                   `json:"product_version"`
+	Company        Company                 `json:"company"`
+	Form           *ApplicationForm        `json:"form,omitempty"`
+	Status         string                  `json:"status"`
+	StageLabel     string                  `json:"stage_label"`
+	NextAction     string                  `json:"next_action"`
+	AllowedActions []string                `json:"allowed_actions"`
+	PendingAction  *string                 `json:"pending_action,omitempty"`
+	Documents      []ApplicationDocument   `json:"documents"`
+	InfoRequest    *ApplicationInfoRequest `json:"info_request,omitempty"`
+	Offer          *ApplicationOffer       `json:"offer,omitempty"`
+	PublicReason   *string                 `json:"public_reason,omitempty"`
+	CreatedAt      time.Time               `json:"created_at"`
+	UpdatedAt      time.Time               `json:"updated_at"`
+	Version        int64                   `json:"version"`
+}
+
+type ApplicationForm struct {
+	AmountKopecks int64  `json:"amount_kopecks"`
+	TermMonths    int    `json:"term_months"`
+	Purpose       string `json:"purpose"`
+}
+
+type ApplicationDocument struct {
+	ID           uuid.UUID `json:"id"`
+	DocumentType string    `json:"document_type"`
+	FileName     string    `json:"file_name"`
+	Sha256       string    `json:"sha256"`
+	IsMock       bool      `json:"is_mock"`
+	UploadedAt   time.Time `json:"uploaded_at"`
+}
+
+type ApplicationInfoRequest struct {
+	ID                    uuid.UUID `json:"id"`
+	Message               string    `json:"message"`
+	RequiredFields        []string  `json:"required_fields"`
+	RequiredDocumentTypes []string  `json:"required_document_types"`
+	CreatedAt             time.Time `json:"created_at"`
+}
+
+type ApplicationOffer struct {
 	ID             uuid.UUID `json:"id"`
+	Kind           string    `json:"kind"`
 	ProductID      uuid.UUID `json:"product_id"`
 	ProductVersion int64     `json:"product_version"`
-	Company        Company   `json:"company"`
-	Status         string    `json:"status"`
-	StageLabel     string    `json:"stage_label"`
-	NextAction     string    `json:"next_action"`
-	AllowedActions []string  `json:"allowed_actions"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	Version        int64     `json:"version"`
+	ProductName    string    `json:"product_name"`
+	AmountKopecks  int64     `json:"amount_kopecks"`
+	TermMonths     int       `json:"term_months"`
+	RateBps        int       `json:"rate_bps"`
+	Explanation    string    `json:"explanation"`
+	ExpiresAt      time.Time `json:"expires_at"`
 }
 
 type CreateApplicationParams struct {

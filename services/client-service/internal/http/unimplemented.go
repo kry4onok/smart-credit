@@ -11,10 +11,6 @@ func (s *server) ListApplications(context.Context, generated.ListApplicationsReq
 	return nil, errNotImplemented
 }
 
-func (s *server) GetApplication(context.Context, generated.GetApplicationRequestObject) (generated.GetApplicationResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) UpdateApplication(context.Context, generated.UpdateApplicationRequestObject) (generated.UpdateApplicationResponseObject, error) {
 	return nil, errNotImplemented
 }
