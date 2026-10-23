@@ -19,13 +19,16 @@ import (
 	enrichmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/enrichment"
 	receiverepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/receive"
 	scoringrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/scoring"
+	validationrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/validation"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	receivecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/receive"
 	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
 	scoringstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/scoring"
+	validationstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	enrichmentworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/enrichment"
 	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
+	validationworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/validation"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -36,6 +39,7 @@ type Container struct {
 	Scoring          *scoringrepository.Repository
 	ScoringWorker    *scoringworker.Worker
 	EnrichmentWorker *enrichmentworker.Worker
+	ValidationWorker *validationworker.Worker
 	ClientEvents     *clientevents.Consumer
 	HTTPHandler      http.Handler
 	scoringClient    *scoringclient.Client
@@ -61,6 +65,8 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	listCases := listcase.New(caseRepository)
 	getCase := getcase.New(caseRepository)
 	transactions := transaction.New(db)
+	validationCases := validationrepository.New(db)
+	validation := validationworker.New(validationstage.New(validationCases, transactions))
 	receiveCases := receivecase.New(receiverepository.New(db), transactions)
 	brokerAddresses := strings.Split(cfg.KafkaBrokers, ",")
 	for index := range brokerAddresses {
@@ -115,6 +121,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		Scoring:          scoringAttempts,
 		ScoringWorker:    worker,
 		EnrichmentWorker: enrichment,
+		ValidationWorker: validation,
 		ClientEvents:     consumer,
 		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
 		scoringClient:    client,
