@@ -8,4 +8,5 @@ var (
 	ErrCompanyVersionConflict = errors.New("company version conflict")
 	ErrInvalidCompanyProfile  = errors.New("invalid company profile")
 	ErrInvalidIfMatch         = errors.New("invalid if-match")
+	ErrProductNotFound        = errors.New("product not found")
 )

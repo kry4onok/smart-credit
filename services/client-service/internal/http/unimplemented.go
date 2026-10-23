@@ -54,7 +54,3 @@ func (s *server) SubmitApplication(context.Context, generated.SubmitApplicationR
 func (s *server) GetApplicationTimeline(context.Context, generated.GetApplicationTimelineRequestObject) (generated.GetApplicationTimelineResponseObject, error) {
 	return nil, errNotImplemented
 }
-
-func (s *server) GetClientProduct(context.Context, generated.GetClientProductRequestObject) (generated.GetClientProductResponseObject, error) {
-	return nil, errNotImplemented
-}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
+	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
 	productlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/list"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 	"github.com/google/uuid"
@@ -35,8 +36,14 @@ func (productsMock) Execute(context.Context, *string) (model.ProductCatalog, err
 	return model.ProductCatalog{Version: 1, Items: []model.Product{}}, nil
 }
 
+type productMock struct{}
+
+func (productMock) Execute(_ context.Context, id uuid.UUID) (model.Product, error) {
+	return model.Product{ID: id, Version: 1, Code: "EXPRESS", Name: "Экспресс"}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		path, authorization string
 		status              int
@@ -44,6 +51,7 @@ func TestRoutes(t *testing.T) {
 		{"/healthz", "", 204}, {"/readyz", "", 204}, {"/client/company", "", 401},
 		{"/client/company", "Bearer test", 200},
 		{"/client/products", "Bearer test", 200},
+		{"/client/products/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 	} {
 		t.Run(tc.path+tc.authorization, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, tc.path, nil)
