@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	scoringclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/scoring"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
 	authmiddleware "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/middleware/auth"
@@ -16,15 +17,19 @@ import (
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
+	scoringstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/scoring"
+	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Container struct {
-	DB           *pgxpool.Pool
-	Transactions *transaction.Manager
-	Scoring      *scoringrepository.Repository
-	HTTPHandler  http.Handler
+	DB            *pgxpool.Pool
+	Transactions  *transaction.Manager
+	Scoring       *scoringrepository.Repository
+	ScoringWorker *scoringworker.Worker
+	HTTPHandler   http.Handler
+	scoringClient *scoringclient.Client
 
 	closeOnce sync.Once
 }
@@ -56,12 +61,24 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			return nil, fmt.Errorf("invalid BANK_DEMO_ANALYST_ID")
 		}
 	}
+	var client *scoringclient.Client
+	var worker *scoringworker.Worker
+	if cfg.ScoringTarget != "" {
+		client, err = scoringclient.Dial(cfg.ScoringTarget)
+		if err != nil {
+			db.Close()
+			return nil, fmt.Errorf("create scoring dependency: %w", err)
+		}
+		worker = scoringworker.New(scoringAttempts, scoringstage.New(scoringAttempts, client), scoringAttempts)
+	}
 
 	return &Container{
-		DB:           db,
-		Transactions: transactions,
-		Scoring:      scoringAttempts,
-		HTTPHandler:  authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
+		DB:            db,
+		Transactions:  transactions,
+		Scoring:       scoringAttempts,
+		ScoringWorker: worker,
+		HTTPHandler:   authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase), demoAnalystID),
+		scoringClient: client,
 	}, nil
 }
 
@@ -71,6 +88,9 @@ func (c *Container) Close() {
 	}
 
 	c.closeOnce.Do(func() {
+		if c.scoringClient != nil {
+			_ = c.scoringClient.Close()
+		}
 		if c.DB != nil {
 			c.DB.Close()
 		}

@@ -50,6 +50,9 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	go func() {
 		serverErrors <- server.Run()
 	}()
+	if dependencies.ScoringWorker != nil {
+		go dependencies.ScoringWorker.Run(ctx, logger)
+	}
 
 	logger.Info("bank-service started", "address", cfg.HTTP.Address)
 

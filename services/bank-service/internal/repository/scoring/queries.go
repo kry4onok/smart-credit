@@ -78,3 +78,54 @@ INSERT INTO score_results (
 SELECT case_id, $2, $3, $4::jsonb, request->'features', $5, $6, id
 FROM scoring_attempts
 WHERE id = $1`
+
+const claimScoringCaseQuery = `
+WITH candidate AS (
+    SELECT id FROM cases
+    WHERE status = 'SCORING'
+      AND (next_run_at IS NULL OR next_run_at <= now())
+      AND (lease_until IS NULL OR lease_until < now())
+    ORDER BY created_at, id
+    FOR UPDATE SKIP LOCKED
+    LIMIT 1
+)
+UPDATE cases AS c
+SET lease_until = now() + interval '30 seconds'
+FROM candidate
+WHERE c.id = candidate.id
+RETURNING c.id, c.lease_until`
+
+const currentWorkerAttemptQuery = `
+SELECT a.id, a.status,
+       COALESCE(a.created_at < now() - interval '30 seconds', false)
+FROM cases AS c
+LEFT JOIN scoring_attempts AS a ON a.id = c.current_scoring_attempt_id
+WHERE c.id = $1 AND c.status = 'SCORING' AND c.lease_until = $2`
+
+const lockWorkerCaseQuery = `
+SELECT c.current_scoring_attempt_id, a.status, a.error_code
+FROM cases AS c
+LEFT JOIN scoring_attempts AS a ON a.id = c.current_scoring_attempt_id
+WHERE c.id = $1 AND c.status = 'SCORING' AND c.lease_until = $2
+FOR UPDATE OF c`
+
+const finishScoringCaseQuery = `
+UPDATE cases
+SET status = $3,
+    recommendation = $4,
+    lease_until = NULL,
+    next_run_at = NULL,
+    version = version + 1,
+    audit_version = audit_version + 1,
+    updated_at = now()
+WHERE id = $1 AND lease_until = $2 AND status = 'SCORING'
+RETURNING version`
+
+const insertWorkerAuditQuery = `
+INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, details)
+VALUES ($1, $2, $3, 'SCORING_COMPLETED', 'SYSTEM', $4, $5::jsonb)`
+
+const releaseScoringCaseQuery = `
+UPDATE cases
+SET lease_until = NULL, next_run_at = now() + interval '5 seconds'
+WHERE id = $1 AND lease_until = $2 AND status = 'SCORING'`

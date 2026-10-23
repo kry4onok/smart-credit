@@ -16,6 +16,7 @@ type Config struct {
 	HTTP             HTTPConfig
 	Database         DatabaseConfig
 	DemoAnalystID    string        `env:"BANK_DEMO_ANALYST_ID"`
+	ScoringTarget    string        `env:"BANK_SCORING_GRPC_ADDR"`
 	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
 	ShutdownTimeout  time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
 }
