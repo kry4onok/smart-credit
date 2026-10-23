@@ -70,6 +70,11 @@ SELECT
     latest_score.reasons,
     latest_score.model_version,
     latest_score.feature_schema_version,
+    current_attempt.id,
+    current_attempt.input_revision,
+    current_attempt.as_of_date,
+    current_attempt.status,
+    current_attempt.response,
     cases.triggered_rules,
     cases.recommendation,
     cases.assignee_id,
@@ -111,10 +116,15 @@ LEFT JOIN LATERAL (
 LEFT JOIN LATERAL (
     SELECT score, grade, reasons, model_version, feature_schema_version
     FROM score_results
-    WHERE case_id = cases.id
+    WHERE case_id = cases.id AND attempt_id IS NULL
+        AND cases.current_scoring_attempt_id IS NULL
+        AND cases.scoring_input_revision = 1
     ORDER BY created_at DESC, id DESC
     LIMIT 1
 ) AS latest_score ON true
+LEFT JOIN scoring_attempts AS current_attempt
+    ON current_attempt.id = cases.current_scoring_attempt_id
+    AND current_attempt.input_revision = cases.scoring_input_revision
 LEFT JOIN LATERAL (
     SELECT id, message, required_fields, required_document_types, created_at
     FROM info_requests

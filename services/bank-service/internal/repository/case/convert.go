@@ -3,10 +3,13 @@ package caserepository
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	scoringpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/scoring"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func scanCaseListItem(row rowScanner) (model.CaseListItem, error) {
@@ -52,6 +55,11 @@ func scanCase(row rowScanner) (model.Case, error) {
 	var reasonsJSON []byte
 	var modelVersion *string
 	var featureSchemaVersion *string
+	var currentAttemptID *uuid.UUID
+	var currentInputRevision *int64
+	var currentAsOfDate *time.Time
+	var currentAttemptStatus *string
+	var currentResponseJSON []byte
 	var recommendation *string
 	var infoRequestID *uuid.UUID
 	var infoRequestMessage *string
@@ -99,6 +107,11 @@ func scanCase(row rowScanner) (model.Case, error) {
 		&reasonsJSON,
 		&modelVersion,
 		&featureSchemaVersion,
+		&currentAttemptID,
+		&currentInputRevision,
+		&currentAsOfDate,
+		&currentAttemptStatus,
+		&currentResponseJSON,
 		&item.TriggeredRules,
 		&recommendation,
 		&item.AssigneeID,
@@ -150,11 +163,30 @@ func scanCase(row rowScanner) (model.Case, error) {
 			return model.Case{}, fmt.Errorf("decode score reasons: %w", decodeErr)
 		}
 		item.Score = &model.ScoreResult{
-			Score:                *score,
+			AssessmentStatus:     "ASSESSED",
+			Score:                score,
 			Grade:                model.ScoreGrade(*grade),
 			Reasons:              reasons,
 			ModelVersion:         *modelVersion,
 			FeatureSchemaVersion: *featureSchemaVersion,
+		}
+	}
+	if currentAttemptID != nil {
+		if currentAttemptStatus == nil {
+			return model.Case{}, fmt.Errorf("current scoring attempt has no status")
+		}
+
+		if *currentAttemptStatus == "ASSESSED" || *currentAttemptStatus == "INSUFFICIENT_DATA" ||
+			*currentAttemptStatus == "UNSUPPORTED_INPUT" {
+			currentScore, decodeErr := decodeCurrentScore(
+				currentResponseJSON, *currentAttemptID, *currentInputRevision, *currentAsOfDate,
+			)
+			if decodeErr != nil {
+				return model.Case{}, fmt.Errorf("decode current scoring attempt: %w", decodeErr)
+			}
+			item.Score = currentScore
+		} else {
+			item.Score = nil
 		}
 	}
 	if recommendation != nil {
@@ -186,6 +218,56 @@ func scanCase(row rowScanner) (model.Case, error) {
 	}
 
 	return item, nil
+}
+
+func decodeCurrentScore(data []byte, attemptID uuid.UUID, revision int64, asOfDate time.Time) (*model.ScoreResult, error) {
+	response := &scoringpb.ScoreResponse{}
+	if err := protojson.Unmarshal(data, response); err != nil {
+		return nil, err
+	}
+
+	status := strings.TrimPrefix(response.AssessmentStatus.String(), "ASSESSMENT_STATUS_")
+	if status != "ASSESSED" && status != "INSUFFICIENT_DATA" && status != "UNSUPPORTED_INPUT" {
+		return nil, fmt.Errorf("invalid scoring status %q", status)
+	}
+	result := &model.ScoreResult{
+		AssessmentStatus:     status,
+		Grade:                model.ScoreGrade(strings.TrimPrefix(response.Grade.String(), "GRADE_")),
+		ModelVersion:         response.ModelVersion,
+		FeatureSchemaVersion: response.FeatureSchemaVersion,
+		AttemptID:            &attemptID,
+		InputRevision:        &revision,
+		AsOfDate:             &asOfDate,
+		DataIssues:           make([]model.ScoreDataIssue, 0, len(response.DataIssues)),
+		Reasons:              make([]model.ScoreReason, 0, len(response.Reasons)),
+		FactorContributions:  make([]model.ScoreFactorContribution, 0, len(response.FactorContributions)),
+	}
+	if response.Score != nil {
+		value := int(*response.Score)
+		result.Score = &value
+	}
+
+	baseline := int(response.BaselineScore)
+	result.BaselineScore = &baseline
+	checksum := response.ConfigChecksum
+	result.ConfigChecksum = &checksum
+	for _, issue := range response.DataIssues {
+		result.DataIssues = append(result.DataIssues, model.ScoreDataIssue{Code: issue.Code, FieldPath: issue.FieldPath})
+	}
+	for _, factor := range response.FactorContributions {
+		result.FactorContributions = append(result.FactorContributions, model.ScoreFactorContribution{
+			FactorName: factor.FactorName, Points: int(factor.Points), Description: factor.Description,
+		})
+	}
+	for _, reason := range response.Reasons {
+		result.Reasons = append(result.Reasons, model.ScoreReason{
+			Code:         model.ScoreReasonCode(strings.TrimPrefix(reason.Code.String(), "REASON_CODE_")),
+			Description:  reason.Description,
+			Direction:    model.ScoreReasonDirection(strings.TrimPrefix(reason.Direction.String(), "DIRECTION_")),
+			Contribution: int(reason.Contribution),
+		})
+	}
+	return result, nil
 }
 
 func convertInfoFields(values []string) []model.InfoField {
