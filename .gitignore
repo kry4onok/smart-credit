@@ -63,3 +63,4 @@ dist/
 !CMakeLists.txt
 !LICENSE*
 !NOTICE*
+!THIRD_PARTY_NOTICES.md

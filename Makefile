@@ -8,6 +8,8 @@ endif
 COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
 POSTGRES_PORT ?= 5432
 SCORING_PORT ?= 50051
+ASSISTANT_PORT ?= 50052
+OLLAMA_MODEL ?= qwen2.5:3b
 SWAGGER_PORT ?= 8081
 GATEWAY_PORT ?= 8000
 BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/bank_db?sslmode=disable
@@ -25,7 +27,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/bank-service/internal/generated
 
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed
-.PHONY: client-up client-down client-logs
+.PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -36,6 +38,9 @@ help:
 	@echo 'make scoring-test     Проверить модель и gRPC'
 	@echo 'make scoring-up       Собрать и запустить scoring в Docker'
 	@echo 'make scoring-smoke    Проверить scoring из Python'
+	@echo 'make assistant-up     Собрать и запустить assistant в Docker'
+	@echo 'make assistant-smoke  Проверить оба gRPC-метода assistant'
+	@echo 'make assistant-down   Остановить assistant'
 	@echo 'make scoring-smoke-go Проверить scoring из Go'
 	@echo 'make bank-scoring-smoke Проверить банковский adapter со scoring'
 	@echo 'make lint             Проверить Go-код линтерами и форматтерами'
@@ -108,6 +113,18 @@ scoring-smoke-go:
 
 bank-scoring-smoke:
 	BANK_SCORING_TARGET=$(SCORING_TARGET) go test ./services/bank-service/internal/client/scoring -run '^TestLiveScoringAdapter$$' -count=1 -v
+
+assistant-up: require-env
+	$(COMPOSE) up -d --build --wait assistant
+
+assistant-down: require-env
+	$(COMPOSE) rm -sf assistant
+
+assistant-logs: require-env
+	$(COMPOSE) logs -f assistant
+
+assistant-smoke: require-env
+	$(COMPOSE) exec -T assistant .venv/bin/python /app/scripts/assistant_smoke.py --target 127.0.0.1:50052 --expect-version $(OLLAMA_MODEL)
 
 scoring-evaluate:
 	PYTHONPATH=proto/gen/python $(SCORING_PY) python scripts/evaluate_scoring.py --target $(SCORING_TARGET) --output /tmp/smart-credit-scoring-evaluation.json
