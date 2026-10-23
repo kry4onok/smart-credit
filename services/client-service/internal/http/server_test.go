@@ -29,7 +29,7 @@ func (companyMock) Execute(context.Context, uuid.UUID) (model.Company, error) {
 }
 
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		path, authorization string
 		status              int

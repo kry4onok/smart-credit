@@ -8,6 +8,7 @@ import (
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
+	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/health"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/middleware"
@@ -18,16 +19,21 @@ var errNotImplemented = errors.New("operation is not implemented")
 type server struct {
 	health  *health.Handler
 	company *companyget.Handler
+	update  *companyupdate.Handler
 }
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
 		health:  health.New(db, readinessTimeout),
 		company: company,
+		update:  update,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
+			domainerror.Write(w, domainerror.Problem(r.Context(), http.StatusBadRequest, "BAD_REQUEST", "Некорректный запрос."))
+		},
 	})
 	handler := generated.Handler(strictHandler)
 	protected := middleware.RequireClient(verifier, handler)
@@ -58,4 +64,8 @@ func responseErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 
 func (s *server) GetCompany(ctx context.Context, request generated.GetCompanyRequestObject) (generated.GetCompanyResponseObject, error) {
 	return s.company.Handle(ctx, request)
+}
+
+func (s *server) UpdateCompany(ctx context.Context, request generated.UpdateCompanyRequestObject) (generated.UpdateCompanyResponseObject, error) {
+	return s.update.Handle(ctx, request)
 }
