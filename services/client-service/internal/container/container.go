@@ -12,6 +12,7 @@ import (
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
+	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
@@ -27,6 +28,7 @@ import (
 	createapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/create"
 	addapplicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document"
 	getapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/get"
+	provideinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/info"
 	listapplications "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/list"
 	submitapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/submit"
 	updateapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/update"
@@ -78,6 +80,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			applicationget.New(getapplication.New(applicationRepository)),
 			applicationlist.New(listapplications.New(applicationRepository)),
 			applicationsubmit.New(submitapplication.New(applicationRepository)),
+			applicationinfo.New(provideinfo.New(applicationRepository)),
 			applicationupdate.New(updateapplication.New(applicationRepository)),
 			productget.New(getproduct.New(productrepo.New(db))),
 			productlist.New(listproducts.New(productrepo.New(db))),

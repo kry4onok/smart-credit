@@ -18,4 +18,6 @@ var (
 	ErrInvalidDocumentUpload      = errors.New("invalid document upload")
 	ErrIdempotencyConflict        = errors.New("idempotency conflict")
 	ErrInvalidApplication         = errors.New("invalid application")
+	ErrApplicationInfoConflict    = errors.New("application info response conflicts with current state")
+	ErrInvalidInfoResponse        = errors.New("invalid application info response")
 )

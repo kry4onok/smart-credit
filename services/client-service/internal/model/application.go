@@ -110,3 +110,21 @@ type SubmitApplicationParams struct {
 	ApplicationID uuid.UUID
 	IdempotencyID uuid.UUID
 }
+
+type ProvideInfoParams struct {
+	OrgID              uuid.UUID
+	UserID             uuid.UUID
+	ApplicationID      uuid.UUID
+	RequestID          uuid.UUID
+	IdempotencyID      uuid.UUID
+	Company            *Company
+	Fields             *ApplicationPatch
+	DocumentIDs        []uuid.UUID
+	DocumentsSpecified bool
+	RequestHash        []byte
+}
+
+type ActionAccepted struct {
+	ApplicationID uuid.UUID `json:"application_id"`
+	PendingAction string    `json:"pending_action"`
+}

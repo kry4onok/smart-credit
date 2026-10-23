@@ -11,10 +11,6 @@ func (s *server) CancelApplication(context.Context, generated.CancelApplicationR
 	return nil, errNotImplemented
 }
 
-func (s *server) ProvideInfo(context.Context, generated.ProvideInfoRequestObject) (generated.ProvideInfoResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) AcceptOffer(context.Context, generated.AcceptOfferRequestObject) (generated.AcceptOfferResponseObject, error) {
 	return nil, errNotImplemented
 }
