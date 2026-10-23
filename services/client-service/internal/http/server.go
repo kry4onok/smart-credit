@@ -12,23 +12,26 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/health"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/middleware"
+	productlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/list"
 )
 
 var errNotImplemented = errors.New("operation is not implemented")
 
 type server struct {
-	health  *health.Handler
-	company *companyget.Handler
-	update  *companyupdate.Handler
+	health   *health.Handler
+	company  *companyget.Handler
+	update   *companyupdate.Handler
+	products *productlist.Handler
 }
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:  health.New(db, readinessTimeout),
-		company: company,
-		update:  update,
+		health:   health.New(db, readinessTimeout),
+		company:  company,
+		update:   update,
+		products: products,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
@@ -68,4 +71,8 @@ func (s *server) GetCompany(ctx context.Context, request generated.GetCompanyReq
 
 func (s *server) UpdateCompany(ctx context.Context, request generated.UpdateCompanyRequestObject) (generated.UpdateCompanyResponseObject, error) {
 	return s.update.Handle(ctx, request)
+}
+
+func (s *server) ListClientProducts(ctx context.Context, request generated.ListClientProductsRequestObject) (generated.ListClientProductsResponseObject, error) {
+	return s.products.Handle(ctx, request)
 }

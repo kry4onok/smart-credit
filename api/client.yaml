@@ -88,7 +88,7 @@ paths:
       parameters:
         - name: purpose
           in: query
-          schema: { type: string }
+          schema: { $ref: './common.yaml#/components/schemas/PurposeTag' }
       responses:
         '200':
           description: Клиентская копия каталога.
@@ -102,6 +102,9 @@ paths:
                     type: array
                     items: { $ref: './common.yaml#/components/schemas/Product' }
                   catalog_version: { type: integer, format: int64, minimum: 1 }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /client/products/{product_id}:
     get:
       tags: [Products]
