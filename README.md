@@ -145,25 +145,25 @@ Swagger UI: `http://localhost:8000/docs/` → **Bank API**. Проверьте
 
 ```yaml
 client-service:
-  build:
-    context: ..
-    dockerfile: deploy/docker/go-service.Dockerfile
-    args:
-      SERVICE_PATH: services/client-service
-  environment:
-    CLIENT_HTTP_ADDR: ":8080"
-    CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
-  depends_on:
-    postgres:
-      condition: service_healthy
-  ports:
-    - "127.0.0.1:8083:8080"
-  healthcheck:
-    test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
-    interval: 5s
-    timeout: 3s
-    retries: 20
-  restart: unless-stopped
+   build:
+      context: ..
+      dockerfile: deploy/docker/go-service.Dockerfile
+      args:
+         SERVICE_PATH: services/client-service
+   environment:
+      CLIENT_HTTP_ADDR: ":8080"
+      CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
+   depends_on:
+      postgres:
+         condition: service_healthy
+   ports:
+      - "127.0.0.1:8083:8080"
+   healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+   restart: unless-stopped
 ```
 
 Из контейнеров Postgres доступен как `postgres:5432`, Kafka — как
@@ -175,6 +175,43 @@ client-service:
 auth и client контейнеров появятся общие команды `make dev-up`,
 `make dev-down` и `make dev-logs`, которые поднимут инфраструктуру, применят
 миграции и запустят весь стенд.
+
+## client-service
+
+Сервис кабинета клиента можно собрать и запустить в Docker вместе с Postgres:
+
+```sh
+make client-up
+```
+
+Команда поднимает Postgres, применяет миграции `client_db`, собирает общий
+Go-образ с параметром `SERVICE_PATH=services/client-service` и ждёт успешного
+`/healthz`. Логи и остановка контейнера:
+
+```sh
+make client-logs
+make client-down
+```
+
+Для отдельного применения миграций используются команды:
+
+```sh
+make client-db-up
+make client-db-status
+```
+
+Проверка процесса и подключения к `client_db`:
+
+```sh
+curl -i http://localhost:8083/healthz
+curl -i http://localhost:8083/readyz
+```
+
+Обе ручки отвечают `204 No Content`, когда сервис и Postgres готовы.
+Бизнес-ручки требуют Bearer JWT с ролью `CLIENT`; организация выбирается по
+`org_id` из проверенного токена. JWKS по умолчанию запрашивается у
+auth-service на `http://127.0.0.1:8082/.well-known/jwks.json`.
+
 
 ## bank-service
 
