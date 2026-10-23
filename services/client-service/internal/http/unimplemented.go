@@ -11,10 +11,6 @@ func (s *server) CancelApplication(context.Context, generated.CancelApplicationR
 	return nil, errNotImplemented
 }
 
-func (s *server) AddApplicationDocument(context.Context, generated.AddApplicationDocumentRequestObject) (generated.AddApplicationDocumentResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) ProvideInfo(context.Context, generated.ProvideInfoRequestObject) (generated.ProvideInfoResponseObject, error) {
 	return nil, errNotImplemented
 }

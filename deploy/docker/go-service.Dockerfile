@@ -19,7 +19,9 @@ FROM alpine:3.22
 
 RUN apk add --no-cache ca-certificates && \
     addgroup -S app && \
-    adduser -S -G app app
+    adduser -S -G app app && \
+    mkdir -p /var/lib/smart-credit/documents && \
+    chown -R app:app /var/lib/smart-credit
 
 COPY --from=builder /out/service /usr/local/bin/service
 

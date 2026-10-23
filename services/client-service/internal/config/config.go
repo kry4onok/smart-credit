@@ -12,11 +12,12 @@ import (
 )
 
 type Config struct {
-	JWT              JWTConfig
-	HTTP             HTTPConfig
-	Database         DatabaseConfig
-	ReadinessTimeout time.Duration `env:"CLIENT_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
-	ShutdownTimeout  time.Duration `env:"CLIENT_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
+	JWT                 JWTConfig
+	HTTP                HTTPConfig
+	Database            DatabaseConfig
+	DocumentStoragePath string        `env:"CLIENT_DOCUMENT_STORAGE_PATH" env-default:".data/client-documents" validate:"required"`
+	ReadinessTimeout    time.Duration `env:"CLIENT_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
+	ShutdownTimeout     time.Duration `env:"CLIENT_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
 }
 
 // JWTConfig must match the access token issuer and audience configured in auth.

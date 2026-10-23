@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
+	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
@@ -81,8 +84,14 @@ func (applicationListMock) Execute(_ context.Context, _ listapplication.Input) (
 	return listapplication.Output{}, nil
 }
 
+type applicationDocumentMock struct{}
+
+func (applicationDocumentMock) Execute(_ context.Context, _ model.AddApplicationDocumentParams) (model.ApplicationDocument, error) {
+	return model.ApplicationDocument{ID: uuid.New(), DocumentType: "BANK_STATEMENT", FileName: "statement.pdf", Sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", IsMock: true, UploadedAt: time.Now().UTC()}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		method, path, authorization string
 		status                      int
@@ -95,10 +104,30 @@ func TestRoutes(t *testing.T) {
 		{http.MethodGet, "/client/applications", "Bearer test", 200},
 		{http.MethodGet, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 		{http.MethodPatch, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
+		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/documents", "Bearer test", 201},
 	} {
 		t.Run(tc.method+tc.path+tc.authorization, func(t *testing.T) {
 			request := httptest.NewRequest(tc.method, tc.path, nil)
-			if tc.method == http.MethodPost && tc.path == "/client/applications" {
+			if tc.method == http.MethodPost && strings.HasSuffix(tc.path, "/documents") {
+				body := bytes.NewBuffer(nil)
+				writer := multipart.NewWriter(body)
+				if err := writer.WriteField("document_type", "BANK_STATEMENT"); err != nil {
+					t.Fatal(err)
+				}
+				part, err := writer.CreateFormFile("file", "statement.pdf")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := part.Write([]byte("demo")); err != nil {
+					t.Fatal(err)
+				}
+				if err := writer.Close(); err != nil {
+					t.Fatal(err)
+				}
+				request = httptest.NewRequest(http.MethodPost, tc.path, body)
+				request.Header.Set("Content-Type", writer.FormDataContentType())
+				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000002")
+			} else if tc.method == http.MethodPost && tc.path == "/client/applications" {
 				request = httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(`{"product_id":"00000000-0000-0000-0000-000000000001"}`))
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000002")

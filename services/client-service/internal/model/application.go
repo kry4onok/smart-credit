@@ -48,6 +48,8 @@ type ApplicationDocument struct {
 	Sha256       string    `json:"sha256"`
 	IsMock       bool      `json:"is_mock"`
 	UploadedAt   time.Time `json:"uploaded_at"`
+	StorageKey   string    `json:"-"`
+	SizeBytes    int64     `json:"-"`
 }
 
 type ApplicationInfoRequest struct {
@@ -90,4 +92,14 @@ type UpdateApplicationParams struct {
 	ApplicationID   uuid.UUID
 	ExpectedVersion int64
 	Patch           ApplicationPatch
+}
+
+type AddApplicationDocumentParams struct {
+	OrgID          uuid.UUID
+	UserID         uuid.UUID
+	ApplicationID  uuid.UUID
+	IdempotencyKey uuid.UUID
+	DocumentType   string
+	FileName       string
+	Content        []byte
 }

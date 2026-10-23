@@ -42,6 +42,8 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusConflict, "APPLICATION_VERSION_CONFLICT", "Заявка уже изменена; обновите карточку и повторите запрос.")
 	case errors.Is(err, domain.ErrApplicationNotDraft):
 		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Редактировать можно только черновик заявки.")
+	case errors.Is(err, domain.ErrApplicationDocumentState):
+		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Документ нельзя добавить в текущем состоянии заявки.")
 	case errors.Is(err, domain.ErrCompanyAlreadyExists):
 		return Problem(ctx, http.StatusConflict, "COMPANY_ALREADY_EXISTS", "Профиль компании уже существует; укажите актуальный If-Match.")
 	case errors.Is(err, domain.ErrCompanyVersionConflict):
@@ -54,6 +56,10 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION", "Заявка не может быть создана.")
 	case errors.Is(err, domain.ErrInvalidApplicationPatch):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION_FORM", "Форма заявки заполнена некорректно.")
+	case errors.Is(err, domain.ErrApplicationDocumentType):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_DOCUMENT_TYPE", "Тип документа не разрешён для этой заявки.")
+	case errors.Is(err, domain.ErrInvalidDocumentUpload):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_DOCUMENT", "Файл документа заполнен некорректно.")
 	}
 	return Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/config"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
+	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
@@ -21,6 +22,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/company"
 	productrepo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/product"
 	createapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/create"
+	addapplicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document"
 	getapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/get"
 	listapplications "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/list"
 	updateapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/update"
@@ -41,13 +43,14 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create postgres dependency: %w", err)
 	}
-	applicationRepository := applicationrepo.New(applicationrepo.Adapt(db))
+	applicationRepository := applicationrepo.New(applicationrepo.Adapt(db), cfg.DocumentStoragePath)
 	return &Container{
 		DB: db,
 		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout,
 			companyget.New(getcompany.New(company.New(db))),
 			companyupdate.New(updatecompany.New(company.New(db))),
 			applicationcreate.New(createapplication.New(applicationRepository)),
+			applicationdocument.New(addapplicationdocument.New(applicationRepository)),
 			applicationget.New(getapplication.New(applicationRepository)),
 			applicationlist.New(listapplications.New(applicationRepository)),
 			applicationupdate.New(updateapplication.New(applicationRepository)),
