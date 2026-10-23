@@ -9,6 +9,7 @@ import (
 
 type Tx interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
+	Query(context.Context, string, ...any) (pgx.Rows, error)
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 	Commit(context.Context) error
 	Rollback(context.Context) error

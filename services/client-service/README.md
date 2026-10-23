@@ -13,13 +13,17 @@ HTTP-сервис кабинета клиента с техническими р
 - `GET /client/applications/{application_id}` — возвращает карточку заявки, форму, документы, активный запрос банка или оферту и вычисленные действия.
 - `PATCH /client/applications/{application_id}` — автосохраняет форму черновика по `If-Match`.
 - `POST /client/applications/{application_id}/documents` — принимает демо-файл до 5 MiB и сохраняет его метаданные с `Idempotency-Key`.
+- `POST /client/applications/{application_id}/submit` — проверяет заполненность черновика, переводит его в `SUBMITTED` и сохраняет событие `ApplicationSubmitted` в outbox.
 
 Технические ручки доступны без JWT и возвращают пустое тело. Бизнес-ручки
 требуют Bearer JWT с ролью `CLIENT`; профиль всегда выбирается по `org_id` из
 токена. При недоступной БД
 сервис продолжает работать, readiness восстанавливается после её подключения.
 Остальные операции контракта пока возвращают `501 Not Implemented`.
-Kafka на этом этапе не подключена и в readiness не проверяется.
+Kafka используется для outbox relay в `client.events` и проекции входящих
+`bank.events`; недоступность брокера не останавливает HTTP-сервис и не входит в
+проверку readiness. Непубликованные события остаются в outbox и будут повторены
+после восстановления брокера.
 Демо-файлы сохраняются в локальный Docker volume `client_documents`.
 
 ## Запуск в Docker

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -16,6 +17,8 @@ type Config struct {
 	HTTP                HTTPConfig
 	Database            DatabaseConfig
 	DocumentStoragePath string        `env:"CLIENT_DOCUMENT_STORAGE_PATH" env-default:".data/client-documents" validate:"required"`
+	KafkaBrokers        string        `env:"CLIENT_KAFKA_BROKERS" env-default:"127.0.0.1:9092" validate:"required"`
+	KafkaConsumerGroup  string        `env:"CLIENT_KAFKA_CONSUMER_GROUP" env-default:"client-service" validate:"required"`
 	ReadinessTimeout    time.Duration `env:"CLIENT_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
 	ShutdownTimeout     time.Duration `env:"CLIENT_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
 }
@@ -69,6 +72,22 @@ func Load() (Config, error) {
 	parsed, err := url.Parse(cfg.Database.URL)
 	if err != nil || (parsed.Scheme != "postgres" && parsed.Scheme != "postgresql") || parsed.Hostname() == "" || parsed.Path == "" || parsed.Path == "/" {
 		return Config{}, fmt.Errorf("CLIENT_DATABASE_URL must be a postgres URL with host and database name")
+	}
+	if strings.TrimSpace(cfg.KafkaConsumerGroup) == "" {
+		return Config{}, fmt.Errorf("CLIENT_KAFKA_CONSUMER_GROUP is required")
+	}
+	for _, broker := range strings.Split(cfg.KafkaBrokers, ",") {
+		if strings.TrimSpace(broker) == "" {
+			return Config{}, fmt.Errorf("CLIENT_KAFKA_BROKERS must be a comma-separated list of addresses")
+		}
+		_, port, err := net.SplitHostPort(strings.TrimSpace(broker))
+		if err != nil {
+			return Config{}, fmt.Errorf("CLIENT_KAFKA_BROKERS must contain host:port addresses: %w", err)
+		}
+		portNumber, err := strconv.Atoi(port)
+		if err != nil || portNumber < 1 || portNumber > 65535 {
+			return Config{}, fmt.Errorf("CLIENT_KAFKA_BROKERS must contain valid ports")
+		}
 	}
 	return cfg, nil
 }

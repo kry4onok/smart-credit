@@ -98,6 +98,8 @@ services:
       CLIENT_HTTP_ADDR: ":8080"
       CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
       CLIENT_DOCUMENT_STORAGE_PATH: /var/lib/smart-credit/documents
+      CLIENT_KAFKA_BROKERS: kafka:19092
+      CLIENT_KAFKA_CONSUMER_GROUP: client-service
       CLIENT_HTTP_READ_HEADER_TIMEOUT: ${CLIENT_HTTP_READ_HEADER_TIMEOUT}
       CLIENT_HTTP_READ_TIMEOUT: ${CLIENT_HTTP_READ_TIMEOUT}
       CLIENT_HTTP_WRITE_TIMEOUT: ${CLIENT_HTTP_WRITE_TIMEOUT}
@@ -113,6 +115,8 @@ services:
       CLIENT_SHUTDOWN_TIMEOUT: ${CLIENT_SHUTDOWN_TIMEOUT}
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     ports:
       - "127.0.0.1:8083:8080"
