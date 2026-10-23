@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -18,6 +19,8 @@ type Config struct {
 	DemoAnalystID    string        `env:"BANK_DEMO_ANALYST_ID"`
 	ScoringTarget    string        `env:"BANK_SCORING_GRPC_ADDR"`
 	BureauTarget     string        `env:"BANK_BUREAU_GRPC_ADDR"`
+	KafkaBrokers     string        `env:"BANK_KAFKA_BROKERS" env-default:"127.0.0.1:9092"`
+	KafkaGroup       string        `env:"BANK_KAFKA_CONSUMER_GROUP" env-default:"bank-service"`
 	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
 	ShutdownTimeout  time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
 }
@@ -53,6 +56,22 @@ func Load() (Config, error) {
 		id, err := uuid.Parse(cfg.DemoAnalystID)
 		if err != nil || id == uuid.Nil {
 			return Config{}, fmt.Errorf("BANK_DEMO_ANALYST_ID must be a nonzero UUID")
+		}
+	}
+	if strings.TrimSpace(cfg.KafkaGroup) == "" {
+		return Config{}, fmt.Errorf("BANK_KAFKA_CONSUMER_GROUP is required")
+	}
+	for _, broker := range strings.Split(cfg.KafkaBrokers, ",") {
+		if strings.TrimSpace(broker) == "" {
+			return Config{}, fmt.Errorf("BANK_KAFKA_BROKERS must be a comma-separated list of addresses")
+		}
+		_, port, err := net.SplitHostPort(strings.TrimSpace(broker))
+		if err != nil {
+			return Config{}, fmt.Errorf("BANK_KAFKA_BROKERS must contain host:port addresses: %w", err)
+		}
+		portNumber, err := strconv.Atoi(port)
+		if err != nil || portNumber < 1 || portNumber > 65535 {
+			return Config{}, fmt.Errorf("BANK_KAFKA_BROKERS must contain valid ports")
 		}
 	}
 

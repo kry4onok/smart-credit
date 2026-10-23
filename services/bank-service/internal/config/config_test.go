@@ -36,6 +36,9 @@ func TestLoad(t *testing.T) {
 			cfg.ShutdownTimeout,
 		)
 	}
+	if cfg.KafkaBrokers != "127.0.0.1:9092" || cfg.KafkaGroup != "bank-service" {
+		t.Errorf("Kafka config = brokers %q, group %q", cfg.KafkaBrokers, cfg.KafkaGroup)
+	}
 }
 
 func TestLoadDemoAnalystID(t *testing.T) {
@@ -86,6 +89,11 @@ func TestLoadRejectsInvalidEnvironment(t *testing.T) {
 			name: "invalid demo analyst ID",
 			env:  map[string]string{"BANK_DEMO_ANALYST_ID": "invalid"},
 			want: "BANK_DEMO_ANALYST_ID",
+		},
+		{
+			name: "invalid Kafka brokers",
+			env:  map[string]string{"BANK_KAFKA_BROKERS": "localhost"},
+			want: "BANK_KAFKA_BROKERS",
 		},
 	}
 
