@@ -72,7 +72,9 @@ services:
       BANK_DB_HEALTH_CHECK_PERIOD: ${BANK_DB_HEALTH_CHECK_PERIOD}
       BANK_READINESS_TIMEOUT: ${BANK_READINESS_TIMEOUT}
       BANK_SHUTDOWN_TIMEOUT: ${BANK_SHUTDOWN_TIMEOUT}
-      BANK_DEMO_ANALYST_ID: ${BANK_DEMO_ANALYST_ID:-}
+      BANK_JWKS_URL: http://auth:8080/.well-known/jwks.json
+      BANK_JWT_ISSUER: ${AUTH_JWT_ISSUER:-smart-credit-auth}
+      BANK_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-smart-credit}
       BANK_ASSISTANT_GRPC_ADDR: assistant:50052
     depends_on:
       postgres:

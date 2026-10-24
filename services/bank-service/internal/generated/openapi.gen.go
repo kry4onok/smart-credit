@@ -1234,6 +1234,22 @@ func (response ListCases400ApplicationProblemPlusJSONResponse) VisitListCasesRes
 	return err
 }
 
+type ListCases401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListCases401ApplicationProblemPlusJSONResponse) VisitListCasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListCases403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
@@ -1278,6 +1294,38 @@ func (response GetCase200JSONResponse) VisitGetCaseResponse(w http.ResponseWrite
 		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
 	}
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCase401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetCase401ApplicationProblemPlusJSONResponse) VisitGetCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCase403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response GetCase403ApplicationProblemPlusJSONResponse) VisitGetCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1337,6 +1385,22 @@ func (response GetCaseAudit400ApplicationProblemPlusJSONResponse) VisitGetCaseAu
 	return err
 }
 
+type GetCaseAudit401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetCaseAudit401ApplicationProblemPlusJSONResponse) VisitGetCaseAuditResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetCaseAudit403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
@@ -1389,6 +1453,22 @@ func (response DecideCase200JSONResponse) VisitDecideCaseResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DecideCase401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DecideCase401ApplicationProblemPlusJSONResponse) VisitDecideCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1482,6 +1562,22 @@ func (response SummarizeCase400ApplicationProblemPlusJSONResponse) VisitSummariz
 	return err
 }
 
+type SummarizeCase401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response SummarizeCase401ApplicationProblemPlusJSONResponse) VisitSummarizeCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SummarizeCase403ApplicationProblemPlusJSONResponse struct {
 	ForbiddenApplicationProblemPlusJSONResponse
 }
@@ -1559,6 +1655,22 @@ func (response TakeCase400ApplicationProblemPlusJSONResponse) VisitTakeCaseRespo
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TakeCase401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response TakeCase401ApplicationProblemPlusJSONResponse) VisitTakeCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
 	_, err := buf.WriteTo(w)
 	return err
 }
