@@ -20,6 +20,7 @@ type Config struct {
 	ScoringTarget    string        `env:"BANK_SCORING_GRPC_ADDR"`
 	BureauTarget     string        `env:"BANK_BUREAU_GRPC_ADDR"`
 	AssistantTarget  string        `env:"BANK_ASSISTANT_GRPC_ADDR"`
+	AssistantTimeout time.Duration `env:"BANK_ASSISTANT_TIMEOUT" env-default:"5s" validate:"gt=0"`
 	KafkaBrokers     string        `env:"BANK_KAFKA_BROKERS" env-default:"127.0.0.1:9092"`
 	KafkaGroup       string        `env:"BANK_KAFKA_CONSUMER_GROUP" env-default:"bank-service"`
 	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
@@ -52,6 +53,9 @@ func Load() (Config, error) {
 	}
 	if cfg.Database.URL == "" {
 		return Config{}, fmt.Errorf("BANK_DATABASE_URL is required")
+	}
+	if cfg.AssistantTimeout >= cfg.HTTP.WriteTimeout {
+		return Config{}, fmt.Errorf("BANK_ASSISTANT_TIMEOUT must be less than BANK_HTTP_WRITE_TIMEOUT")
 	}
 	if cfg.DemoAnalystID != "" {
 		id, err := uuid.Parse(cfg.DemoAnalystID)

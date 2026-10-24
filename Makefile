@@ -167,7 +167,7 @@ assistant-logs: require-env
 	$(COMPOSE) logs -f assistant
 
 assistant-smoke: require-env
-	$(COMPOSE) exec -T assistant .venv/bin/python /app/scripts/assistant_smoke.py --target 127.0.0.1:50052 --expect-version $(OLLAMA_MODEL)
+	$(COMPOSE) exec -T assistant .venv/bin/python /app/scripts/assistant_smoke.py --target 127.0.0.1:50052 --timeout 30 --expect-version $(if $(strip $(LLM_MODEL)),$(LLM_MODEL),$(OLLAMA_MODEL))
 
 BUREAU_TARGET ?= 127.0.0.1:$(BUREAU_PORT)
 

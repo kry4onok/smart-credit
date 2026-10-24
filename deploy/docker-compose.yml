@@ -74,6 +74,7 @@ services:
       BANK_SHUTDOWN_TIMEOUT: ${BANK_SHUTDOWN_TIMEOUT}
       BANK_DEMO_ANALYST_ID: ${BANK_DEMO_ANALYST_ID:-}
       BANK_ASSISTANT_GRPC_ADDR: assistant:50052
+      BANK_ASSISTANT_TIMEOUT: ${BANK_ASSISTANT_TIMEOUT:-5s}
     depends_on:
       postgres:
         condition: service_healthy
@@ -300,6 +301,10 @@ services:
       ASSISTANT_ADDR: "0.0.0.0:50052"
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     read_only: true

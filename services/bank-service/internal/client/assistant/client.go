@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const requestTimeout = 5 * time.Second
+const defaultRequestTimeout = 5 * time.Second
 
 type RPC interface {
 	SummarizeCase(context.Context, *assistantpb.SummarizeCaseRequest, ...grpc.CallOption) (*assistantpb.TextResponse, error)
@@ -22,21 +22,25 @@ type RPC interface {
 type Client struct {
 	rpc        RPC
 	connection *grpc.ClientConn
+	timeout    time.Duration
 }
 
 func New(rpc RPC) *Client {
-	return &Client{rpc: rpc}
+	return &Client{rpc: rpc, timeout: defaultRequestTimeout}
 }
 
-func Dial(target string) (*Client, error) {
+func Dial(target string, timeout time.Duration) (*Client, error) {
 	if strings.TrimSpace(target) == "" {
 		return nil, errors.New("assistant target is required")
+	}
+	if timeout <= 0 {
+		return nil, errors.New("assistant timeout must be positive")
 	}
 	connection, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("create assistant connection: %w", err)
 	}
-	return &Client{rpc: assistantpb.NewAssistantServiceClient(connection), connection: connection}, nil
+	return &Client{rpc: assistantpb.NewAssistantServiceClient(connection), connection: connection, timeout: timeout}, nil
 }
 
 func (c *Client) Close() error {
@@ -50,7 +54,7 @@ func (c *Client) Summarize(ctx context.Context, facts summary.Facts) (string, st
 	if c == nil || c.rpc == nil {
 		return "", "", errors.New("assistant client is not configured")
 	}
-	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	response, err := c.rpc.SummarizeCase(ctx, &assistantpb.SummarizeCaseRequest{
 		ApplicationId: facts.ApplicationID, ProductName: facts.ProductName,

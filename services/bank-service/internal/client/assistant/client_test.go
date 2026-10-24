@@ -32,12 +32,25 @@ func TestSummarizeMapsFactsAndSetsDeadline(t *testing.T) {
 	if err != nil || text != "Текст" || source != "assistant" {
 		t.Fatalf("text=%q source=%q err=%v", text, source, err)
 	}
-	if rpc.deadline.IsZero() || rpc.deadline.Before(before) || rpc.deadline.After(before.Add(requestTimeout+time.Second)) {
+	if rpc.deadline.IsZero() || rpc.deadline.Before(before) || rpc.deadline.After(before.Add(defaultRequestTimeout+time.Second)) {
 		t.Fatalf("deadline = %v", rpc.deadline)
 	}
 	if rpc.request.GetApplicationId() != facts.ApplicationID || rpc.request.GetGrade() != "B" ||
 		len(rpc.request.GetReasonCodes()) != 1 || len(rpc.request.GetTriggeredRuleCodes()) != 1 {
 		t.Fatalf("request = %+v", rpc.request)
+	}
+}
+
+func TestSummarizeUsesConfiguredTimeout(t *testing.T) {
+	rpc := &rpcStub{response: &assistantpb.TextResponse{Text: "Текст", ModelVersion: "qwen2.5:3b"}}
+	client := New(rpc)
+	client.timeout = 20 * time.Second
+	before := time.Now()
+	if _, _, err := client.Summarize(context.Background(), summary.Facts{}); err != nil {
+		t.Fatal(err)
+	}
+	if rpc.deadline.Before(before.Add(19*time.Second)) || rpc.deadline.After(before.Add(21*time.Second)) {
+		t.Fatalf("configured deadline = %v", rpc.deadline)
 	}
 }
 

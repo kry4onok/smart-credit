@@ -434,12 +434,15 @@ make assistant-up
 make assistant-smoke
 ```
 
-`assistant-smoke` вызывает оба метода по gRPC и требует ответа именно модели.
-При успехе выводятся `SummarizeCase [qwen2.5:3b]` и
-`ExplainDecision [qwen2.5:3b]`. На компьютере сервис доступен по
+`assistant-smoke` прогоняет семь банковских demo-сценариев: семь резюме и два
+объяснения по делам №3 и №4. Скрипт требует ответа именно выбранной модели;
+при успехе в строках стоит её имя, например `[qwen2.5:3b]`. На компьютере сервис доступен по
 `127.0.0.1:50052`, внутри Compose — по `assistant:50052`. Контейнер обращается
 к Ollama через `host.docker.internal:11434`. Порт и модель задаются через
-`ASSISTANT_PORT`, `OLLAMA_MODEL`, `OLLAMA_URL` в `.env`. Логи и остановка:
+`ASSISTANT_PORT`, `OLLAMA_MODEL`, `OLLAMA_URL` в `.env`. Эксперты могут задать
+свой `LLM_PROVIDER=ollama|openai`, `LLM_BASE_URL`, `LLM_MODEL` и, если нужен,
+`LLM_API_KEY`. Пустые новые переменные используют прежние настройки Ollama.
+Логи и остановка:
 `make assistant-logs`, `make assistant-down`.
 
 При недоступной Ollama или непроверенном ответе модели assistant возвращает
@@ -449,18 +452,20 @@ make assistant-smoke
 [инструкции ML-2](ml/assistant/README.md).
 
 **Стык с bank-service:** `POST /backoffice/applications/{id}/summary` вызывает
-`SummarizeCase` с дедлайном 5 секунд. Compose передаёт адрес `assistant:50052`
+`SummarizeCase` с дедлайном 5 секунд по умолчанию. Для медленной локальной модели
+можно задать `BANK_ASSISTANT_TIMEOUT=20s` (меньше `BANK_HTTP_WRITE_TIMEOUT`) и
+пересоздать bank-service. Compose передаёт адрес `assistant:50052`
 через `BANK_ASSISTANT_GRPC_ADDR`; при недоступности gRPC bank-service возвращает
 собственный шаблон с `source=template`. `model_version=template` от assistant
 тоже переводится в `source=template`. Вызов объяснения решения пока отсутствует.
 Поля запросов и ответственность сторон
 описаны в [инструкции ML-2](ml/assistant/README.md#контракт-с-bank-service).
 
-**Проверено:** контейнер собирается и становится healthy; оба gRPC-метода
-возвращают текст `qwen2.5:3b` через Ollama на компьютере; при недоступной Ollama
-оба метода возвращают шаблон. Восемь unit-тестов и контейнерный fallback
-проверяет [CI assistant](.github/workflows/assistant.yml) без загрузки весов;
-ответ реальной модели проверяется локально командой `make assistant-smoke`.
+**Проверка:** unit-тесты и контейнерный fallback проверяет
+[CI assistant](.github/workflows/assistant.yml) без загрузки весов. Ответы
+реальной модели, качество текста и задержку при банковском дедлайне
+проверьте локально через `make assistant-smoke`; сценарии и чеклист описаны в
+[инструкции ML-2](ml/assistant/README.md#проверка-качества-текста).
 
 Для общего демо ориентир — компьютер с **16 ГБ ОЗУ**, из которых Docker можно
 выделить примерно 5–6 ГБ; Ollama работает в оставшейся памяти компьютера.
