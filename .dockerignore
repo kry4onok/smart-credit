@@ -3,6 +3,10 @@
 .idea
 .vscode
 .env
+.env.*
+.data
+**/*.pem
+**/*.key
 
 *.out
 *.test

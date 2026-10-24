@@ -33,29 +33,36 @@ Kafka используется для outbox relay в `client.events` и про�
 
 ## Запуск в Docker
 
-Из корня репозитория добавьте переменные `CLIENT_*` из `.env.example`
+Из корня репозитория добавьте переменные `AUTH_*` и `CLIENT_*` из `.env.example`
 в локальный `.env`, затем выполните:
 
 ```sh
 make client-up
 ```
 
-Команда запускает Postgres, применяет миграции `client_db`, собирает и
-запускает только `client-service`. Используется общий Dockerfile
+Команда создаёт постоянный ключ auth, запускает Postgres и auth, применяет
+миграции `auth_db`/`client_db`, собирает и запускает `client-service` с Kafka.
+Используется общий Dockerfile
 `deploy/docker/go-service.Dockerfile` с `SERVICE_PATH=services/client-service`.
 Внутри контейнера сервис слушает `:8080` и подключается к `postgres:5432`;
 на компьютере доступен по адресу `http://localhost:8083`.
-Docker healthcheck вызывает `/healthz`; готовность БД проверяется через `/readyz`.
+Docker healthcheck вызывает `/readyz`. Клиент проверяет JWT через JWKS по
+`http://auth:8080/.well-known/jwks.json`; issuer/audience берутся из `AUTH_*`,
+таймаут и кеш — из `CLIENT_JWKS_TIMEOUT` и `CLIENT_JWKS_CACHE_TTL`.
+В `.env` локальный `CLIENT_JWKS_URL` указывает на порт `8082`; Compose заменяет
+его адресом Docker-сервиса. Токены с ролями ANALYST/ADMIN дают `403`.
 
 ```sh
 make client-logs
 make client-down
 ```
 
-`client-down` удаляет только контейнер клиента. Postgres и его данные сохраняются.
+`client-down` удаляет только контейнер клиента. Auth, Postgres и данные сохраняются.
 Проверить ручки через уже запущенный gateway можно по адресам
 `http://localhost:8000/internal/client/healthz` и
 `http://localhost:8000/internal/client/readyz` (при стандартном `GATEWAY_PORT`).
+Gateway направляет `/api/client/*` в `client-service:8080`, `/api/auth/*` —
+в `auth:8080`. Для Go-процессов на компьютере используйте прямые порты.
 
 ## Проверка
 
