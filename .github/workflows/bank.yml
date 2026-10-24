@@ -63,17 +63,58 @@ jobs:
         run: docker compose --env-file .env -f deploy/docker-compose.yml config --quiet
       - name: Start Postgres and Kafka
         run: make infra-up
+      - name: Start auth for Bank JWT integration
+        run: make auth-up
       - name: Start scoring and bank with bureau mocks
         run: make scoring-up bank-up bank-demo-seed
       - name: Bank PostgreSQL integration tests
-        run: make bank-outbox-test bank-decision-test bank-audit-test
+        run: make bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test
       - name: Verify enrichment and automatic decision through bank API
         run: |
           python3 - <<'PY'
+          import base64
           import json
+          import subprocess
+          import tempfile
           import time
           import urllib.error
           import urllib.request
+
+          config = dict(
+              line.strip().split("=", 1)
+              for line in open(".env", encoding="utf-8")
+              if line.strip() and not line.lstrip().startswith("#") and "=" in line
+          )
+          with urllib.request.urlopen("http://127.0.0.1:8082/.well-known/jwks.json", timeout=5) as response:
+              key_id = json.load(response)["keys"][0]["kid"]
+          private_key = subprocess.check_output([
+              "docker", "compose", "--env-file", ".env", "-f", "deploy/docker-compose.yml",
+              "exec", "-T", "auth", "cat", "/var/lib/smart-credit/auth/private.pem",
+          ])
+
+          def encode(value):
+              return base64.urlsafe_b64encode(
+                  json.dumps(value, separators=(",", ":")).encode()
+              ).rstrip(b"=")
+
+          now = int(time.time())
+          unsigned = b".".join((
+              encode({"alg": "RS256", "typ": "JWT", "kid": key_id}),
+              encode({
+                  "sub": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "role": "ANALYST", "can_submit": False,
+                  "iss": config["AUTH_JWT_ISSUER"], "aud": config["AUTH_JWT_AUDIENCE"],
+                  "iat": now, "exp": now + 300,
+              }),
+          ))
+          with tempfile.NamedTemporaryFile() as key_file:
+              key_file.write(private_key)
+              key_file.flush()
+              signature = subprocess.run(
+                  ["openssl", "dgst", "-sha256", "-sign", key_file.name],
+                  input=unsigned, capture_output=True, check=True,
+              ).stdout
+          token = b".".join((unsigned, base64.urlsafe_b64encode(signature).rstrip(b"="))).decode()
 
           cases = {
               6: ("OFFER", None, True, True),
@@ -86,7 +127,8 @@ jobs:
                   case_id = f"10000000-0000-4000-8000-{number:012d}"
                   url = f"http://127.0.0.1:8080/backoffice/applications/{case_id}"
                   try:
-                      with urllib.request.urlopen(url, timeout=5) as response:
+                      request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+                      with urllib.request.urlopen(request, timeout=5) as response:
                           case = json.load(response)
                   except (OSError, urllib.error.URLError, ValueError) as error:
                       pending.append(f"{case_id}: {error}")
@@ -105,7 +147,7 @@ jobs:
           PY
       - name: Container logs on failure
         if: failure()
-        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color --tail=200 postgres kafka scoring bureau-mocks bank-service
+        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color --tail=200 postgres kafka auth scoring bureau-mocks bank-service
       - name: Stop containers
         if: always()
         run: docker compose --env-file .env -f deploy/docker-compose.yml down --volumes --remove-orphans

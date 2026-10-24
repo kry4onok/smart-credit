@@ -2,6 +2,13 @@
 
 Полное техническое задание: [TZ.md](TZ.md).
 
+## Веб-интерфейс
+
+Кабинет клиента и рабочее место аналитика — в [web/](web/README.md). Быстрый просмотр
+без backend: `make web-install web-mock` → `http://localhost:5173` (демо-учётки и
+пароль `demo` показаны на экране входа). Docker-сборка с nginx: `make web-up` →
+`http://localhost:3000`.
+
 ## Проверка Go-кода
 
 Перед pull request запустите:
@@ -13,6 +20,18 @@ make lint
 Команда использует закреплённую версию `golangci-lint`; отдельная установка не нужна.
 
 ## Swagger UI
+
+Для проверки всех API и банковского сценария одной командой запустите
+инфраструктуру, Auth, Client, Bank, scoring, bureau-mocks, assistant, демо-сиды
+и gateway:
+
+```sh
+make demo-up
+```
+
+После запуска откройте `http://localhost:8000/docs/`. Повторный `demo-up`
+безопасен для существующих демоданных. Frontend запускается отдельно через
+`make web-up`; остановить весь Compose-стек можно через `make infra-down`.
 
 Общая документация Auth, Client и Bank API запускается отдельно от сервисов:
 
@@ -128,8 +147,24 @@ Swagger UI: `http://localhost:8000/docs/` → **Bank API**. Проверьте
 `GET /backoffice/applications/10000000-0000-4000-8000-000000000004`.
 В detail должны быть `offer`, `score` и заголовок `ETag: "1"`; для заявки
 `...0003` — `info_request` и `checks.bureau_error`.
-Пока HTTP-аутентификация не передаёт ID текущего сотрудника в bank-service,
-`allowed_actions` содержит только `VIEW`, даже у назначенной заявки.
+Bank API берёт ID сотрудника из access JWT. Для назначенной заявки
+`allowed_actions` рассчитывается по роли и ID вошедшего аналитика.
+
+### Каталог банка в клиентском API
+
+После `make bank-up` и `make bank-demo-seed` bank-service публикует полный
+список активных продуктов через outbox в `bank.events`. Фоновая сверка запускается
+сразу и затем каждые пять секунд. Новая версия агрегата `catalog` появляется
+только при изменении публичного снимка; удаление продукта из активного каталога
+тоже передаётся полным снимком. Client-service применяет его к своей проекции.
+
+Для проверки через Swagger дополнительно запустите `make client-up`,
+`make auth-dev-seed` и `make gateway-up`. На `http://localhost:8000/docs/`
+войдите через Auth API `POST /auth/login` как `client@smart-credit.test`,
+затем вставьте `access_token` в **Authorize** Client API и вызовите
+`GET /client/products`. Ответ должен содержать `catalog_version >= 1` и
+активные демопродукты `FLEX` и `WORKING`. Повторный запуск банка без изменений
+не увеличивает версию. `make bank-catalog-test` проверяет это на PostgreSQL.
 
 ## Как добавить HTTP Go-сервис в Docker
 
@@ -198,6 +233,10 @@ Auth запускается из `services/auth/cmd/service` и по умолч�
 После запуска PostgreSQL примените `make auth-db-up`. Миграция создаёт пустые
 таблицы `organizations`, `users`, `refresh_tokens`.
 Проверка миграций в изолированных схемах: `make auth-db-test`.
+Для локального входа задайте три `AUTH_DEV_*_PASSWORD` в игнорируемом Git `.env`
+и выполните `make auth-dev-seed`. Команда создаёт ANALYST, ADMIN и CLIENT с
+фиксированными UUID; детали и email приведены в [README auth](services/auth/README.md).
+Интеграционная проверка seed в отдельной схеме: `make auth-dev-seed-test`.
 
 ## client-service
 

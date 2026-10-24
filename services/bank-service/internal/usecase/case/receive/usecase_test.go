@@ -3,6 +3,7 @@ package receive
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
@@ -171,5 +172,56 @@ func TestParseRejectsInvalidInfoProvided(t *testing.T) {
 				t.Fatalf("parse error = %v, want ErrInvalidEvent", err)
 			}
 		})
+	}
+}
+
+func TestParseOfferResponses(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		make func(string) *eventspb.Event
+	}{
+		{"accepted", func(id string) *eventspb.Event {
+			e := submittedEvent()
+			e.Payload = &eventspb.Event_OfferAccepted{OfferAccepted: &eventspb.OfferAccepted{OfferId: id}}
+			return e
+		}},
+		{"declined", func(id string) *eventspb.Event {
+			e := submittedEvent()
+			e.Payload = &eventspb.Event_OfferDeclined{OfferDeclined: &eventspb.OfferDeclined{OfferId: id}}
+			return e
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			event := test.make("11111111-1111-4111-8111-111111111111")
+			input, err := parse(event)
+			if err != nil || input.OfferID.String() != "11111111-1111-4111-8111-111111111111" || input.OfferAction == "" {
+				t.Fatalf("parsed response = %+v, %v", input, err)
+			}
+			if _, err := parse(test.make("")); !errors.Is(err, ErrInvalidEvent) {
+				t.Fatalf("missing offer ID error = %v", err)
+			}
+		})
+	}
+}
+
+func TestParseApplicationCancelled(t *testing.T) {
+	event := submittedEvent()
+	event.Payload = &eventspb.Event_ApplicationCancelled{ApplicationCancelled: &eventspb.ApplicationCancelled{
+		Reason: "Финансирование больше не требуется",
+	}}
+	input, err := parse(event)
+	if err != nil || !input.Cancelled || input.CancelReason != event.GetApplicationCancelled().GetReason() ||
+		input.ApplicationID.String() != event.GetAggregateId() || input.AggregateVersion != event.GetAggregateVersion() {
+		t.Fatalf("parsed cancellation = %+v, %v", input, err)
+	}
+	event.Payload = &eventspb.Event_ApplicationCancelled{}
+	if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatalf("missing payload error = %v", err)
+	}
+	event.Payload = &eventspb.Event_ApplicationCancelled{ApplicationCancelled: &eventspb.ApplicationCancelled{
+		Reason: strings.Repeat("a", 501),
+	}}
+	if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatalf("long reason error = %v", err)
 	}
 }

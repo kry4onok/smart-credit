@@ -72,7 +72,9 @@ services:
       BANK_DB_HEALTH_CHECK_PERIOD: ${BANK_DB_HEALTH_CHECK_PERIOD}
       BANK_READINESS_TIMEOUT: ${BANK_READINESS_TIMEOUT}
       BANK_SHUTDOWN_TIMEOUT: ${BANK_SHUTDOWN_TIMEOUT}
-      BANK_DEMO_ANALYST_ID: ${BANK_DEMO_ANALYST_ID:-}
+      BANK_JWKS_URL: http://auth:8080/.well-known/jwks.json
+      BANK_JWT_ISSUER: ${AUTH_JWT_ISSUER:-smart-credit-auth}
+      BANK_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-smart-credit}
       BANK_ASSISTANT_GRPC_ADDR: assistant:50052
       BANK_ASSISTANT_TIMEOUT: ${BANK_ASSISTANT_TIMEOUT:-5s}
     depends_on:
@@ -318,6 +320,19 @@ services:
     cap_drop:
       - ALL
     stop_grace_period: 10s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
 volumes:

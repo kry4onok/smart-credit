@@ -15,6 +15,7 @@ OLLAMA_MODEL ?= qwen2.5:3b
 SWAGGER_PORT ?= 8081
 GATEWAY_PORT ?= 8000
 AUTH_DATABASE_URL ?= postgres://auth_user:$(AUTH_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/auth_db?sslmode=disable
+WEB_PORT ?= 3000
 BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/bank_db?sslmode=disable
 CLIENT_DATABASE_URL ?= postgres://client_user:$(CLIENT_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/client_db?sslmode=disable
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.24.1
@@ -30,10 +31,11 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs demo-up infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test bank-offer-test bank-cancel-test
+.PHONY: web-install web-gen web-dev web-mock web-build web-up web-down web-logs
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
-.PHONY: auth-up auth-down auth-logs auth-keygen auth-db-up auth-db-down auth-db-status auth-db-test
+.PHONY: auth-up auth-down auth-logs auth-keygen auth-dev-seed auth-dev-seed-test auth-db-up auth-db-down auth-db-status auth-db-test
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -58,6 +60,7 @@ help:
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
 	@echo 'make docs-logs        Показать логи Swagger UI'
 	@echo 'make gateway-up       Запустить nginx gateway и Swagger UI'
+	@echo 'make demo-up          Запустить сервисы и сиды для проверки API через Swagger'
 	@echo 'make gateway-down     Остановить и удалить gateway и Swagger UI'
 	@echo 'make gateway-reload   Проверить и перечитать конфигурацию nginx'
 	@echo 'make gateway-logs     Показать логи gateway'
@@ -70,6 +73,8 @@ help:
 	@echo 'make bank-logs        Показать логи bank-service'
 	@echo 'make auth-db-up       Применить миграции auth_db'
 	@echo 'make auth-up          Создать ключ, применить миграции и запустить auth в Docker'
+	@echo 'make auth-dev-seed    Создать локальные учётки ANALYST, ADMIN и CLIENT в auth_db'
+	@echo 'make auth-dev-seed-test Проверить seed в отдельной схеме auth_db'
 	@echo 'make auth-down        Остановить auth, сохранив ключ и сессии'
 	@echo 'make auth-logs        Показать логи auth'
 	@echo 'make auth-keygen      Создать постоянный RSA-ключ в Docker volume'
@@ -85,6 +90,9 @@ help:
 	@echo 'make bank-outbox-test Проверить порядок и повторы outbox на bank_db'
 	@echo 'make bank-decision-test Проверить ручное и автоматическое решение на bank_db'
 	@echo 'make bank-audit-test Проверить порядок и пагинацию истории дела на bank_db'
+	@echo 'make bank-catalog-test Проверить версии и полный снимок каталога банка'
+	@echo 'make bank-offer-test   Проверить ответы на оферты и дедупликацию'
+	@echo 'make bank-cancel-test  Проверить отзыв заявки и дедупликацию'
 	@echo 'make client-db-up     Применить миграции client_db'
 	@echo 'make client-up        Собрать и запустить client-service в Docker'
 	@echo 'make client-down      Остановить и удалить контейнер client-service'
@@ -92,6 +100,10 @@ help:
 	@echo 'make client-db-down   Откатить миграцию client_db'
 	@echo 'make client-db-status Показать состояние миграций client_db'
 	@echo 'make infra-down       Остановить контейнеры, сохранив данные'
+	@echo 'make web-mock         Запустить web без backend (демо-данные в браузере)'
+	@echo 'make web-dev          Запустить web с прокси /api на gateway'
+	@echo 'make web-gen          Сгенерировать TS-типы web из OpenAPI'
+	@echo 'make web-up           Собрать и запустить web (nginx) в Docker'
 
 require-env:
 	@test -f "$(ENV_FILE)" || { echo 'Создайте ENV_FILE по примеру .env.example' >&2; exit 1; }
@@ -157,6 +169,15 @@ bank-decision-test: require-env
 bank-audit-test: require-env
 	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/case -run '^TestListAuditOrdersTiesAndKeepsInternalDetailsPrivate$$' -count=1 -v
 
+bank-catalog-test: require-env
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/catalog -run '^TestPublishesFullCatalogOnlyWhenChanged$$' -count=1 -v
+
+bank-offer-test: require-env
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/receive -run '^TestApplyOfferResponsesAtomically$$' -count=1 -v
+
+bank-cancel-test: require-env
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/receive -run '^TestApplyCancellationAtomically$$' -count=1 -v
+
 assistant-up: require-env
 	$(COMPOSE) up -d --build --wait assistant
 
@@ -219,6 +240,18 @@ gateway-reload: require-env
 
 gateway-logs: require-env
 	$(COMPOSE) logs -f gateway
+
+demo-up: require-env
+	@$(MAKE) infra-up
+	@$(MAKE) client-up
+	@$(MAKE) auth-dev-seed
+	@$(MAKE) scoring-up
+	@$(MAKE) bureau-up
+	@$(MAKE) assistant-up
+	@$(MAKE) bank-up
+	@$(MAKE) bank-demo-seed
+	@$(MAKE) gateway-up
+	@echo 'Swagger: http://localhost:$(GATEWAY_PORT)/docs/'
 
 infra-up: require-env
 	$(COMPOSE) up -d --wait postgres kafka
@@ -301,8 +334,39 @@ auth-up: auth-keygen
 	@$(GOOSE) -dir $(AUTH_MIGRATIONS) postgres "$(AUTH_DATABASE_URL)" up
 	$(COMPOSE) up -d --wait auth
 
+auth-dev-seed: require-env
+	@go run ./services/auth/cmd/dev-seed
+
+auth-dev-seed-test: require-env
+	@AUTH_TEST_DATABASE_URL="$(AUTH_DATABASE_URL)" go test -count=1 ./services/auth/internal/devseed
+
 auth-down: require-env
 	$(COMPOSE) rm -sf auth
 
 auth-logs: require-env
 	$(COMPOSE) logs -f auth
+
+web-install:
+	npm --prefix web ci
+
+web-gen:
+	npm --prefix web run gen
+
+web-dev:
+	npm --prefix web run dev
+
+web-mock:
+	npm --prefix web run dev:mock
+
+web-build:
+	npm --prefix web run build
+
+web-up: require-env
+	$(COMPOSE) up -d --build --wait web
+	@echo 'Web: http://localhost:$(WEB_PORT)'
+
+web-down: require-env
+	$(COMPOSE) rm -sf web
+
+web-logs: require-env
+	$(COMPOSE) logs -f web
