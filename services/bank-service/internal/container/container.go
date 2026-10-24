@@ -18,6 +18,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
+	catalogrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/catalog"
 	decisionrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/decision"
 	enrichmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/enrichment"
 	outboxrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/outbox"
@@ -33,6 +34,7 @@ import (
 	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
 	scoringstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/scoring"
 	validationstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
+	catalogworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/catalog"
 	decisionworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/decision"
 	enrichmentworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/enrichment"
 	outboxworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/outbox"
@@ -47,6 +49,7 @@ type Container struct {
 	Scoring          *scoringrepository.Repository
 	ScoringWorker    *scoringworker.Worker
 	DecisionWorker   *decisionworker.Worker
+	CatalogWorker    *catalogworker.Worker
 	EnrichmentWorker *enrichmentworker.Worker
 	ValidationWorker *validationworker.Worker
 	OutboxWorker     *outboxworker.Worker
@@ -160,6 +163,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		Scoring:          scoringAttempts,
 		ScoringWorker:    worker,
 		DecisionWorker:   decisionworker.New(decisionrepository.New(db, transactions)),
+		CatalogWorker:    catalogworker.New(catalogrepository.New(db, transactions)),
 		EnrichmentWorker: enrichment,
 		ValidationWorker: validation,
 		OutboxWorker:     outboxworker.New(outboxrepository.New(db), publisher),

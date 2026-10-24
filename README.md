@@ -128,8 +128,24 @@ Swagger UI: `http://localhost:8000/docs/` → **Bank API**. Проверьте
 `GET /backoffice/applications/10000000-0000-4000-8000-000000000004`.
 В detail должны быть `offer`, `score` и заголовок `ETag: "1"`; для заявки
 `...0003` — `info_request` и `checks.bureau_error`.
-Пока HTTP-аутентификация не передаёт ID текущего сотрудника в bank-service,
-`allowed_actions` содержит только `VIEW`, даже у назначенной заявки.
+Bank API берёт ID сотрудника из access JWT. Для назначенной заявки
+`allowed_actions` рассчитывается по роли и ID вошедшего аналитика.
+
+### Каталог банка в клиентском API
+
+После `make bank-up` и `make bank-demo-seed` bank-service публикует полный
+список активных продуктов через outbox в `bank.events`. Фоновая сверка запускается
+сразу и затем каждые пять секунд. Новая версия агрегата `catalog` появляется
+только при изменении публичного снимка; удаление продукта из активного каталога
+тоже передаётся полным снимком. Client-service применяет его к своей проекции.
+
+Для проверки через Swagger дополнительно запустите `make client-up`,
+`make auth-dev-seed` и `make gateway-up`. На `http://localhost:8000/docs/`
+войдите через Auth API `POST /auth/login` как `client@smart-credit.test`,
+затем вставьте `access_token` в **Authorize** Client API и вызовите
+`GET /client/products`. Ответ должен содержать `catalog_version >= 1` и
+активные демопродукты `FLEX` и `WORKING`. Повторный запуск банка без изменений
+не увеличивает версию. `make bank-catalog-test` проверяет это на PostgreSQL.
 
 ## Как добавить HTTP Go-сервис в Docker
 

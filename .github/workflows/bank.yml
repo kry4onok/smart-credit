@@ -68,7 +68,7 @@ jobs:
       - name: Start scoring and bank with bureau mocks
         run: make scoring-up bank-up bank-demo-seed
       - name: Bank PostgreSQL integration tests
-        run: make bank-outbox-test bank-decision-test bank-audit-test
+        run: make bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test
       - name: Verify enrichment and automatic decision through bank API
         run: |
           python3 - <<'PY'
