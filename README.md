@@ -183,8 +183,9 @@ auth и client контейнеров появятся общие команды
 
 Auth запускается из `services/auth/cmd/service` и по умолчанию слушает
 порт `8082`. Реализованы `/healthz`, `/readyz` с проверкой `auth_db` и публичный
-`/.well-known/jwks.json`. Добавлены Argon2id и RS256 JWT; сессии будут добавлены
-следующими шагами. Перед первым запуском создайте постоянный ключ командой
+`/.well-known/jwks.json`, а также login/refresh/logout с Argon2id, RS256 JWT
+и refresh-cookie на семь дней. Refresh не ротируется, logout его отзывает.
+`GET /auth/me` пока не реализован. Перед первым запуском создайте постоянный ключ командой
 `go run ./services/auth/cmd/keygen`; существующий файл она не перезапишет.
 Настройки `AUTH_*` находятся
 в `.env.example`, инструкции запуска — в [README auth](services/auth/README.md).

@@ -46,9 +46,6 @@ func TestTechnicalRoutes(t *testing.T) {
 func TestBusinessRoutesAreExplicitlyUnimplemented(t *testing.T) {
 	handler := New(Params{ReadinessTimeout: time.Second})
 	for _, tc := range []struct{ method, path, body string }{
-		{http.MethodPost, "/auth/login", `{"email":"demo@example.com","password":"demo"}`},
-		{http.MethodPost, "/auth/refresh", ""},
-		{http.MethodPost, "/auth/logout", ""},
 		{http.MethodGet, "/auth/me", ""},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
