@@ -43,27 +43,6 @@ func TestTechnicalRoutes(t *testing.T) {
 	}
 }
 
-func TestBusinessRoutesAreExplicitlyUnimplemented(t *testing.T) {
-	handler := New(Params{ReadinessTimeout: time.Second})
-	for _, tc := range []struct{ method, path, body string }{
-		{http.MethodGet, "/auth/me", ""},
-	} {
-		t.Run(tc.path, func(t *testing.T) {
-			request := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
-			request.Header.Set("Content-Type", "application/json")
-			response := httptest.NewRecorder()
-			handler.ServeHTTP(response, request)
-			var problem common.Problem
-			if err := json.Unmarshal(response.Body.Bytes(), &problem); err != nil {
-				t.Fatal(err)
-			}
-			if response.Code != http.StatusNotImplemented || problem.Code != "NOT_IMPLEMENTED" || problem.TraceId != response.Header().Get("X-Trace-ID") || response.Header().Get("Content-Type") != "application/problem+json" {
-				t.Fatalf("status=%d problem=%+v", response.Code, problem)
-			}
-		})
-	}
-}
-
 func TestMalformedRequestUsesProblemResponse(t *testing.T) {
 	handler := New(Params{ReadinessTimeout: time.Second})
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{"email":`))

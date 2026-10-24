@@ -18,6 +18,7 @@ import (
 	loginuc "github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/usecase/session/login"
 	logoutuc "github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/usecase/session/logout"
 	refreshuc "github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/usecase/session/refresh"
+	meuc "github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/usecase/user/me"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -57,6 +58,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			DB: db, ReadinessTimeout: cfg.ReadinessTimeout,
 			JWKS:  keyget.New(tokens),
 			Login: login, Refresh: refresh, Logout: logout, Cookie: cfg.Cookie,
+			Me: meuc.New(users), Verifier: tokens,
 		}),
 	}, nil
 }

@@ -185,7 +185,9 @@ Auth запускается из `services/auth/cmd/service` и по умолч�
 порт `8082`. Реализованы `/healthz`, `/readyz` с проверкой `auth_db` и публичный
 `/.well-known/jwks.json`, а также login/refresh/logout с Argon2id, RS256 JWT
 и refresh-cookie на семь дней. Refresh не ротируется, logout его отзывает.
-`GET /auth/me` пока не реализован. Перед первым запуском создайте постоянный ключ командой
+`GET /auth/me` проверяет Bearer JWT и возвращает актуальный профиль и организацию
+из БД. Общий HTTP-слой добавляет trace ID, безопасные JSON-логи и обработку panic.
+Перед первым запуском создайте постоянный ключ командой
 `go run ./services/auth/cmd/keygen`; существующий файл она не перезапишет.
 Настройки `AUTH_*` находятся
 в `.env.example`, инструкции запуска — в [README auth](services/auth/README.md).
