@@ -67,7 +67,7 @@ jobs:
         run: make scoring-up bank-up bank-demo-seed
       - name: Bank PostgreSQL integration tests
         run: make bank-outbox-test bank-decision-test bank-audit-test
-      - name: Verify enrichment outcomes through bank API
+      - name: Verify enrichment and automatic decision through bank API
         run: |
           python3 - <<'PY'
           import json
@@ -76,13 +76,13 @@ jobs:
           import urllib.request
 
           cases = {
-              6: ("DECISION", None, True),
-              7: ("MANUAL_REVIEW", "BUREAU_TIMEOUT", False),
+              6: ("OFFER", None, True, True),
+              7: ("MANUAL_REVIEW", "BUREAU_TIMEOUT", False, False),
           }
           deadline = time.monotonic() + 120
           while time.monotonic() < deadline:
               pending = []
-              for number, (status, bureau_error, has_score) in cases.items():
+              for number, (status, bureau_error, has_score, has_offer) in cases.items():
                   case_id = f"10000000-0000-4000-8000-{number:012d}"
                   url = f"http://127.0.0.1:8080/backoffice/applications/{case_id}"
                   try:
@@ -92,16 +92,16 @@ jobs:
                       pending.append(f"{case_id}: {error}")
                       continue
                   checks = case.get("checks") or {}
-                  actual = (case.get("status"), checks.get("bureau_error"), bool(case.get("score")))
-                  expected = (status, bureau_error, has_score)
+                  actual = (case.get("status"), checks.get("bureau_error"), bool(case.get("score")), bool(case.get("offer")))
+                  expected = (status, bureau_error, has_score, has_offer)
                   if actual != expected:
                       pending.append(f"{case_id}: got {actual}, want {expected}")
               if not pending:
-                  print("Bank enrichment integration passed: success and timeout cases")
+                  print("Bank integration passed: automatic offer and bureau timeout cases")
                   break
               time.sleep(2)
           else:
-              raise SystemExit("Bank enrichment integration failed: " + "; ".join(pending))
+              raise SystemExit("Bank integration failed: " + "; ".join(pending))
           PY
       - name: Container logs on failure
         if: failure()
