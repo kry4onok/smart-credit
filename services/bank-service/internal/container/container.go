@@ -21,6 +21,7 @@ import (
 	receiverepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/receive"
 	scoringrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/scoring"
 	validationrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/validation"
+	auditcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/audit"
 	decidecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/decide"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
@@ -86,6 +87,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	enrichmentResults := enrichmentrepository.New(db, transactions)
 	takeCase := takecase.New(caseRepository, transactions)
 	decideCase := decidecase.New(caseRepository, transactions)
+	auditCase := auditcase.New(caseRepository)
 	demoAnalystID := uuid.Nil
 	if cfg.DemoAnalystID != "" {
 		demoAnalystID, err = uuid.Parse(cfg.DemoAnalystID)
@@ -142,7 +144,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		ValidationWorker: validation,
 		OutboxWorker:     outboxworker.New(outboxrepository.New(db), publisher),
 		ClientEvents:     consumer,
-		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase), demoAnalystID),
+		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase), demoAnalystID),
 		scoringClient:    client,
 		bureauClient:     bureau,
 		outboxPublisher:  publisher,

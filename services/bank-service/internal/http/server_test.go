@@ -24,7 +24,7 @@ func (p *pingerStub) Ping(context.Context) error {
 
 func TestHealth(t *testing.T) {
 	db := &pingerStub{err: errors.New("database is unavailable")}
-	handler := New(db, time.Second, nil, nil, nil, nil)
+	handler := New(db, time.Second, nil, nil, nil, nil, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil))
@@ -50,7 +50,7 @@ func TestReady(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := &pingerStub{err: tt.pingError}
-			handler := New(db, time.Second, nil, nil, nil, nil)
+			handler := New(db, time.Second, nil, nil, nil, nil, nil)
 
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/readyz", nil))
@@ -66,13 +66,23 @@ func TestReady(t *testing.T) {
 }
 
 func TestUnimplementedContractRoute(t *testing.T) {
-	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil)
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil)
 
 	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/backoffice/applications/00000000-0000-0000-0000-000000000001/audit", nil))
+	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/backoffice/applications/00000000-0000-0000-0000-000000000001/summary", nil))
 
 	if response.Code != http.StatusNotImplemented {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusNotImplemented)
+	}
+}
+
+func TestAuditRouteRequiresEmployee(t *testing.T) {
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet,
+		"/backoffice/applications/10000000-0000-4000-8000-000000000001/audit", nil))
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", response.Code)
 	}
 }
 
@@ -95,7 +105,7 @@ func TestTakeInvalidHeadersReturnProblemJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil)
+			handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil)
 			request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
 				"/backoffice/applications/10000000-0000-4000-8000-000000000001/take", nil)
 			request.Header.Set("Idempotency-Key", tt.idempotencyKey)
