@@ -34,3 +34,15 @@ func OfferResponse(eventID, caseID uuid.UUID, version int64, at time.Time, actio
 	}
 	return proto.Marshal(event)
 }
+
+func Cancelled(eventID, caseID uuid.UUID, version int64, at time.Time) ([]byte, error) {
+	event := &eventspb.Event{
+		EventId: eventID.String(), AggregateType: "APPLICATION", AggregateId: caseID.String(),
+		AggregateVersion: version, OccurredAt: timestamppb.New(at),
+		CorrelationId: caseID.String(),
+		Payload: &eventspb.Event_ApplicationPublicStatePublished{ApplicationPublicStatePublished: &eventspb.ApplicationPublicStatePublished{
+			Status: eventspb.ClientStatus_CLIENT_STATUS_CLOSED, StageLabel: "Заявка отозвана",
+		}},
+	}
+	return proto.Marshal(event)
+}
