@@ -1,10 +1,10 @@
-name: Bank bureau integration
+name: Bank service CI
 
 on:
   push:
-    branches: [main, feat/bank-bureau-enrichment]
+    branches: [main, "feat/bank-*"]
     paths:
-      - ".github/workflows/bank-bureau.yml"
+      - ".github/workflows/bank.yml"
       - ".env.example"
       - ".golangci.yml"
       - "Makefile"
@@ -21,7 +21,7 @@ on:
       - "services/bureau-mocks/**"
   pull_request:
     paths:
-      - ".github/workflows/bank-bureau.yml"
+      - ".github/workflows/bank.yml"
       - ".env.example"
       - ".golangci.yml"
       - "Makefile"
@@ -41,9 +41,9 @@ permissions:
   contents: read
 
 jobs:
-  bank-bureau:
+  bank-service:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -55,11 +55,18 @@ jobs:
       - name: Unit tests
         run: go test ./services/bank-service/... ./services/bureau-mocks/...
       - name: Go lint
-        run: make lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.15.0
+          args: ./services/bank-service/... ./services/bureau-mocks/...
       - name: Validate Compose configuration
         run: docker compose --env-file .env -f deploy/docker-compose.yml config --quiet
+      - name: Start Postgres and Kafka
+        run: make infra-up
       - name: Start scoring and bank with bureau mocks
         run: make scoring-up bank-up bank-demo-seed
+      - name: Bank PostgreSQL integration tests
+        run: make bank-outbox-test bank-decision-test bank-audit-test
       - name: Verify enrichment outcomes through bank API
         run: |
           python3 - <<'PY'
@@ -90,15 +97,15 @@ jobs:
                   if actual != expected:
                       pending.append(f"{case_id}: got {actual}, want {expected}")
               if not pending:
-                  print("Bank bureau integration passed: success and timeout cases")
+                  print("Bank enrichment integration passed: success and timeout cases")
                   break
               time.sleep(2)
           else:
-              raise SystemExit("Bank bureau integration failed: " + "; ".join(pending))
+              raise SystemExit("Bank enrichment integration failed: " + "; ".join(pending))
           PY
       - name: Container logs on failure
         if: failure()
-        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color --tail=200 postgres scoring bureau-mocks bank-service
+        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --no-color --tail=200 postgres kafka scoring bureau-mocks bank-service
       - name: Stop containers
         if: always()
         run: docker compose --env-file .env -f deploy/docker-compose.yml down --volumes --remove-orphans

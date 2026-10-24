@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
+	audithandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/audit"
 	decidehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/decide"
 	gethandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/get"
 	listhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/list"
@@ -23,6 +24,7 @@ type server struct {
 	getCase    *gethandler.Handler
 	takeCase   *takehandler.Handler
 	decideCase *decidehandler.Handler
+	auditCase  *audithandler.Handler
 }
 
 func New(
@@ -32,6 +34,7 @@ func New(
 	getCase gethandler.UseCase,
 	takeCase takehandler.UseCase,
 	decideCase decidehandler.UseCase,
+	auditCase audithandler.UseCase,
 ) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
 		health:     health.New(db, readinessTimeout),
@@ -39,6 +42,7 @@ func New(
 		getCase:    gethandler.New(getCase),
 		takeCase:   takehandler.New(takeCase),
 		decideCase: decidehandler.New(decideCase),
+		auditCase:  audithandler.New(auditCase),
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})
