@@ -70,7 +70,7 @@ help:
 	@echo 'make bank-submitted-smoke Отправить тестовое ApplicationSubmitted в client.events'
 	@echo 'make bank-info-smoke APPLICATION_ID=<uuid> REQUEST_ID=<uuid> Ответить на запрос банка через client.events'
 	@echo 'make bank-outbox-test Проверить порядок и повторы outbox на bank_db'
-	@echo 'make bank-decision-test Проверить решение аналитика, повтор и публичное событие на bank_db'
+	@echo 'make bank-decision-test Проверить ручное и автоматическое решение на bank_db'
 	@echo 'make bank-audit-test Проверить порядок и пагинацию истории дела на bank_db'
 	@echo 'make client-db-up     Применить миграции client_db'
 	@echo 'make client-up        Собрать и запустить client-service в Docker'
@@ -139,7 +139,7 @@ bank-outbox-test: require-env
 	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/outbox -run '^TestRelayClaimsInAggregateOrderAndRecoversLease$$' -count=1 -v
 
 bank-decision-test: require-env
-	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/case -run '^TestDecidePersistsOfferAuditOutboxAndReplay$$' -count=1 -v
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/case ./services/bank-service/internal/repository/decision -run '^(TestDecidePersistsOfferAuditOutboxAndReplay|TestAutomaticDecisionPersistsOfferAuditAndEvent)$$' -count=1 -v
 
 bank-audit-test: require-env
 	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/case -run '^TestListAuditOrdersTiesAndKeepsInternalDetailsPrivate$$' -count=1 -v

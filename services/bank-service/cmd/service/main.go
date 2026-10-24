@@ -58,6 +58,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		workers.Add(1)
 		go func() { defer workers.Done(); dependencies.ScoringWorker.Run(workerCtx, logger) }()
 	}
+	workers.Add(1)
+	go func() { defer workers.Done(); dependencies.DecisionWorker.Run(workerCtx, logger) }()
 	if dependencies.EnrichmentWorker != nil {
 		workers.Add(1)
 		go func() { defer workers.Done(); dependencies.EnrichmentWorker.Run(workerCtx, logger) }()
