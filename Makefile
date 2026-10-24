@@ -1,11 +1,12 @@
 .DEFAULT_GOAL := help
 
-ifneq (,$(wildcard .env))
-include .env
+ENV_FILE ?= .env
+ifneq (,$(wildcard $(ENV_FILE)))
+include $(ENV_FILE)
 export
 endif
 
-COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
+COMPOSE := docker compose --env-file $(ENV_FILE) -f deploy/docker-compose.yml
 POSTGRES_PORT ?= 5432
 SCORING_PORT ?= 50051
 ASSISTANT_PORT ?= 50052
@@ -32,7 +33,7 @@ OPENAPI_OUTPUT_DIRS := \
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
-.PHONY: auth-db-up auth-db-down auth-db-status auth-db-test
+.PHONY: auth-up auth-down auth-logs auth-keygen auth-db-up auth-db-down auth-db-status auth-db-test
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -68,6 +69,10 @@ help:
 	@echo 'make bank-down        Остановить и удалить контейнер bank-service'
 	@echo 'make bank-logs        Показать логи bank-service'
 	@echo 'make auth-db-up       Применить миграции auth_db'
+	@echo 'make auth-up          Создать ключ, применить миграции и запустить auth в Docker'
+	@echo 'make auth-down        Остановить auth, сохранив ключ и сессии'
+	@echo 'make auth-logs        Показать логи auth'
+	@echo 'make auth-keygen      Создать постоянный RSA-ключ в Docker volume'
 	@echo 'make auth-db-down     Откатить миграцию auth_db'
 	@echo 'make auth-db-status   Показать состояние миграций auth_db'
 	@echo 'make auth-db-test     Проверить миграции в изолированной схеме auth_db'
@@ -89,7 +94,7 @@ help:
 	@echo 'make infra-down       Остановить контейнеры, сохранив данные'
 
 require-env:
-	@test -f .env || { echo 'Сначала выполните: cp .env.example .env' >&2; exit 1; }
+	@test -f "$(ENV_FILE)" || { echo 'Создайте ENV_FILE по примеру .env.example' >&2; exit 1; }
 
 gen: gen-openapi gen-proto
 
@@ -255,7 +260,7 @@ bank-db-status: require-env
 bank-demo-seed: require-env
 	$(COMPOSE) exec -T postgres sh -c 'PGPASSWORD="$$BANK_DB_PASSWORD" psql -h 127.0.0.1 -U bank_user -d bank_db -v ON_ERROR_STOP=1' < $(BANK_DEMO_SEED)
 
-client-up: require-env
+client-up: auth-up
 	$(COMPOSE) up -d --wait postgres
 	$(GOOSE) -dir $(CLIENT_MIGRATIONS) postgres "$(CLIENT_DATABASE_URL)" up
 	$(COMPOSE) up -d --build --wait client-service
@@ -286,3 +291,18 @@ auth-db-status: require-env
 
 auth-db-test: require-env
 	@AUTH_TEST_DATABASE_URL="$(AUTH_DATABASE_URL)" go test -count=1 ./services/auth/migrations
+
+auth-keygen: require-env
+	$(COMPOSE) build auth
+	$(COMPOSE) run --rm --no-deps --entrypoint sh auth -c 'if test -f "$$AUTH_JWT_PRIVATE_KEY_PATH"; then echo "Existing RSA signing key retained"; else exec /usr/local/bin/keygen -out "$$AUTH_JWT_PRIVATE_KEY_PATH"; fi'
+
+auth-up: auth-keygen
+	$(COMPOSE) up -d --wait postgres
+	@$(GOOSE) -dir $(AUTH_MIGRATIONS) postgres "$(AUTH_DATABASE_URL)" up
+	$(COMPOSE) up -d --wait auth
+
+auth-down: require-env
+	$(COMPOSE) rm -sf auth
+
+auth-logs: require-env
+	$(COMPOSE) logs -f auth

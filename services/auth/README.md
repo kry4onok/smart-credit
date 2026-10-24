@@ -22,7 +22,50 @@ Readiness пока проверяет только соединение, без 
 `AUTH_SHUTDOWN_TIMEOUT`, затем закрывается пул PostgreSQL. Логи процесса — JSON.
 В каждый HTTP-ответ добавляется `X-Trace-ID`; ошибки содержат тот же `trace_id`.
 
-## Локальный запуск
+## Запуск в Docker
+
+Из корня репозитория добавьте блок `AUTH_*` из `.env.example` в `.env`:
+
+```sh
+make auth-up
+```
+
+Команда собирает target `auth` общего Dockerfile, создаёт RSA-ключ при первом
+запуске, поднимает PostgreSQL, применяет миграции `auth_db` и ждёт успешного
+`/readyz`. Внутри сети auth слушает `auth:8080`, с компьютера — `localhost:8082`.
+Healthcheck проверяет `/readyz`; Kafka для auth не нужна.
+
+Ключ хранится в volume `auth_keys` как `/var/lib/smart-credit/auth/private.pem`
+с правами `0600`. Его создаёт пользователь `app`, от которого работает сервис;
+ключ не копируется в образ. `make auth-keygen` сохраняет существующий файл.
+Этот ключ независим от локального `.data/auth/private.pem`.
+Issuer, audience, TTL, `kid` и cookie-настройки берутся из `AUTH_*`.
+
+```sh
+make auth-logs
+make auth-down
+```
+
+`auth-down` удаляет контейнер, сохраняя ключ и БД с сессиями. Пересоздание
+контейнера не меняет подпись: ранее выданные access и refresh продолжают работать.
+`docker compose down -v` удаляет также ключ и данные — используйте его только
+для удаления отдельного тестового окружения.
+
+Для связки с клиентом и gateway:
+
+```sh
+make client-up
+make gateway-up
+```
+
+`client-up` запускает auth с миграциями и ключом, затем клиент с его БД и Kafka.
+Клиент получает JWKS напрямую по `http://auth:8080/.well-known/jwks.json`;
+issuer и audience совпадают с auth. Swagger: `http://localhost:8000/docs/`.
+Наружные пути — `/api/auth/*`, `/api/.well-known/*`, `/api/client/*`.
+Nginx обновляет Docker DNS после пересоздания контейнера, не требуя reload.
+Учётки автоматически не создаются; auth seed по-прежнему отсутствует.
+
+## Запуск Go-процесса на компьютере
 
 Из корня репозитория добавьте блок `AUTH_*` из `.env.example` в свою `.env`.
 Пароль в `AUTH_DATABASE_URL` должен совпадать с `AUTH_DB_PASSWORD`.
@@ -65,7 +108,12 @@ curl -i http://localhost:8082/.well-known/jwks.json
 
 Через существующий gateway доступны `/internal/auth/healthz` и
 `/internal/auth/readyz` на `http://localhost:8000`.
-Compose-контейнер auth относится к следующим шагам реализации.
+Gateway по умолчанию направляет auth/client в Docker. Для запуска Go-процессов
+на компьютере обращайтесь к их портам напрямую; для refresh-cookie задайте
+`AUTH_REFRESH_COOKIE_PATH=/auth`. Локальный клиент использует
+`CLIENT_JWKS_URL=http://127.0.0.1:8082/.well-known/jwks.json` и те же issuer/audience,
+что и локальный auth. При переходе между разными ключами перезапустите клиент,
+чтобы очистить его кеш JWKS.
 
 ## Миграции
 
@@ -201,3 +249,23 @@ refresh-хеши и сроки, откат миграции, цикл login/refr
 JWT, trace ID, безопасные логи, recovery и `404/405`.
 Без `AUTH_TEST_DATABASE_URL` SQL-тесты пропускаются. Для каждого теста
 создаётся отдельная схема; существующие таблицы auth не затрагиваются.
+
+Docker smoke-тест `TestDockerAuthClientIntegration` запускается отдельно при
+заданных переменных для уже запущенного отдельного окружения:
+
+| Переменная | Значение |
+|---|---|
+| `AUTH_DOCKER_TEST_URL` | URL gateway без завершающего `/` |
+| `AUTH_DOCKER_TEST_PROJECT` | Имя отдельного проекта `smart-credit-auth-smoke-*` |
+| `AUTH_DOCKER_TEST_ENV` | Абсолютный путь к env-файлу этого проекта |
+| `AUTH_DOCKER_TEST_OVERRIDE` | Абсолютный путь к Compose override с незанятыми портами |
+| `AUTH_DOCKER_TEST_DATABASE_URL` | DSN тестовой `auth_db` с компьютера |
+| `CLIENT_DOCKER_TEST_DATABASE_URL` | DSN тестовой `client_db` с компьютера |
+
+```sh
+go test -count=1 -timeout 4m -run '^TestDockerAuthClientIntegration$' ./services/auth/internal/container
+```
+
+Он создаёт временные учётки и компании, проверяет login/me/refresh/logout,
+JWT клиента и изоляцию организаций, затем пересоздаёт auth и клиент и проверяет
+старые токены. Фикстуры удаляются; демоучётки не устанавливаются.
