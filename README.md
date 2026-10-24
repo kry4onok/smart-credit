@@ -21,6 +21,18 @@ make lint
 
 ## Swagger UI
 
+Для проверки всех API и банковского сценария одной командой запустите
+инфраструктуру, Auth, Client, Bank, scoring, bureau-mocks, assistant, демо-сиды
+и gateway:
+
+```sh
+make demo-up
+```
+
+После запуска откройте `http://localhost:8000/docs/`. Повторный `demo-up`
+безопасен для существующих демоданных. Frontend запускается отдельно через
+`make web-up`; остановить весь Compose-стек можно через `make infra-down`.
+
 Общая документация Auth, Client и Bank API запускается отдельно от сервисов:
 
 ```sh
