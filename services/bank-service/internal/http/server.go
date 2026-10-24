@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
+	decidehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/decide"
 	gethandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/get"
 	listhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/list"
 	takehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/take"
@@ -17,10 +18,11 @@ import (
 var errNotImplemented = errors.New("operation is not implemented")
 
 type server struct {
-	health    *health.Handler
-	listCases *listhandler.Handler
-	getCase   *gethandler.Handler
-	takeCase  *takehandler.Handler
+	health     *health.Handler
+	listCases  *listhandler.Handler
+	getCase    *gethandler.Handler
+	takeCase   *takehandler.Handler
+	decideCase *decidehandler.Handler
 }
 
 func New(
@@ -29,12 +31,14 @@ func New(
 	listCases listhandler.UseCase,
 	getCase gethandler.UseCase,
 	takeCase takehandler.UseCase,
+	decideCase decidehandler.UseCase,
 ) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:    health.New(db, readinessTimeout),
-		listCases: listhandler.New(listCases),
-		getCase:   gethandler.New(getCase),
-		takeCase:  takehandler.New(takeCase),
+		health:     health.New(db, readinessTimeout),
+		listCases:  listhandler.New(listCases),
+		getCase:    gethandler.New(getCase),
+		takeCase:   takehandler.New(takeCase),
+		decideCase: decidehandler.New(decideCase),
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})
