@@ -8,6 +8,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/middleware"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 	"github.com/google/uuid"
 )
 
@@ -22,7 +23,10 @@ func (h *Handler) Handle(ctx context.Context, request generated.CreateApplicatio
 	if request.Body == nil || request.Body.ProductId == uuid.Nil {
 		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION", "Необходимо выбрать продукт.")}, nil
 	}
-	application, err := h.usecase.Execute(ctx, client.OrgID, client.UserID, request.Body.ProductId, request.Params.IdempotencyKey)
+	application, err := h.usecase.Execute(ctx, model.CreateApplicationParams{
+		OrgID: client.OrgID, UserID: client.UserID,
+		ProductID: request.Body.ProductId, IdempotencyID: request.Params.IdempotencyKey,
+	})
 	if err != nil {
 		return problemResponse{domainerror.Map(ctx, err)}, nil
 	}

@@ -36,7 +36,10 @@ func (h *Handler) Handle(ctx context.Context, request generated.UpdateApplicatio
 		patch.AmountKopecks = &amount
 		patch.AmountCurrency = string(request.Body.Amount.Currency)
 	}
-	application, err := h.usecase.Execute(ctx, client.OrgID, request.ApplicationId, patch, expectedVersion)
+	application, err := h.usecase.Execute(ctx, model.UpdateApplicationParams{
+		OrgID: client.OrgID, ApplicationID: request.ApplicationId,
+		Patch: patch, ExpectedVersion: expectedVersion,
+	})
 	if err != nil {
 		return problemResponse{domainerror.Map(ctx, err)}, nil
 	}
