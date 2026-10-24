@@ -50,7 +50,6 @@ func TestBusinessRoutesAreExplicitlyUnimplemented(t *testing.T) {
 		{http.MethodPost, "/auth/refresh", ""},
 		{http.MethodPost, "/auth/logout", ""},
 		{http.MethodGet, "/auth/me", ""},
-		{http.MethodGet, "/.well-known/jwks.json", ""},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
 			request := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))

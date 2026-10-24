@@ -21,7 +21,3 @@ func (s *server) Logout(context.Context, generated.LogoutRequestObject) (generat
 func (s *server) GetCurrentUser(context.Context, generated.GetCurrentUserRequestObject) (generated.GetCurrentUserResponseObject, error) {
 	return nil, errNotImplemented
 }
-
-func (s *server) GetJwks(context.Context, generated.GetJwksRequestObject) (generated.GetJwksResponseObject, error) {
-	return nil, errNotImplemented
-}

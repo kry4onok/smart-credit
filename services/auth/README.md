@@ -1,16 +1,20 @@
 # auth
 
-Каркас сервиса пользователей и сессий по `api/auth.yaml`.
+Сервис пользователей, сессий и публичных ключей по `api/auth.yaml`.
 
 - `GET /healthz` — `204 No Content`, если процесс отвечает; БД не проверяется.
 - `GET /readyz` — `204 No Content` при успешном ping `auth_db`, иначе `503`.
   Проверка ограничена `AUTH_READINESS_TIMEOUT`; тело ответа пустое.
-- Login, refresh, logout, me и JWKS пока возвращают `501 Not Implemented`
+- `GET /.well-known/jwks.json` — публичный RSA-ключ с `kid`, `alg=RS256`,
+  `use=sig`, `n` и `e`; `Cache-Control: public, max-age=300`. Авторизация и БД
+  для этого запроса не нужны.
+- Login, refresh, logout и me пока возвращают `501 Not Implemented`
   в формате `application/problem+json`. Сессии и токены пока не выдаются.
 
 Сервис запускается при недоступном PostgreSQL и восстанавливает readiness после
-возвращения БД. Доступность таблиц и ключа JWT будет проверяться при реализации
-соответствующих функций; на этом этапе readiness проверяет только соединение.
+возвращения БД. Приватный RSA-ключ загружается и проверяется при старте;
+отсутствующий, повреждённый или неподходящий ключ останавливает запуск.
+Readiness пока проверяет только соединение, без доступности таблиц.
 `SIGINT`/`SIGTERM` запускают graceful shutdown HTTP с таймаутом
 `AUTH_SHUTDOWN_TIMEOUT`, затем закрывается пул PostgreSQL. Логи процесса — JSON.
 В каждый HTTP-ответ добавляется `X-Trace-ID`; ошибки содержат тот же `trace_id`.
@@ -28,12 +32,23 @@ docker compose --env-file .env -f deploy/docker-compose.yml up -d postgres
 make auth-db-up
 ```
 
-Загрузите переменные и запустите auth:
+Загрузите переменные. При первом запуске создайте постоянный ключ:
 
 ```sh
 set -a
 source .env
 set +a
+go run ./services/auth/cmd/keygen -out "$AUTH_JWT_PRIVATE_KEY_PATH"
+```
+
+Команда создаёт RSA-ключ 2048 бит в PKCS#8 PEM с правами `0600` и отказывается
+перезаписывать существующий файл. Каталог `.data/auth/` исключён из Git.
+Ключ создаётся один раз и сохраняется между перезапусками; для собственного пути
+также исключите приватный файл из Git. Не передавайте его клиенту.
+
+Запустите сервис из того же терминала:
+
+```sh
 go run ./services/auth/cmd/service
 ```
 
@@ -42,6 +57,7 @@ go run ./services/auth/cmd/service
 ```sh
 curl -i http://localhost:8082/healthz
 curl -i http://localhost:8082/readyz
+curl -i http://localhost:8082/.well-known/jwks.json
 ```
 
 Через существующий gateway доступны `/internal/auth/healthz` и
@@ -63,9 +79,31 @@ Compose-контейнер auth относится к следующим шаг�
 readiness и shutdown. Конфигурация проверяет адрес сервера, PostgreSQL URL,
 положительные таймауты и соотношение размеров пула.
 
-Настройки JWT уже описаны: issuer `smart-credit-auth`, audience `smart-credit`,
-access TTL `15m`, `kid` и путь к приватному ключу. Ключ пока не читается и не
-генерируется. Его загрузка, RS256 и JWKS будут добавлены на шаге выпуска JWT.
+Настройки JWT: issuer `smart-credit-auth`, audience `smart-credit`, access TTL
+`15m`, `kid=auth-v1`, путь к приватному ключу `.data/auth/private.pem`.
+Поддерживаются незашифрованные RSA PEM PKCS#1 и PKCS#8, от 2048 до 8192 бит.
+Пара ключ/`kid` должна оставаться прежней между перезапусками. Автоматической
+ротации и публикации предыдущих ключей пока нет.
+
+## Пароли и access JWT
+
+`internal/infra/password` создаёт Argon2id-хеши: версия 19, память 64 MiB,
+три прохода, четыре потока, случайная соль 16 байт и результат 32 байта.
+PHC-строка совместима с ограничением `users.password_hash`. Проверка использует
+сравнение за постоянное время и ограничивает параметры PHC до 64 MiB, трёх
+проходов и четырёх потоков перед вычислением хеша. Пароли не обрезаются и не
+нормализуются.
+
+`internal/infra/jwt` выпускает и локально проверяет RS256 access JWT.
+В заголовке — `alg`, `typ=JWT`, `kid`; в payload — `sub`, `role`, `can_submit`,
+`iss`, `aud`, `iat`, `exp`. Только CLIENT получает `org_id`; для ANALYST/ADMIN
+организация отсутствует, `can_submit=false`. `expires_in` и `exp` используют
+одинаковый TTL в целых секундах. JWKS содержит только публичные параметры.
+Токены с неверными подписью, алгоритмом, ключом, issuer/audience, сроком или
+сочетанием роли и организации отклоняются.
+
+Адаптеры подключены в container для следующих шагов login/refresh/me.
+Публичной выдачи токенов и загрузки учётных записей на этом этапе ещё нет.
 
 Будущая refresh-cookie: имя `smart_credit_refresh`, путь `/api/auth`,
 `HttpOnly`, `SameSite=Strict`. Для прямого обращения к auth задайте
