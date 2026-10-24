@@ -30,7 +30,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
 .PHONY: auth-up auth-down auth-logs auth-keygen auth-dev-seed auth-dev-seed-test auth-db-up auth-db-down auth-db-status auth-db-test
@@ -87,6 +87,7 @@ help:
 	@echo 'make bank-outbox-test Проверить порядок и повторы outbox на bank_db'
 	@echo 'make bank-decision-test Проверить ручное и автоматическое решение на bank_db'
 	@echo 'make bank-audit-test Проверить порядок и пагинацию истории дела на bank_db'
+	@echo 'make bank-catalog-test Проверить версии и полный снимок каталога банка'
 	@echo 'make client-db-up     Применить миграции client_db'
 	@echo 'make client-up        Собрать и запустить client-service в Docker'
 	@echo 'make client-down      Остановить и удалить контейнер client-service'
@@ -158,6 +159,9 @@ bank-decision-test: require-env
 
 bank-audit-test: require-env
 	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/case -run '^TestListAuditOrdersTiesAndKeepsInternalDetailsPrivate$$' -count=1 -v
+
+bank-catalog-test: require-env
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/catalog -run '^TestPublishesFullCatalogOnlyWhenChanged$$' -count=1 -v
 
 assistant-up: require-env
 	$(COMPOSE) up -d --build --wait assistant
