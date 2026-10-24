@@ -186,6 +186,10 @@ auth и client контейнеров появятся общие команды
 сессии и JWKS будут добавлены следующими шагами. Настройки `AUTH_*` находятся
 в `.env.example`, инструкции запуска — в [README auth](services/auth/README.md).
 
+После запуска PostgreSQL примените `make auth-db-up`. Миграция создаёт пустые
+таблицы `organizations`, `users`, `refresh_tokens`.
+Проверка миграций в изолированных схемах: `make auth-db-test`.
+
 ## client-service
 
 Сервис кабинета клиента можно собрать и запустить в Docker вместе с Postgres:
