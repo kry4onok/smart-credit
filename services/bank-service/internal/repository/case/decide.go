@@ -255,7 +255,6 @@ func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input,
 	if snapshot.Revenue == nil || len(snapshot.Revenue.Amount) == 0 {
 		return p, fmt.Errorf("%w: revenue is required", decide.ErrValidation)
 	}
-	
 	revenue, err := strconv.ParseInt(strings.Trim(string(snapshot.Revenue.Amount), `"`), 10, 64)
 	if err != nil || revenue <= 0 {
 		return p, fmt.Errorf("%w: revenue must be positive", decide.ErrValidation)
