@@ -13,9 +13,11 @@ BUREAU_PORT ?= 50053
 OLLAMA_MODEL ?= qwen2.5:3b
 SWAGGER_PORT ?= 8081
 GATEWAY_PORT ?= 8000
+AUTH_DATABASE_URL ?= postgres://auth_user:$(AUTH_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/auth_db?sslmode=disable
 BANK_DATABASE_URL ?= postgres://bank_user:$(BANK_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/bank_db?sslmode=disable
 CLIENT_DATABASE_URL ?= postgres://client_user:$(CLIENT_DB_PASSWORD)@127.0.0.1:$(POSTGRES_PORT)/client_db?sslmode=disable
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.24.1
+AUTH_MIGRATIONS := services/auth/migrations
 BANK_MIGRATIONS := services/bank-service/migrations
 BANK_DEMO_SEED := services/bank-service/seeds/demo.sql
 CLIENT_MIGRATIONS := services/client-service/migrations
@@ -29,6 +31,8 @@ OPENAPI_OUTPUT_DIRS := \
 
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
+
+.PHONY: auth-db-up auth-db-down auth-db-status auth-db-test
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -63,6 +67,10 @@ help:
 	@echo 'make bank-up          Собрать и запустить bank-service в Docker'
 	@echo 'make bank-down        Остановить и удалить контейнер bank-service'
 	@echo 'make bank-logs        Показать логи bank-service'
+	@echo 'make auth-db-up       Применить миграции auth_db'
+	@echo 'make auth-db-down     Откатить миграцию auth_db'
+	@echo 'make auth-db-status   Показать состояние миграций auth_db'
+	@echo 'make auth-db-test     Проверить миграции в изолированной схеме auth_db'
 	@echo 'make bank-db-up       Применить миграции bank_db'
 	@echo 'make bank-db-down     Откатить миграцию bank_db'
 	@echo 'make bank-db-status   Показать состояние миграций bank_db'
@@ -266,3 +274,15 @@ client-db-down: require-env
 
 client-db-status: require-env
 	$(GOOSE) -dir $(CLIENT_MIGRATIONS) postgres "$(CLIENT_DATABASE_URL)" status
+
+auth-db-up: require-env
+	@$(GOOSE) -dir $(AUTH_MIGRATIONS) postgres "$(AUTH_DATABASE_URL)" up
+
+auth-db-down: require-env
+	@$(GOOSE) -dir $(AUTH_MIGRATIONS) postgres "$(AUTH_DATABASE_URL)" down
+
+auth-db-status: require-env
+	@$(GOOSE) -dir $(AUTH_MIGRATIONS) postgres "$(AUTH_DATABASE_URL)" status
+
+auth-db-test: require-env
+	@AUTH_TEST_DATABASE_URL="$(AUTH_DATABASE_URL)" go test -count=1 ./services/auth/migrations

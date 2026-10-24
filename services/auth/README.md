@@ -25,6 +25,7 @@
 
 ```sh
 docker compose --env-file .env -f deploy/docker-compose.yml up -d postgres
+make auth-db-up
 ```
 
 Загрузите переменные и запустите auth:
@@ -45,8 +46,15 @@ curl -i http://localhost:8082/readyz
 
 Через существующий gateway доступны `/internal/auth/healthz` и
 `/internal/auth/readyz` на `http://localhost:8000`.
-Compose-контейнер auth, команды Makefile, миграции и seed относятся к следующим
-шагам реализации.
+Compose-контейнер auth относится к следующим шагам реализации.
+
+## Миграции
+
+Схема `auth_db` содержит `organizations`, `users`, `refresh_tokens`.
+Описание ограничений и команд отката — в [README миграций](migrations/README.md).
+Статус миграций показывает `make auth-db-status`.
+
+Миграция создаёт пустые таблицы; учётные записи пока не загружаются.
 
 ## Конфигурация
 
@@ -70,3 +78,13 @@ access TTL `15m`, `kid` и путь к приватному ключу. Ключ
 ```sh
 go test ./services/auth/...
 ```
+
+SQL-проверки запускаются отдельно:
+
+```sh
+make auth-db-test
+```
+
+Они проверяют ограничения ролей и организаций, email без учёта регистра,
+refresh-хеши и сроки, а также откат миграции. Для каждого теста
+создаётся отдельная схема; существующие таблицы auth не затрагиваются.
