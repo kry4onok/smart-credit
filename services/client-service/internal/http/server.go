@@ -13,6 +13,7 @@ import (
 	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationofferaccept "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/accept"
+	applicationofferdecline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/decline"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
@@ -27,38 +28,40 @@ import (
 var errNotImplemented = errors.New("operation is not implemented")
 
 type server struct {
-	health                 *health.Handler
-	company                *companyget.Handler
-	update                 *companyupdate.Handler
-	application            *applicationcreate.Handler
-	applicationDocument    *applicationdocument.Handler
-	applicationGet         *applicationget.Handler
-	applicationList        *applicationlist.Handler
-	applicationOfferAccept *applicationofferaccept.Handler
-	applicationSubmit      *applicationsubmit.Handler
-	applicationInfo        *applicationinfo.Handler
-	applicationUpdate      *applicationupdate.Handler
-	product                *productget.Handler
-	products               *productlist.Handler
+	health                  *health.Handler
+	company                 *companyget.Handler
+	update                  *companyupdate.Handler
+	application             *applicationcreate.Handler
+	applicationDocument     *applicationdocument.Handler
+	applicationGet          *applicationget.Handler
+	applicationList         *applicationlist.Handler
+	applicationOfferAccept  *applicationofferaccept.Handler
+	applicationOfferDecline *applicationofferdecline.Handler
+	applicationSubmit       *applicationsubmit.Handler
+	applicationInfo         *applicationinfo.Handler
+	applicationUpdate       *applicationupdate.Handler
+	product                 *productget.Handler
+	products                *productlist.Handler
 }
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationDocument *applicationdocument.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationOfferAccept *applicationofferaccept.Handler, applicationSubmit *applicationsubmit.Handler, applicationInfo *applicationinfo.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationDocument *applicationdocument.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationOfferAccept *applicationofferaccept.Handler, applicationOfferDecline *applicationofferdecline.Handler, applicationSubmit *applicationsubmit.Handler, applicationInfo *applicationinfo.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:                 health.New(db, readinessTimeout),
-		company:                company,
-		update:                 update,
-		application:            application,
-		applicationDocument:    applicationDocument,
-		applicationGet:         applicationGet,
-		applicationList:        applicationList,
-		applicationOfferAccept: applicationOfferAccept,
-		applicationSubmit:      applicationSubmit,
-		applicationInfo:        applicationInfo,
-		applicationUpdate:      applicationUpdate,
-		product:                product,
-		products:               products,
+		health:                  health.New(db, readinessTimeout),
+		company:                 company,
+		update:                  update,
+		application:             application,
+		applicationDocument:     applicationDocument,
+		applicationGet:          applicationGet,
+		applicationList:         applicationList,
+		applicationOfferAccept:  applicationOfferAccept,
+		applicationOfferDecline: applicationOfferDecline,
+		applicationSubmit:       applicationSubmit,
+		applicationInfo:         applicationInfo,
+		applicationUpdate:       applicationUpdate,
+		product:                 product,
+		products:                products,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
@@ -126,6 +129,10 @@ func (s *server) ProvideInfo(ctx context.Context, request generated.ProvideInfoR
 
 func (s *server) AcceptOffer(ctx context.Context, request generated.AcceptOfferRequestObject) (generated.AcceptOfferResponseObject, error) {
 	return s.applicationOfferAccept.Handle(ctx, request)
+}
+
+func (s *server) DeclineOffer(ctx context.Context, request generated.DeclineOfferRequestObject) (generated.DeclineOfferResponseObject, error) {
+	return s.applicationOfferDecline.Handle(ctx, request)
 }
 
 func (s *server) UpdateApplication(ctx context.Context, request generated.UpdateApplicationRequestObject) (generated.UpdateApplicationResponseObject, error) {

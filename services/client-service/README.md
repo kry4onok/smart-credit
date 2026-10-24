@@ -15,7 +15,8 @@ HTTP-сервис кабинета клиента с техническими р
 - `POST /client/applications/{application_id}/documents` — принимает демо-файл до 5 MiB и сохраняет его метаданные с `Idempotency-Key`.
 - `POST /client/applications/{application_id}/submit` — проверяет заполненность черновика, переводит его в `SUBMITTED` и сохраняет событие `ApplicationSubmitted` в outbox.
 - `POST /client/applications/{application_id}/info` — проверяет актуальный запрос банка, сохраняет уточнённый снимок заявки и отправляет `InfoProvided` через outbox.
-- `POST /client/applications/{application_id}/offer/accept` — проверяет актуальную оферту, сохраняет действие клиента и отправляет `OfferAccepted` через outbox.
+- `POST /client/applications/{application_id}/offer/accept` — подтверждает выбранную актуальную оферту, переводит действие в `ACCEPT_PENDING` и отправляет `OfferAccepted` через outbox; после подтверждения банка заявка переходит к оформлению.
+- `POST /client/applications/{application_id}/offer/decline` — отказывается от выбранной актуальной оферты, переводит действие в `DECLINE_PENDING` и отправляет `OfferDeclined` через outbox; окончательное закрытие заявки выполняется после подтверждения банка.
 
 Технические ручки доступны без JWT и возвращают пустое тело. Бизнес-ручки
 требуют Bearer JWT с ролью `CLIENT`; профиль всегда выбирается по `org_id` из
