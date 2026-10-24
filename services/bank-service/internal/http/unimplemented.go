@@ -10,10 +10,6 @@ func (s *server) GetCaseAudit(context.Context, generated.GetCaseAuditRequestObje
 	return nil, errNotImplemented
 }
 
-func (s *server) DecideCase(context.Context, generated.DecideCaseRequestObject) (generated.DecideCaseResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) SummarizeCase(context.Context, generated.SummarizeCaseRequestObject) (generated.SummarizeCaseResponseObject, error) {
 	return nil, errNotImplemented
 }
