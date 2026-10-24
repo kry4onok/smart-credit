@@ -39,15 +39,19 @@ func TestLoad(t *testing.T) {
 	if cfg.KafkaBrokers != "127.0.0.1:9092" || cfg.KafkaGroup != "bank-service" {
 		t.Errorf("Kafka config = brokers %q, group %q", cfg.KafkaBrokers, cfg.KafkaGroup)
 	}
+	if cfg.JWT.JWKSURL != "http://127.0.0.1:8082/.well-known/jwks.json" ||
+		cfg.JWT.Issuer != "smart-credit-auth" || cfg.JWT.Audience != "smart-credit" ||
+		cfg.JWT.Timeout != 2*time.Second || cfg.JWT.CacheTTL != 5*time.Minute {
+		t.Errorf("JWT config = %+v", cfg.JWT)
+	}
 }
 
-func TestLoadDemoAnalystID(t *testing.T) {
+func TestLoadJWT(t *testing.T) {
 	setValidEnvironment(t)
-	id := "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-	t.Setenv("BANK_DEMO_ANALYST_ID", id)
+	t.Setenv("BANK_JWKS_URL", "http://auth:8080/.well-known/jwks.json")
 	cfg, err := Load()
-	if err != nil || cfg.DemoAnalystID != id {
-		t.Fatalf("DemoAnalystID=%q, err=%v", cfg.DemoAnalystID, err)
+	if err != nil || cfg.JWT.JWKSURL != "http://auth:8080/.well-known/jwks.json" {
+		t.Fatalf("JWT=%+v, err=%v", cfg.JWT, err)
 	}
 }
 
@@ -95,9 +99,9 @@ func TestLoadRejectsInvalidEnvironment(t *testing.T) {
 			want: "ReadinessTimeout",
 		},
 		{
-			name: "invalid demo analyst ID",
-			env:  map[string]string{"BANK_DEMO_ANALYST_ID": "invalid"},
-			want: "BANK_DEMO_ANALYST_ID",
+			name: "invalid JWKS URL",
+			env:  map[string]string{"BANK_JWKS_URL": "invalid"},
+			want: "JWKSURL",
 		},
 		{
 			name: "invalid Kafka brokers",
@@ -140,7 +144,11 @@ func setValidEnvironment(t *testing.T) {
 		"BANK_DB_HEALTH_CHECK_PERIOD":   "1m",
 		"BANK_READINESS_TIMEOUT":        "1s",
 		"BANK_SHUTDOWN_TIMEOUT":         "10s",
-		"BANK_DEMO_ANALYST_ID":          "",
+		"BANK_JWKS_URL":                 "http://127.0.0.1:8082/.well-known/jwks.json",
+		"BANK_JWT_ISSUER":               "smart-credit-auth",
+		"BANK_JWT_AUDIENCE":             "smart-credit",
+		"BANK_JWKS_TIMEOUT":             "2s",
+		"BANK_JWKS_CACHE_TTL":           "5m",
 	}
 	for name, value := range values {
 		t.Setenv(name, value)

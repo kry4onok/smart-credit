@@ -14,6 +14,7 @@ import (
 	clientevents "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/consumer/clientevents"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
 	authmiddleware "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/middleware/auth"
+	jwtverifier "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/jwt"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
@@ -37,7 +38,6 @@ import (
 	outboxworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/outbox"
 	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
 	validationworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/validation"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -94,15 +94,6 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	takeCase := takecase.New(caseRepository, transactions)
 	decideCase := decidecase.New(caseRepository, transactions)
 	auditCase := auditcase.New(caseRepository)
-	demoAnalystID := uuid.Nil
-	if cfg.DemoAnalystID != "" {
-		demoAnalystID, err = uuid.Parse(cfg.DemoAnalystID)
-		if err != nil || demoAnalystID == uuid.Nil {
-			consumer.Close()
-			db.Close()
-			return nil, fmt.Errorf("invalid BANK_DEMO_ANALYST_ID")
-		}
-	}
 	var client *scoringclient.Client
 	var worker *scoringworker.Worker
 	var bureau *bureauclient.Client
@@ -173,7 +164,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		ValidationWorker: validation,
 		OutboxWorker:     outboxworker.New(outboxrepository.New(db), publisher),
 		ClientEvents:     consumer,
-		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer)), demoAnalystID),
+		HTTPHandler:      authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer))),
 		scoringClient:    client,
 		bureauClient:     bureau,
 		assistantClient:  assistant,
