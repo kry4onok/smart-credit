@@ -58,9 +58,9 @@ func (r *Repository) offerAction(ctx context.Context, params offerActionParams) 
 		INSERT INTO idempotency_keys (
 			actor_id, route, idempotency_key, request_hash, response_status,
 			response_body, application_id, expires_at
-		) VALUES ($1, $2, $3, $4, 202, '{}'::jsonb, $5, now() + interval '24 hours')
+		) VALUES ($1, $2, $3, $4, 202, '{}'::jsonb, NULL, now() + interval '24 hours')
 		ON CONFLICT (actor_id, route, idempotency_key) DO NOTHING
-		RETURNING 1`, params.UserID, route, params.IdempotencyID, params.RequestHash, params.ApplicationID).Scan(&reserved)
+		RETURNING 1`, params.UserID, route, params.IdempotencyID, params.RequestHash).Scan(&reserved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var storedHash []byte
 		var responseBody []byte
@@ -181,9 +181,9 @@ func (r *Repository) offerAction(ctx context.Context, params offerActionParams) 
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE idempotency_keys
-		SET response_body = $4
+		SET response_body = $4, application_id = $5
 		WHERE actor_id = $1 AND route = $2 AND idempotency_key = $3`,
-		params.UserID, route, params.IdempotencyID, responseBody); err != nil {
+		params.UserID, route, params.IdempotencyID, responseBody, params.ApplicationID); err != nil {
 		return model.ActionAccepted{}, fmt.Errorf("save offer action idempotency response: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {

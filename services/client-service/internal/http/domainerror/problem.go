@@ -66,6 +66,10 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusConflict, "OFFER_ACTION_CONFLICT", "Оферта уже обработана, истекла или заявка находится в другом состоянии.")
 	case errors.Is(err, domain.ErrInvalidOfferAction):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_OFFER_ACTION", "Оферта для действия указана некорректно.")
+	case errors.Is(err, domain.ErrApplicationSignConflict):
+		return Problem(ctx, http.StatusConflict, "SIGN_ACTION_CONFLICT", "Заявка не готова к подписанию или оферта уже обработана.")
+	case errors.Is(err, domain.ErrInvalidSignAction):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_SIGN_ACTION", "Данные для подписания указаны некорректно.")
 	case errors.Is(err, domain.ErrInvalidDocumentUpload):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_DOCUMENT", "Файл документа заполнен некорректно.")
 	}

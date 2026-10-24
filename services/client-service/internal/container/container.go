@@ -16,6 +16,7 @@ import (
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
 	applicationofferaccept "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/accept"
 	applicationofferdecline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/decline"
+	applicationsign "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/sign"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
@@ -34,6 +35,7 @@ import (
 	listapplications "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/list"
 	acceptoffer "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/offer/accept"
 	declineoffer "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/offer/decline"
+	signcontract "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/sign"
 	submitapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/submit"
 	updateapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/update"
 	getcompany "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/company/get"
@@ -85,6 +87,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			applicationlist.New(listapplications.New(applicationRepository)),
 			applicationofferaccept.New(acceptoffer.New(applicationRepository)),
 			applicationofferdecline.New(declineoffer.New(applicationRepository)),
+			applicationsign.New(signcontract.New(applicationRepository)),
 			applicationsubmit.New(submitapplication.New(applicationRepository)),
 			applicationinfo.New(provideinfo.New(applicationRepository)),
 			applicationupdate.New(updateapplication.New(applicationRepository)),

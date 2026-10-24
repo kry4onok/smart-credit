@@ -21,6 +21,7 @@ const provideInfoRoutePrefix = "POST /client/applications/"
 
 type infoSnapshot struct {
 	status             string
+	pendingAction      *string
 	version            int64
 	clientEventVersion int64
 	company            model.Company
@@ -46,9 +47,9 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		INSERT INTO idempotency_keys (
 			actor_id, route, idempotency_key, request_hash, response_status,
 			response_body, application_id, expires_at
-		) VALUES ($1, $2, $3, $4, 202, '{}'::jsonb, $5, now() + interval '24 hours')
+		) VALUES ($1, $2, $3, $4, 202, '{}'::jsonb, NULL, now() + interval '24 hours')
 		ON CONFLICT (actor_id, route, idempotency_key) DO NOTHING
-		RETURNING 1`, params.UserID, route, params.IdempotencyID, params.RequestHash, params.ApplicationID).Scan(&reserved)
+		RETURNING 1`, params.UserID, route, params.IdempotencyID, params.RequestHash).Scan(&reserved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var storedHash []byte
 		var responseBody []byte
@@ -77,7 +78,7 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 	if err != nil {
 		return model.ActionAccepted{}, err
 	}
-	if snapshot.status != "NEEDS_INFO" || snapshot.requestID != params.RequestID {
+	if snapshot.status != "NEEDS_INFO" || snapshot.pendingAction != nil || snapshot.requestID != params.RequestID {
 		return model.ActionAccepted{}, domain.ErrApplicationInfoConflict
 	}
 
@@ -132,7 +133,7 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		return model.ActionAccepted{}, fmt.Errorf("marshal info provided event: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx, `
+	result, err := tx.Exec(ctx, `
 		UPDATE applications
 		SET company_snapshot = $3,
 		    requested_amount_kopecks = $4,
@@ -145,8 +146,12 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		    updated_at = $7
 		WHERE id = $1 AND org_id = $2 AND status = 'NEEDS_INFO' AND pending_action IS NULL`,
 		params.ApplicationID, params.OrgID, companyJSON, form.AmountKopecks,
-		form.TermMonths, form.Purpose, now, snapshot.version+1, clientEventVersion); err != nil {
+		form.TermMonths, form.Purpose, now, snapshot.version+1, clientEventVersion)
+	if err != nil {
 		return model.ActionAccepted{}, fmt.Errorf("save info response: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return model.ActionAccepted{}, domain.ErrApplicationInfoConflict
 	}
 
 	if _, err := tx.Exec(ctx, `
@@ -171,9 +176,9 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE idempotency_keys
-		SET response_body = $4
+		SET response_body = $4, application_id = $5
 		WHERE actor_id = $1 AND route = $2 AND idempotency_key = $3`,
-		params.UserID, route, params.IdempotencyID, responseBody); err != nil {
+		params.UserID, route, params.IdempotencyID, responseBody, params.ApplicationID); err != nil {
 		return model.ActionAccepted{}, fmt.Errorf("save info idempotency response: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -189,12 +194,12 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 	var term *int
 	var purpose *string
 	err := tx.QueryRow(ctx, `
-		SELECT status, version, client_event_version, company_snapshot,
+		SELECT status, pending_action, version, client_event_version, company_snapshot,
 		       product_snapshot, requested_amount_kopecks, requested_term_months, purpose_tag
 		FROM applications
 		WHERE id = $1 AND org_id = $2
 		FOR UPDATE`, applicationID, orgID).Scan(
-		&snapshot.status, &snapshot.version, &snapshot.clientEventVersion, &companyRaw,
+		&snapshot.status, &snapshot.pendingAction, &snapshot.version, &snapshot.clientEventVersion, &companyRaw,
 		&productRaw, &amount, &term, &purpose)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return infoSnapshot{}, domain.ErrApplicationNotFound
