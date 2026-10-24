@@ -20,4 +20,6 @@ var (
 	ErrInvalidApplication         = errors.New("invalid application")
 	ErrApplicationInfoConflict    = errors.New("application info response conflicts with current state")
 	ErrInvalidInfoResponse        = errors.New("invalid application info response")
+	ErrApplicationOfferConflict   = errors.New("application offer action conflicts with current state")
+	ErrInvalidOfferAction         = errors.New("invalid offer action")
 )
