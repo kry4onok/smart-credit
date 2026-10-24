@@ -30,7 +30,9 @@ func TestHandleCreatesDraft(t *testing.T) {
 		Company: model.Company{INN: "7707083893", Name: "Demo", OKVED: "62.01", RegisteredAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)},
 		Status:  "DRAFT", StageLabel: "Черновик", NextAction: "Заполните заявку", Version: 1,
 	}}
-	response, err := New(usecase).Handle(withClient(t), generated.CreateApplicationRequestObject{
+	ctx := withClient(t)
+	principal, _ := middleware.Client(ctx)
+	response, err := New(usecase).Handle(ctx, generated.CreateApplicationRequestObject{
 		Params: generated.CreateApplicationParams{IdempotencyKey: common.IdempotencyKey(idempotencyID)},
 		Body:   &generated.CreateApplicationJSONRequestBody{ProductId: common.Id(productID)},
 	})
@@ -48,6 +50,11 @@ func TestHandleCreatesDraft(t *testing.T) {
 	if recorder.Code != http.StatusCreated || !usecase.called || body.Id != common.Id(applicationID) || body.ProductId != common.Id(productID) ||
 		body.Status != common.ClientStatus("DRAFT") || body.Company.Inn != "7707083893" {
 		t.Fatalf("status = %d, called = %v, body = %+v", recorder.Code, usecase.called, body)
+	}
+	if usecase.params != (model.CreateApplicationParams{
+		OrgID: principal.OrgID, UserID: principal.UserID, ProductID: productID, IdempotencyID: idempotencyID,
+	}) {
+		t.Fatalf("create params = %+v", usecase.params)
 	}
 }
 

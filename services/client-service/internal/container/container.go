@@ -9,6 +9,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/config"
 	bankevents "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/consumer/bankevents"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http"
+	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
@@ -29,6 +30,7 @@ import (
 	applicationrepo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/application"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/company"
 	productrepo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/product"
+	cancelapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/cancel"
 	createapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/create"
 	addapplicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document"
 	getapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/get"
@@ -80,23 +82,27 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		DB:         db,
 		Outbox:     outbox,
 		BankEvents: bankEvents,
-		HTTPHandler: httpapi.New(db, cfg.ReadinessTimeout,
-			companyget.New(getcompany.New(company.New(db))),
-			companyupdate.New(updatecompany.New(company.New(db))),
-			applicationcreate.New(createapplication.New(applicationRepository)),
-			applicationdocument.New(addapplicationdocument.New(applicationRepository)),
-			applicationget.New(getapplication.New(applicationRepository)),
-			applicationlist.New(listapplications.New(applicationRepository)),
-			applicationtimeline.New(gettimeline.New(applicationRepository)),
-			applicationofferaccept.New(acceptoffer.New(applicationRepository)),
-			applicationofferdecline.New(declineoffer.New(applicationRepository)),
-			applicationsign.New(signcontract.New(applicationRepository)),
-			applicationsubmit.New(submitapplication.New(applicationRepository)),
-			applicationinfo.New(provideinfo.New(applicationRepository)),
-			applicationupdate.New(updateapplication.New(applicationRepository)),
-			productget.New(getproduct.New(productrepo.New(db))),
-			productlist.New(listproducts.New(productrepo.New(db))),
-			jwt.New(cfg.JWT.JWKSURL, cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.Timeout, cfg.JWT.CacheTTL)),
+		HTTPHandler: httpapi.New(httpapi.Params{
+			DB:                      db,
+			ReadinessTimeout:        cfg.ReadinessTimeout,
+			Verifier:                jwt.New(cfg.JWT),
+			CompanyGet:              companyget.New(getcompany.New(company.New(db))),
+			CompanyUpdate:           companyupdate.New(updatecompany.New(company.New(db))),
+			ApplicationCreate:       applicationcreate.New(createapplication.New(applicationRepository)),
+			ApplicationCancel:       applicationcancel.New(cancelapplication.New(applicationRepository)),
+			ApplicationDocument:     applicationdocument.New(addapplicationdocument.New(applicationRepository)),
+			ApplicationGet:          applicationget.New(getapplication.New(applicationRepository)),
+			ApplicationList:         applicationlist.New(listapplications.New(applicationRepository)),
+			ApplicationTimeline:     applicationtimeline.New(gettimeline.New(applicationRepository)),
+			ApplicationOfferAccept:  applicationofferaccept.New(acceptoffer.New(applicationRepository)),
+			ApplicationOfferDecline: applicationofferdecline.New(declineoffer.New(applicationRepository)),
+			ApplicationSign:         applicationsign.New(signcontract.New(applicationRepository)),
+			ApplicationSubmit:       applicationsubmit.New(submitapplication.New(applicationRepository)),
+			ApplicationInfo:         applicationinfo.New(provideinfo.New(applicationRepository)),
+			ApplicationUpdate:       applicationupdate.New(updateapplication.New(applicationRepository)),
+			ProductGet:              productget.New(getproduct.New(productrepo.New(db))),
+			ProductList:             productlist.New(listproducts.New(productrepo.New(db))),
+		}),
 	}, nil
 }
 

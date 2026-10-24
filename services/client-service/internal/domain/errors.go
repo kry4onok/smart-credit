@@ -24,4 +24,6 @@ var (
 	ErrInvalidOfferAction         = errors.New("invalid offer action")
 	ErrApplicationSignConflict    = errors.New("application sign action conflicts with current state")
 	ErrInvalidSignAction          = errors.New("invalid sign action")
+	ErrApplicationCancelConflict  = errors.New("application cancellation conflicts with current state")
+	ErrInvalidCancelAction        = errors.New("invalid application cancellation")
 )

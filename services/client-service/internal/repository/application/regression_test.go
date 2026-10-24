@@ -170,6 +170,10 @@ func TestActionsHideMissingAndForeignApplicationsIntegration(t *testing.T) {
 		{"foreign", f.draft.ID, uuid.New()},
 	} {
 		for name, action := range map[string]func(context.Context) error{
+			"cancel": func(ctx context.Context) error {
+				_, err := f.repo.CancelApplication(ctx, model.CancelApplicationParams{OrgID: target.org, UserID: f.params.UserID, ApplicationID: target.id, IdempotencyID: uuid.New(), RequestHash: hash[:]})
+				return err
+			},
 			"submit": func(ctx context.Context) error {
 				_, err := f.repo.Submit(ctx, model.SubmitApplicationParams{OrgID: target.org, UserID: f.params.UserID, ApplicationID: target.id, IdempotencyID: uuid.New()})
 				return err

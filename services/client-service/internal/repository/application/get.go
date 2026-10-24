@@ -19,18 +19,20 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 	var amount *int64
 	var termMonths *int
 	var purpose *string
+	var hasSignature bool
 
 	err := r.db.QueryRow(ctx, `
 		SELECT id, product_id, product_version, company_snapshot,
 		       requested_amount_kopecks, requested_term_months, purpose_tag,
 		       status, stage_label, next_action, pending_action, public_reason,
-		       version, created_at, updated_at
+		       version, created_at, updated_at,
+		       EXISTS (SELECT 1 FROM timeline_entries WHERE application_id = applications.id AND action = 'SIGN')
 		FROM applications
 		WHERE id = $1 AND org_id = $2`, applicationID, orgID).Scan(
 		&application.ID, &application.ProductID, &application.ProductVersion, &companySnapshot,
 		&amount, &termMonths, &purpose, &application.Status, &application.StageLabel,
 		&application.NextAction, &application.PendingAction, &application.PublicReason,
-		&application.Version, &application.CreatedAt, &application.UpdatedAt,
+		&application.Version, &application.CreatedAt, &application.UpdatedAt, &hasSignature,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Application{}, domain.ErrApplicationNotFound
@@ -62,7 +64,7 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 	if err != nil {
 		return model.Application{}, err
 	}
-	application.AllowedActions = allowedActions(application.Status, application.PendingAction)
+	application.AllowedActions = allowedActions(application.Status, application.PendingAction, hasSignature)
 	return application, nil
 }
 
@@ -155,20 +157,25 @@ func (r *Repository) offer(ctx context.Context, applicationID uuid.UUID) (*model
 	return &offer, nil
 }
 
-func allowedActions(status string, pendingAction *string) []string {
+func allowedActions(status string, pendingAction *string, hasSignature bool) []string {
 	if pendingAction != nil {
 		return []string{}
 	}
+	actions := make([]string, 0)
 	switch status {
 	case "DRAFT":
-		return []string{"EDIT_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT"}
+		actions = append(actions, "EDIT_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT")
 	case "NEEDS_INFO":
-		return []string{"PROVIDE_INFO", "UPLOAD_DOCUMENT"}
+		actions = append(actions, "PROVIDE_INFO", "UPLOAD_DOCUMENT")
 	case "OFFER_AVAILABLE":
-		return []string{"ACCEPT_OFFER", "DECLINE_OFFER"}
+		actions = append(actions, "ACCEPT_OFFER", "DECLINE_OFFER")
 	case "FORMALIZING":
-		return []string{"SIGN"}
-	default:
-		return []string{}
+		if !hasSignature {
+			actions = append(actions, "SIGN")
+		}
 	}
+	if domain.CanCancelApplication(status, pendingAction, hasSignature) {
+		actions = append(actions, "CANCEL")
+	}
+	return actions
 }

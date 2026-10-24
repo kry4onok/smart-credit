@@ -155,3 +155,12 @@ type ActionAccepted struct {
 	ApplicationID uuid.UUID `json:"application_id"`
 	PendingAction string    `json:"pending_action"`
 }
+
+type CancelApplicationParams struct {
+	OrgID         uuid.UUID
+	UserID        uuid.UUID
+	ApplicationID uuid.UUID
+	IdempotencyID uuid.UUID
+	Reason        string
+	RequestHash   []byte
+}

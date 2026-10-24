@@ -26,7 +26,9 @@ func TestHandleUpdatesDraft(t *testing.T) {
 	amount := common.Money{AmountKopecks: 100, Currency: common.MoneyCurrencyRUB}
 	term := 12
 	purpose := common.PurposeTag("EQUIPMENT")
-	response, err := New(usecase).Handle(withClient(t), generated.UpdateApplicationRequestObject{
+	ctx := withClient(t)
+	principal, _ := middleware.Client(ctx)
+	response, err := New(usecase).Handle(ctx, generated.UpdateApplicationRequestObject{
 		ApplicationId: common.Id(applicationID),
 		Params:        generated.UpdateApplicationParams{IfMatch: `"1"`},
 		Body:          &generated.ApplicationFormPatch{Amount: &amount, TermMonths: &term, Purpose: &purpose},
@@ -38,8 +40,14 @@ func TestHandleUpdatesDraft(t *testing.T) {
 	if err := response.VisitUpdateApplicationResponse(recorder); err != nil {
 		t.Fatal(err)
 	}
-	if recorder.Code != http.StatusOK || !usecase.called || usecase.version != 1 {
-		t.Fatalf("status = %d, called = %v, version = %d", recorder.Code, usecase.called, usecase.version)
+	if recorder.Code != http.StatusOK || !usecase.called || usecase.params.ExpectedVersion != 1 {
+		t.Fatalf("status = %d, called = %v, version = %d", recorder.Code, usecase.called, usecase.params.ExpectedVersion)
+	}
+	params := usecase.params
+	if params.OrgID != principal.OrgID || params.ApplicationID != applicationID ||
+		params.Patch.AmountKopecks == nil || *params.Patch.AmountKopecks != amount.AmountKopecks || params.Patch.AmountCurrency != "RUB" ||
+		params.Patch.TermMonths == nil || *params.Patch.TermMonths != term || params.Patch.Purpose == nil || *params.Patch.Purpose != string(purpose) {
+		t.Fatalf("update params = %+v", params)
 	}
 }
 

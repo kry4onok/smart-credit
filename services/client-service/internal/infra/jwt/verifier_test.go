@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/config"
 	"github.com/google/uuid"
 )
 
@@ -35,7 +36,10 @@ func TestVerifyAndRotateJWKS(t *testing.T) {
 		}}})
 	}))
 	defer server.Close()
-	verifier := New(server.URL, "issuer", "audience", time.Second, time.Minute)
+	verifier := New(config.JWTConfig{
+		JWKSURL: server.URL, Issuer: "issuer", Audience: "audience",
+		Timeout: time.Second, CacheTTL: time.Minute,
+	})
 	userID, orgID := uuid.New(), uuid.New()
 	payload := map[string]any{"sub": userID.String(), "org_id": orgID.String(), "role": "CLIENT",
 		"iss": "issuer", "aud": []string{"other", "audience"}, "exp": time.Now().Add(time.Hour).Unix()}

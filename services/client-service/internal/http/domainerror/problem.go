@@ -70,6 +70,10 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusConflict, "SIGN_ACTION_CONFLICT", "Заявка не готова к подписанию или оферта уже обработана.")
 	case errors.Is(err, domain.ErrInvalidSignAction):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_SIGN_ACTION", "Данные для подписания указаны некорректно.")
+	case errors.Is(err, domain.ErrApplicationCancelConflict):
+		return Problem(ctx, http.StatusConflict, "CANCEL_ACTION_CONFLICT", "Заявку нельзя отозвать в текущем состоянии или другое действие ещё обрабатывается.")
+	case errors.Is(err, domain.ErrInvalidCancelAction):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_CANCEL_ACTION", "Причина отзыва должна содержать не более 500 символов.")
 	case errors.Is(err, domain.ErrInvalidDocumentUpload):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_DOCUMENT", "Файл документа заполнен некорректно.")
 	}

@@ -2,6 +2,18 @@ package domain
 
 import "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 
+func CanCancelApplication(status string, pendingAction *string, hasSignature bool) bool {
+	if pendingAction != nil || hasSignature {
+		return false
+	}
+	switch status {
+	case "SUBMITTED", "UNDER_REVIEW", "NEEDS_INFO", "OFFER_AVAILABLE", "FORMALIZING":
+		return true
+	default:
+		return false
+	}
+}
+
 func ValidateApplicationPatch(patch model.ApplicationPatch) error {
 	if patch.AmountKopecks == nil && patch.TermMonths == nil && patch.Purpose == nil {
 		return ErrInvalidApplicationPatch

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
@@ -59,8 +60,8 @@ func (productMock) Execute(_ context.Context, id uuid.UUID) (model.Product, erro
 
 type applicationMock struct{}
 
-func (applicationMock) Execute(_ context.Context, orgID, userID, productID, idempotencyID uuid.UUID) (model.Application, error) {
-	return model.Application{ID: uuid.New(), ProductID: productID, ProductVersion: 1, Company: model.Company{
+func (applicationMock) Execute(_ context.Context, params model.CreateApplicationParams) (model.Application, error) {
+	return model.Application{ID: uuid.New(), ProductID: params.ProductID, ProductVersion: 1, Company: model.Company{
 		INN: "7707083893", Name: "Demo", OKVED: "62.01", Version: 1,
 		RegisteredAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 	}, Status: "DRAFT", StageLabel: "Черновик", NextAction: "Заполните заявку", Version: 1}, nil
@@ -77,8 +78,8 @@ func (applicationGetMock) Execute(_ context.Context, _ uuid.UUID, applicationID 
 
 type applicationUpdateMock struct{}
 
-func (applicationUpdateMock) Execute(_ context.Context, _ uuid.UUID, applicationID uuid.UUID, _ model.ApplicationPatch, _ int64) (model.Application, error) {
-	return model.Application{ID: applicationID, ProductID: uuid.New(), ProductVersion: 1, Company: model.Company{
+func (applicationUpdateMock) Execute(_ context.Context, params model.UpdateApplicationParams) (model.Application, error) {
+	return model.Application{ID: params.ApplicationID, ProductID: uuid.New(), ProductVersion: 1, Company: model.Company{
 		INN: "7707083893", Name: "Demo", OKVED: "62.01",
 		RegisteredAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 	}, Status: "DRAFT", StageLabel: "Черновик", NextAction: "Заполните заявку", Version: 2}, nil
@@ -135,8 +136,33 @@ func (applicationTimelineMock) Execute(context.Context, uuid.UUID, uuid.UUID) ([
 	return []model.TimelineEntry{}, nil
 }
 
+type applicationCancelMock struct{}
+
+func (applicationCancelMock) Execute(_ context.Context, params model.CancelApplicationParams) (model.ActionAccepted, error) {
+	return model.ActionAccepted{ApplicationID: params.ApplicationID, PendingAction: "CANCEL_PENDING"}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationtimeline.New(applicationTimelineMock{}), applicationofferaccept.New(applicationOfferAcceptMock{}), applicationofferdecline.New(applicationOfferDeclineMock{}), applicationsign.New(applicationSignMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationinfo.New(applicationInfoMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(Params{
+		DB:                      pingerMock{},
+		ReadinessTimeout:        time.Second,
+		Verifier:                verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}},
+		CompanyGet:              companyget.New(companyMock{}),
+		ApplicationCreate:       applicationcreate.New(applicationMock{}),
+		ApplicationCancel:       applicationcancel.New(applicationCancelMock{}),
+		ApplicationDocument:     applicationdocument.New(applicationDocumentMock{}),
+		ApplicationGet:          applicationget.New(applicationGetMock{}),
+		ApplicationList:         applicationlist.New(applicationListMock{}),
+		ApplicationTimeline:     applicationtimeline.New(applicationTimelineMock{}),
+		ApplicationOfferAccept:  applicationofferaccept.New(applicationOfferAcceptMock{}),
+		ApplicationOfferDecline: applicationofferdecline.New(applicationOfferDeclineMock{}),
+		ApplicationSign:         applicationsign.New(applicationSignMock{}),
+		ApplicationSubmit:       applicationsubmit.New(applicationSubmitMock{}),
+		ApplicationInfo:         applicationinfo.New(applicationInfoMock{}),
+		ApplicationUpdate:       applicationupdate.New(applicationUpdateMock{}),
+		ProductGet:              productget.New(productMock{}),
+		ProductList:             productlist.New(productsMock{}),
+	})
 	for _, tc := range []struct {
 		method, path, authorization string
 		status                      int
@@ -157,6 +183,8 @@ func TestRoutes(t *testing.T) {
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/offer/accept", "Bearer test", 202},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/offer/decline", "Bearer test", 202},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/sign", "Bearer test", 202},
+		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/cancel", "Bearer test", 202},
+		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/cancel", "", 401},
 	} {
 		t.Run(tc.method+tc.path+tc.authorization, func(t *testing.T) {
 			request := httptest.NewRequest(tc.method, tc.path, nil)
@@ -197,6 +225,8 @@ func TestRoutes(t *testing.T) {
 				request = httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(`{"offer_id":"00000000-0000-0000-0000-000000000004"}`))
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000007")
+			} else if tc.method == http.MethodPost && strings.HasSuffix(tc.path, "/cancel") {
+				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000008")
 			} else if tc.method == http.MethodPatch {
 				request = httptest.NewRequest(http.MethodPatch, tc.path, strings.NewReader(`{"amount":{"amount_kopecks":100,"currency":"RUB"}}`))
 				request.Header.Set("Content-Type", "application/merge-patch+json")

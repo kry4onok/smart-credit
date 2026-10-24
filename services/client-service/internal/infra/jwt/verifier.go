@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/config"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 	"github.com/google/uuid"
 )
@@ -33,9 +34,9 @@ type Verifier struct {
 	expires  time.Time
 }
 
-func New(url, issuer, audience string, timeout, cacheTTL time.Duration) *Verifier {
-	return &Verifier{url: url, issuer: issuer, audience: audience,
-		client: &http.Client{Timeout: timeout}, ttl: cacheTTL}
+func New(cfg config.JWTConfig) *Verifier {
+	return &Verifier{url: cfg.JWKSURL, issuer: cfg.Issuer, audience: cfg.Audience,
+		client: &http.Client{Timeout: cfg.Timeout}, ttl: cfg.CacheTTL}
 }
 
 type claims struct {

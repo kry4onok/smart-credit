@@ -2,11 +2,11 @@ package httpapi
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
+	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
@@ -27,13 +27,12 @@ import (
 	productlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/list"
 )
 
-var errNotImplemented = errors.New("operation is not implemented")
-
 type server struct {
 	health                  *health.Handler
 	company                 *companyget.Handler
 	update                  *companyupdate.Handler
 	application             *applicationcreate.Handler
+	applicationCancel       *applicationcancel.Handler
 	applicationDocument     *applicationdocument.Handler
 	applicationGet          *applicationget.Handler
 	applicationList         *applicationlist.Handler
@@ -50,24 +49,47 @@ type server struct {
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationDocument *applicationdocument.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationTimeline *applicationtimeline.Handler, applicationOfferAccept *applicationofferaccept.Handler, applicationOfferDecline *applicationofferdecline.Handler, applicationSign *applicationsign.Handler, applicationSubmit *applicationsubmit.Handler, applicationInfo *applicationinfo.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
+type Params struct {
+	DB                      health.Pinger
+	ReadinessTimeout        time.Duration
+	Verifier                middleware.Verifier
+	CompanyGet              *companyget.Handler
+	CompanyUpdate           *companyupdate.Handler
+	ApplicationCreate       *applicationcreate.Handler
+	ApplicationCancel       *applicationcancel.Handler
+	ApplicationDocument     *applicationdocument.Handler
+	ApplicationGet          *applicationget.Handler
+	ApplicationList         *applicationlist.Handler
+	ApplicationTimeline     *applicationtimeline.Handler
+	ApplicationOfferAccept  *applicationofferaccept.Handler
+	ApplicationOfferDecline *applicationofferdecline.Handler
+	ApplicationSign         *applicationsign.Handler
+	ApplicationSubmit       *applicationsubmit.Handler
+	ApplicationInfo         *applicationinfo.Handler
+	ApplicationUpdate       *applicationupdate.Handler
+	ProductGet              *productget.Handler
+	ProductList             *productlist.Handler
+}
+
+func New(params Params) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:                  health.New(db, readinessTimeout),
-		company:                 company,
-		update:                  update,
-		application:             application,
-		applicationDocument:     applicationDocument,
-		applicationGet:          applicationGet,
-		applicationList:         applicationList,
-		applicationTimeline:     applicationTimeline,
-		applicationOfferAccept:  applicationOfferAccept,
-		applicationOfferDecline: applicationOfferDecline,
-		applicationSign:         applicationSign,
-		applicationSubmit:       applicationSubmit,
-		applicationInfo:         applicationInfo,
-		applicationUpdate:       applicationUpdate,
-		product:                 product,
-		products:                products,
+		health:                  health.New(params.DB, params.ReadinessTimeout),
+		company:                 params.CompanyGet,
+		update:                  params.CompanyUpdate,
+		application:             params.ApplicationCreate,
+		applicationCancel:       params.ApplicationCancel,
+		applicationDocument:     params.ApplicationDocument,
+		applicationGet:          params.ApplicationGet,
+		applicationList:         params.ApplicationList,
+		applicationTimeline:     params.ApplicationTimeline,
+		applicationOfferAccept:  params.ApplicationOfferAccept,
+		applicationOfferDecline: params.ApplicationOfferDecline,
+		applicationSign:         params.ApplicationSign,
+		applicationSubmit:       params.ApplicationSubmit,
+		applicationInfo:         params.ApplicationInfo,
+		applicationUpdate:       params.ApplicationUpdate,
+		product:                 params.ProductGet,
+		products:                params.ProductList,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
@@ -75,7 +97,7 @@ func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.H
 		},
 	})
 	handler := generated.Handler(strictHandler)
-	protected := middleware.RequireClient(verifier, handler)
+	protected := middleware.RequireClient(params.Verifier, handler)
 	return domainerror.Trace(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
 			handler.ServeHTTP(w, r)
@@ -94,10 +116,6 @@ func (s *server) ClientReady(ctx context.Context, request generated.ClientReadyR
 }
 
 func responseErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, errNotImplemented) {
-		w.WriteHeader(http.StatusNotImplemented)
-		return
-	}
 	domainerror.Write(w, domainerror.Map(r.Context(), err))
 }
 
@@ -159,4 +177,8 @@ func (s *server) GetClientProduct(ctx context.Context, request generated.GetClie
 
 func (s *server) GetApplicationTimeline(ctx context.Context, request generated.GetApplicationTimelineRequestObject) (generated.GetApplicationTimelineResponseObject, error) {
 	return s.applicationTimeline.Handle(ctx, request)
+}
+
+func (s *server) CancelApplication(ctx context.Context, request generated.CancelApplicationRequestObject) (generated.CancelApplicationResponseObject, error) {
+	return s.applicationCancel.Handle(ctx, request)
 }
