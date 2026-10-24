@@ -20,6 +20,8 @@ var innPattern = regexp.MustCompile(`^[0-9]{10}([0-9]{2})?$`)
 
 type Input struct {
 	InfoProvided     bool
+	OfferAction      string
+	OfferID          uuid.UUID
 	RequestID        uuid.UUID
 	EventID          uuid.UUID
 	ApplicationID    uuid.UUID
@@ -89,12 +91,35 @@ func parse(event *eventspb.Event) (Input, error) {
 		return Input{}, fmt.Errorf("%w: aggregate_id", ErrInvalidEvent)
 	}
 
-	submitted := event.GetApplicationSubmitted()
-	provided := event.GetInfoProvided()
-	if (submitted == nil && provided == nil) || (submitted != nil && provided != nil) {
+	input := Input{EventID: eventID, ApplicationID: applicationID, AggregateVersion: event.GetAggregateVersion()}
+	switch payload := event.GetPayload().(type) {
+	case *eventspb.Event_OfferAccepted:
+		input.OfferAction = "OfferAccepted"
+		if payload.OfferAccepted != nil {
+			input.OfferID, err = nonzeroUUID(payload.OfferAccepted.GetOfferId())
+		}
+		if payload.OfferAccepted == nil || err != nil {
+			return Input{}, fmt.Errorf("%w: offer_id", ErrInvalidEvent)
+		}
+		return input, nil
+	case *eventspb.Event_OfferDeclined:
+		input.OfferAction = "OfferDeclined"
+		if payload.OfferDeclined != nil {
+			input.OfferID, err = nonzeroUUID(payload.OfferDeclined.GetOfferId())
+		}
+		if payload.OfferDeclined == nil || err != nil {
+			return Input{}, fmt.Errorf("%w: offer_id", ErrInvalidEvent)
+		}
+		return input, nil
+	case *eventspb.Event_ApplicationSubmitted, *eventspb.Event_InfoProvided:
+	default:
 		return Input{}, fmt.Errorf("%w: payload", ErrInvalidEvent)
 	}
-	input := Input{EventID: eventID, ApplicationID: applicationID, AggregateVersion: event.GetAggregateVersion()}
+	submitted := event.GetApplicationSubmitted()
+	provided := event.GetInfoProvided()
+	if submitted == nil && provided == nil {
+		return Input{}, fmt.Errorf("%w: payload", ErrInvalidEvent)
+	}
 	var company *commonpb.CompanySnapshot
 	var form *commonpb.ApplicationForm
 	var documentsInput []*commonpb.DocumentMetadata

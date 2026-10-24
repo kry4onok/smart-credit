@@ -173,3 +173,32 @@ func TestParseRejectsInvalidInfoProvided(t *testing.T) {
 		})
 	}
 }
+
+func TestParseOfferResponses(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		make func(string) *eventspb.Event
+	}{
+		{"accepted", func(id string) *eventspb.Event {
+			e := submittedEvent()
+			e.Payload = &eventspb.Event_OfferAccepted{OfferAccepted: &eventspb.OfferAccepted{OfferId: id}}
+			return e
+		}},
+		{"declined", func(id string) *eventspb.Event {
+			e := submittedEvent()
+			e.Payload = &eventspb.Event_OfferDeclined{OfferDeclined: &eventspb.OfferDeclined{OfferId: id}}
+			return e
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			event := test.make("11111111-1111-4111-8111-111111111111")
+			input, err := parse(event)
+			if err != nil || input.OfferID.String() != "11111111-1111-4111-8111-111111111111" || input.OfferAction == "" {
+				t.Fatalf("parsed response = %+v, %v", input, err)
+			}
+			if _, err := parse(test.make("")); !errors.Is(err, ErrInvalidEvent) {
+				t.Fatalf("missing offer ID error = %v", err)
+			}
+		})
+	}
+}
