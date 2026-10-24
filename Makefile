@@ -31,7 +31,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test bank-offer-test
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs demo-up infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test bank-offer-test bank-cancel-test
 .PHONY: web-install web-gen web-dev web-mock web-build web-up web-down web-logs
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
@@ -60,6 +60,7 @@ help:
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
 	@echo 'make docs-logs        Показать логи Swagger UI'
 	@echo 'make gateway-up       Запустить nginx gateway и Swagger UI'
+	@echo 'make demo-up          Запустить сервисы и сиды для проверки API через Swagger'
 	@echo 'make gateway-down     Остановить и удалить gateway и Swagger UI'
 	@echo 'make gateway-reload   Проверить и перечитать конфигурацию nginx'
 	@echo 'make gateway-logs     Показать логи gateway'
@@ -91,6 +92,7 @@ help:
 	@echo 'make bank-audit-test Проверить порядок и пагинацию истории дела на bank_db'
 	@echo 'make bank-catalog-test Проверить версии и полный снимок каталога банка'
 	@echo 'make bank-offer-test   Проверить ответы на оферты и дедупликацию'
+	@echo 'make bank-cancel-test  Проверить отзыв заявки и дедупликацию'
 	@echo 'make client-db-up     Применить миграции client_db'
 	@echo 'make client-up        Собрать и запустить client-service в Docker'
 	@echo 'make client-down      Остановить и удалить контейнер client-service'
@@ -173,6 +175,9 @@ bank-catalog-test: require-env
 bank-offer-test: require-env
 	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/receive -run '^TestApplyOfferResponsesAtomically$$' -count=1 -v
 
+bank-cancel-test: require-env
+	@BANK_DATABASE_URL="$(BANK_DATABASE_URL)" go test ./services/bank-service/internal/repository/receive -run '^TestApplyCancellationAtomically$$' -count=1 -v
+
 assistant-up: require-env
 	$(COMPOSE) up -d --build --wait assistant
 
@@ -235,6 +240,18 @@ gateway-reload: require-env
 
 gateway-logs: require-env
 	$(COMPOSE) logs -f gateway
+
+demo-up: require-env
+	@$(MAKE) infra-up
+	@$(MAKE) client-up
+	@$(MAKE) auth-dev-seed
+	@$(MAKE) scoring-up
+	@$(MAKE) bureau-up
+	@$(MAKE) assistant-up
+	@$(MAKE) bank-up
+	@$(MAKE) bank-demo-seed
+	@$(MAKE) gateway-up
+	@echo 'Swagger: http://localhost:$(GATEWAY_PORT)/docs/'
 
 infra-up: require-env
 	$(COMPOSE) up -d --wait postgres kafka

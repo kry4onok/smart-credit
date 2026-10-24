@@ -16,6 +16,7 @@ import (
 var ErrEventConflict = errors.New("client event ID or aggregate version conflicts with a different event")
 var ErrInfoProvidedConflict = errors.New("InfoProvided does not match an open request on a NEEDS_INFO case")
 var ErrOfferResponseConflict = errors.New("offer response does not match a current, unexpired offer")
+var ErrCancellationConflict = errors.New("cancellation requires a current case before signing")
 
 type Repository struct {
 	db transaction.Queryer
@@ -51,6 +52,9 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 	}
 	if input.InfoProvided {
 		return r.applyInfoProvided(ctx, q, input)
+	}
+	if input.Cancelled {
+		return r.applyCancellation(ctx, q, input)
 	}
 	if input.OfferAction != "" {
 		return r.applyOfferResponse(ctx, q, input)
@@ -94,6 +98,65 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 		return false, fmt.Errorf("audit submitted application: %w", err)
 	}
 	return true, nil
+}
+
+func (r *Repository) applyCancellation(ctx context.Context, q transaction.Queryer, input receive.Input) (bool, error) {
+	var status string
+	var caseVersion, clientEventVersion int64
+	var clientUserID uuid.UUID
+	err := q.QueryRow(ctx, selectCaseForOfferQuery, input.ApplicationID).
+		Scan(&status, &caseVersion, &clientEventVersion, &clientUserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrCancellationConflict
+	}
+	if err != nil {
+		return false, fmt.Errorf("lock case for cancellation: %w", err)
+	}
+	if !cancellableStatus(status) || input.AggregateVersion != clientEventVersion+1 {
+		return false, ErrCancellationConflict
+	}
+	var newVersion int64
+	err = q.QueryRow(ctx, updateCaseForCancellationQuery, input.ApplicationID, status,
+		input.AggregateVersion, caseVersion).Scan(&newVersion)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrCancellationConflict
+	}
+	if err != nil {
+		return false, fmt.Errorf("cancel case: %w", err)
+	}
+	if _, err := q.Exec(ctx, cancelOpenInfoRequestQuery, input.ApplicationID); err != nil {
+		return false, fmt.Errorf("cancel open info request: %w", err)
+	}
+	if _, err := q.Exec(ctx, declineAvailableOfferQuery, input.ApplicationID); err != nil {
+		return false, fmt.Errorf("close available offer: %w", err)
+	}
+	var now time.Time
+	if err := q.QueryRow(ctx, selectCancellationTimeQuery).Scan(&now); err != nil {
+		return false, fmt.Errorf("read cancellation time: %w", err)
+	}
+	if _, err := q.Exec(ctx, insertCancellationAuditQuery, uuid.New(), input.ApplicationID,
+		newVersion, clientUserID, status, input.EventID, input.CancelReason, now); err != nil {
+		return false, fmt.Errorf("audit cancellation: %w", err)
+	}
+	eventID := uuid.New()
+	payload, err := publicstate.Cancelled(eventID, input.ApplicationID, newVersion, now)
+	if err != nil {
+		return false, fmt.Errorf("encode cancellation: %w", err)
+	}
+	if _, err := q.Exec(ctx, insertOfferResponseOutboxQuery, eventID, input.ApplicationID.String(), newVersion, payload); err != nil {
+		return false, fmt.Errorf("write cancellation outbox: %w", err)
+	}
+	return true, nil
+}
+
+func cancellableStatus(status string) bool {
+	switch status {
+	case "SUBMITTED", "VALIDATION", "NEEDS_INFO", "ENRICHMENT", "SCORING",
+		"DECISION", "MANUAL_REVIEW", "OFFER", "COUNTER_OFFER", "OFFER_ACCEPTED":
+		return true
+	default:
+		return false
+	}
 }
 
 func (r *Repository) applyOfferResponse(ctx context.Context, q transaction.Queryer, input receive.Input) (bool, error) {

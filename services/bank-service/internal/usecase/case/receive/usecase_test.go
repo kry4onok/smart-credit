@@ -3,6 +3,7 @@ package receive
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
@@ -200,5 +201,27 @@ func TestParseOfferResponses(t *testing.T) {
 				t.Fatalf("missing offer ID error = %v", err)
 			}
 		})
+	}
+}
+
+func TestParseApplicationCancelled(t *testing.T) {
+	event := submittedEvent()
+	event.Payload = &eventspb.Event_ApplicationCancelled{ApplicationCancelled: &eventspb.ApplicationCancelled{
+		Reason: "Финансирование больше не требуется",
+	}}
+	input, err := parse(event)
+	if err != nil || !input.Cancelled || input.CancelReason != event.GetApplicationCancelled().GetReason() ||
+		input.ApplicationID.String() != event.GetAggregateId() || input.AggregateVersion != event.GetAggregateVersion() {
+		t.Fatalf("parsed cancellation = %+v, %v", input, err)
+	}
+	event.Payload = &eventspb.Event_ApplicationCancelled{}
+	if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatalf("missing payload error = %v", err)
+	}
+	event.Payload = &eventspb.Event_ApplicationCancelled{ApplicationCancelled: &eventspb.ApplicationCancelled{
+		Reason: strings.Repeat("a", 501),
+	}}
+	if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatalf("long reason error = %v", err)
 	}
 }

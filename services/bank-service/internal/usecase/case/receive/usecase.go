@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
@@ -20,6 +21,8 @@ var innPattern = regexp.MustCompile(`^[0-9]{10}([0-9]{2})?$`)
 
 type Input struct {
 	InfoProvided     bool
+	Cancelled        bool
+	CancelReason     string
 	OfferAction      string
 	OfferID          uuid.UUID
 	RequestID        uuid.UUID
@@ -93,6 +96,14 @@ func parse(event *eventspb.Event) (Input, error) {
 
 	input := Input{EventID: eventID, ApplicationID: applicationID, AggregateVersion: event.GetAggregateVersion()}
 	switch payload := event.GetPayload().(type) {
+	case *eventspb.Event_ApplicationCancelled:
+		if payload.ApplicationCancelled == nil || !utf8.ValidString(payload.ApplicationCancelled.GetReason()) ||
+			utf8.RuneCountInString(payload.ApplicationCancelled.GetReason()) > 500 {
+			return Input{}, fmt.Errorf("%w: cancellation reason", ErrInvalidEvent)
+		}
+		input.Cancelled = true
+		input.CancelReason = payload.ApplicationCancelled.GetReason()
+		return input, nil
 	case *eventspb.Event_OfferAccepted:
 		input.OfferAction = "OfferAccepted"
 		if payload.OfferAccepted != nil {
