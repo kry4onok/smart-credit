@@ -65,3 +65,7 @@ dist/
 !LICENSE*
 !NOTICE*
 !THIRD_PARTY_NOTICES.md
+
+# Web
+node_modules/
+*.tsbuildinfo

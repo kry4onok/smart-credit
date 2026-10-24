@@ -8,3 +8,22 @@
 - Полный текст лицензии установленной модели: `ollama show qwen2.5:3b --license`.
 
 Перед заменой тега модели проверьте лицензию новой версии тем же способом и обновите этот файл.
+
+## Веб-интерфейс (`web/`)
+
+Точные версии закреплены в `web/package-lock.json`.
+
+| Компонент | Версия | Лицензия | Назначение |
+|---|---|---|---|
+| React, React DOM | 19.3.1 | MIT | UI |
+| React Router | 7.18.4 | MIT | маршруты ролей |
+| openapi-fetch | 0.17.0 | MIT | типизированные HTTP-вызовы |
+| Golos Text (Paratype), через @fontsource | 5.3.0 | SIL OFL 1.1 | основной шрифт, хранится в сборке |
+| Unbounded (NaN), через @fontsource | 5.3.0 | SIL OFL 1.1 | шрифт сумм и заголовков, хранится в сборке |
+| Vite, @vitejs/plugin-react | 8.3.5, 6.1.2 | MIT | сборка (только разработка) |
+| openapi-typescript | 7.13.0 | MIT | генерация TS-типов из OpenAPI (только разработка) |
+| TypeScript | 5.9.3 | Apache-2.0 | проверка типов (только разработка) |
+| nginx (образ `nginx:1.30.6-alpine`) | 1.30.6 | BSD-2-Clause | раздача статики и прокси `/api` |
+
+Демо-режим web (`VITE_API_MOCK=true`) моделирует auth, client-service и bank-service
+в браузере на синтетических данных; в production-сборку не входит.
