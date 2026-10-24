@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
+	JWT              JWTConfig
 	HTTP             HTTPConfig
 	Database         DatabaseConfig
-	DemoAnalystID    string        `env:"BANK_DEMO_ANALYST_ID"`
 	ScoringTarget    string        `env:"BANK_SCORING_GRPC_ADDR"`
 	BureauTarget     string        `env:"BANK_BUREAU_GRPC_ADDR"`
 	AssistantTarget  string        `env:"BANK_ASSISTANT_GRPC_ADDR"`
@@ -24,6 +23,15 @@ type Config struct {
 	KafkaGroup       string        `env:"BANK_KAFKA_CONSUMER_GROUP" env-default:"bank-service"`
 	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
 	ShutdownTimeout  time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
+}
+
+// JWTConfig must match the access token issuer and audience configured in auth.
+type JWTConfig struct {
+	JWKSURL  string        `env:"BANK_JWKS_URL" env-default:"http://127.0.0.1:8082/.well-known/jwks.json" validate:"required,http_url"`
+	Issuer   string        `env:"BANK_JWT_ISSUER" env-default:"smart-credit-auth" validate:"required"`
+	Audience string        `env:"BANK_JWT_AUDIENCE" env-default:"smart-credit" validate:"required"`
+	Timeout  time.Duration `env:"BANK_JWKS_TIMEOUT" env-default:"2s" validate:"gt=0"`
+	CacheTTL time.Duration `env:"BANK_JWKS_CACHE_TTL" env-default:"5m" validate:"gt=0"`
 }
 
 type HTTPConfig struct {
@@ -52,12 +60,6 @@ func Load() (Config, error) {
 	}
 	if cfg.Database.URL == "" {
 		return Config{}, fmt.Errorf("BANK_DATABASE_URL is required")
-	}
-	if cfg.DemoAnalystID != "" {
-		id, err := uuid.Parse(cfg.DemoAnalystID)
-		if err != nil || id == uuid.Nil {
-			return Config{}, fmt.Errorf("BANK_DEMO_ANALYST_ID must be a nonzero UUID")
-		}
 	}
 	if strings.TrimSpace(cfg.KafkaGroup) == "" {
 		return Config{}, fmt.Errorf("BANK_KAFKA_CONSUMER_GROUP is required")

@@ -52,6 +52,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CasePage' }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /backoffice/applications/{application_id}:
     get:
@@ -69,6 +70,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/BankCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
   /backoffice/applications/{application_id}/take:
     post:
@@ -89,6 +92,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/BankCase' }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -116,6 +120,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/BankCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -135,6 +140,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AuditPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
   /backoffice/applications/{application_id}/summary:
@@ -159,6 +165,7 @@ paths:
                   text: { type: string }
                   source: { type: string, enum: [assistant, template] }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 components:
