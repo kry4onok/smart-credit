@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	assistantclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/assistant"
 	bureauclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/bureau"
 	scoringclient "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/client/scoring"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
@@ -27,6 +28,7 @@ import (
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	listcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/list"
 	receivecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/receive"
+	summarycase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/summary"
 	takecase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/take"
 	scoringstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/scoring"
 	validationstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
@@ -52,6 +54,7 @@ type Container struct {
 	HTTPHandler      http.Handler
 	scoringClient    *scoringclient.Client
 	bureauClient     *bureauclient.Client
+	assistantClient  *assistantclient.Client
 	outboxPublisher  *outboxworker.KafkaPublisher
 
 	closeOnce sync.Once
@@ -103,6 +106,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	var client *scoringclient.Client
 	var worker *scoringworker.Worker
 	var bureau *bureauclient.Client
+	var assistant *assistantclient.Client
 	var enrichment *enrichmentworker.Worker
 	if cfg.ScoringTarget != "" {
 		client, err = scoringclient.Dial(cfg.ScoringTarget)
@@ -125,6 +129,20 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		}
 		enrichment = enrichmentworker.New(enrichmentResults, bureau)
 	}
+	if cfg.AssistantTarget != "" {
+		assistant, err = assistantclient.Dial(cfg.AssistantTarget)
+		if err != nil {
+			consumer.Close()
+			if client != nil {
+				_ = client.Close()
+			}
+			if bureau != nil {
+				_ = bureau.Close()
+			}
+			db.Close()
+			return nil, fmt.Errorf("create assistant dependency: %w", err)
+		}
+	}
 	publisher, err := outboxworker.NewKafkaPublisher(brokerAddresses)
 	if err != nil {
 		consumer.Close()
@@ -134,10 +152,17 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		if bureau != nil {
 			_ = bureau.Close()
 		}
+		if assistant != nil {
+			_ = assistant.Close()
+		}
 		db.Close()
 		return nil, fmt.Errorf("create bank outbox publisher: %w", err)
 	}
 
+	var summarizer summarycase.Assistant
+	if assistant != nil {
+		summarizer = assistant
+	}
 	return &Container{
 		DB:               db,
 		Transactions:     transactions,
@@ -148,9 +173,10 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		ValidationWorker: validation,
 		OutboxWorker:     outboxworker.New(outboxrepository.New(db), publisher),
 		ClientEvents:     consumer,
-		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase), demoAnalystID),
+		HTTPHandler:      authmiddleware.DemoAnalyst(httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer)), demoAnalystID),
 		scoringClient:    client,
 		bureauClient:     bureau,
+		assistantClient:  assistant,
 		outboxPublisher:  publisher,
 	}, nil
 }
@@ -172,6 +198,9 @@ func (c *Container) Close() {
 		}
 		if c.bureauClient != nil {
 			_ = c.bureauClient.Close()
+		}
+		if c.assistantClient != nil {
+			_ = c.assistantClient.Close()
 		}
 		if c.DB != nil {
 			c.DB.Close()

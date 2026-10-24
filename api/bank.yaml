@@ -158,6 +158,8 @@ paths:
                 properties:
                   text: { type: string }
                   source: { type: string, enum: [assistant, template] }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 components:
   responses:

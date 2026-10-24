@@ -10,11 +10,23 @@ import (
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
+	authmiddleware "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/middleware/auth"
+	summarycase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/summary"
+	"github.com/google/uuid"
 )
 
 type pingerStub struct {
 	err   error
 	calls int
+}
+
+type summaryUseCaseStub struct {
+	output summarycase.Output
+	err    error
+}
+
+func (s summaryUseCaseStub) Execute(context.Context, uuid.UUID) (summarycase.Output, error) {
+	return s.output, s.err
 }
 
 func (p *pingerStub) Ping(context.Context) error {
@@ -24,7 +36,7 @@ func (p *pingerStub) Ping(context.Context) error {
 
 func TestHealth(t *testing.T) {
 	db := &pingerStub{err: errors.New("database is unavailable")}
-	handler := New(db, time.Second, nil, nil, nil, nil, nil)
+	handler := New(db, time.Second, nil, nil, nil, nil, nil, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil))
@@ -50,7 +62,7 @@ func TestReady(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := &pingerStub{err: tt.pingError}
-			handler := New(db, time.Second, nil, nil, nil, nil, nil)
+			handler := New(db, time.Second, nil, nil, nil, nil, nil, nil)
 
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/readyz", nil))
@@ -65,19 +77,52 @@ func TestReady(t *testing.T) {
 	}
 }
 
-func TestUnimplementedContractRoute(t *testing.T) {
-	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil)
+func TestSummaryRouteRequiresEmployee(t *testing.T) {
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/backoffice/applications/00000000-0000-0000-0000-000000000001/summary", nil))
 
-	if response.Code != http.StatusNotImplemented {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusNotImplemented)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusForbidden)
+	}
+}
+
+func TestSummaryRouteReturnsTextAndSource(t *testing.T) {
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil,
+		summaryUseCaseStub{output: summarycase.Output{Text: "Продукт: кредит.", Source: "template"}})
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
+		"/backoffice/applications/10000000-0000-4000-8000-000000000001/summary", nil)
+	request = request.WithContext(authmiddleware.WithAnalystID(request.Context(), uuid.New()))
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	var body struct {
+		Text   string `json:"text"`
+		Source string `json:"source"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil || body.Text != "Продукт: кредит." || body.Source != "template" {
+		t.Fatalf("body = %+v, err = %v", body, err)
+	}
+}
+
+func TestSummaryRouteReturnsNotFound(t *testing.T) {
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil,
+		summaryUseCaseStub{err: summarycase.ErrNotFound})
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
+		"/backoffice/applications/10000000-0000-4000-8000-000000000001/summary", nil)
+	request = request.WithContext(authmiddleware.WithAnalystID(request.Context(), uuid.New()))
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
 }
 
 func TestAuditRouteRequiresEmployee(t *testing.T) {
-	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil)
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet,
 		"/backoffice/applications/10000000-0000-4000-8000-000000000001/audit", nil))
@@ -105,7 +150,7 @@ func TestTakeInvalidHeadersReturnProblemJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil)
+			handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil)
 			request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
 				"/backoffice/applications/10000000-0000-4000-8000-000000000001/take", nil)
 			request.Header.Set("Idempotency-Key", tt.idempotencyKey)

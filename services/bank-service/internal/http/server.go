@@ -11,20 +11,20 @@ import (
 	decidehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/decide"
 	gethandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/get"
 	listhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/list"
+	summaryhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/summary"
 	takehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/take"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/health"
 )
 
-var errNotImplemented = errors.New("operation is not implemented")
-
 type server struct {
-	health     *health.Handler
-	listCases  *listhandler.Handler
-	getCase    *gethandler.Handler
-	takeCase   *takehandler.Handler
-	decideCase *decidehandler.Handler
-	auditCase  *audithandler.Handler
+	health      *health.Handler
+	listCases   *listhandler.Handler
+	getCase     *gethandler.Handler
+	takeCase    *takehandler.Handler
+	decideCase  *decidehandler.Handler
+	auditCase   *audithandler.Handler
+	summaryCase *summaryhandler.Handler
 }
 
 func New(
@@ -35,14 +35,16 @@ func New(
 	takeCase takehandler.UseCase,
 	decideCase decidehandler.UseCase,
 	auditCase audithandler.UseCase,
+	summaryCase summaryhandler.UseCase,
 ) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:     health.New(db, readinessTimeout),
-		listCases:  listhandler.New(listCases),
-		getCase:    gethandler.New(getCase),
-		takeCase:   takehandler.New(takeCase),
-		decideCase: decidehandler.New(decideCase),
-		auditCase:  audithandler.New(auditCase),
+		health:      health.New(db, readinessTimeout),
+		listCases:   listhandler.New(listCases),
+		getCase:     gethandler.New(getCase),
+		takeCase:    takehandler.New(takeCase),
+		decideCase:  decidehandler.New(decideCase),
+		auditCase:   audithandler.New(auditCase),
+		summaryCase: summaryhandler.New(summaryCase),
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})
@@ -57,10 +59,6 @@ func requestParameterErrorHandler(w http.ResponseWriter, r *http.Request, err er
 }
 
 func responseErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, errNotImplemented) {
-		w.WriteHeader(http.StatusNotImplemented)
-		return
-	}
 	var domainErr *domainerror.Error
 	if !errors.As(err, &domainErr) || domainErr.Status >= http.StatusInternalServerError {
 		slog.Error("bank request failed", "method", r.Method, "path", r.URL.Path, "error", err)

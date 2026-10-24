@@ -51,6 +51,15 @@ func TestLoadDemoAnalystID(t *testing.T) {
 	}
 }
 
+func TestLoadAssistantTarget(t *testing.T) {
+	setValidEnvironment(t)
+	t.Setenv("BANK_ASSISTANT_GRPC_ADDR", "127.0.0.1:50052")
+	cfg, err := Load()
+	if err != nil || cfg.AssistantTarget != "127.0.0.1:50052" {
+		t.Fatalf("AssistantTarget=%q, err=%v", cfg.AssistantTarget, err)
+	}
+}
+
 func TestLoadRejectsInvalidEnvironment(t *testing.T) {
 	tests := []struct {
 		name string
