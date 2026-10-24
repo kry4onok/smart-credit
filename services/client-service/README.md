@@ -11,6 +11,7 @@ HTTP-сервис кабинета клиента с техническими р
 - `POST /client/applications` — создаёт черновик заявки со снимками выбранного продукта и профиля компании; требует `Idempotency-Key`.
 - `GET /client/applications` — возвращает список заявок организации с фильтром по статусу и cursor-пагинацией.
 - `GET /client/applications/{application_id}` — возвращает карточку заявки, форму, документы, активный запрос банка или оферту и вычисленные действия.
+- `GET /client/applications/{application_id}/timeline` — возвращает публичную историю заявки своей организации от старой записи к новой; для чужой или несуществующей заявки отвечает `404`.
 - `PATCH /client/applications/{application_id}` — автосохраняет форму черновика по `If-Match`.
 - `POST /client/applications/{application_id}/documents` — принимает демо-файл до 5 MiB и сохраняет его метаданные с `Idempotency-Key`.
 - `POST /client/applications/{application_id}/submit` — проверяет заполненность черновика, переводит его в `SUBMITTED` и сохраняет событие `ApplicationSubmitted` в outbox.
@@ -23,7 +24,7 @@ HTTP-сервис кабинета клиента с техническими р
 требуют Bearer JWT с ролью `CLIENT`; профиль всегда выбирается по `org_id` из
 токена. При недоступной БД
 сервис продолжает работать, readiness восстанавливается после её подключения.
-Операции отмены заявки и просмотра timeline пока возвращают `501 Not Implemented`.
+Операция отмены заявки пока возвращает `501 Not Implemented`.
 Kafka используется для outbox relay в `client.events` и проекции входящих
 `bank.events`; недоступность брокера не останавливает HTTP-сервис и не входит в
 проверку readiness. Непубликованные события остаются в outbox и будут повторены

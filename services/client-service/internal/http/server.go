@@ -16,6 +16,7 @@ import (
 	applicationofferdecline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/decline"
 	applicationsign "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/sign"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
+	applicationtimeline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/timeline"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
@@ -36,6 +37,7 @@ type server struct {
 	applicationDocument     *applicationdocument.Handler
 	applicationGet          *applicationget.Handler
 	applicationList         *applicationlist.Handler
+	applicationTimeline     *applicationtimeline.Handler
 	applicationOfferAccept  *applicationofferaccept.Handler
 	applicationOfferDecline *applicationofferdecline.Handler
 	applicationSign         *applicationsign.Handler
@@ -48,7 +50,7 @@ type server struct {
 
 var _ generated.StrictServerInterface = (*server)(nil)
 
-func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationDocument *applicationdocument.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationOfferAccept *applicationofferaccept.Handler, applicationOfferDecline *applicationofferdecline.Handler, applicationSign *applicationsign.Handler, applicationSubmit *applicationsubmit.Handler, applicationInfo *applicationinfo.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
+func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.Handler, update *companyupdate.Handler, application *applicationcreate.Handler, applicationDocument *applicationdocument.Handler, applicationGet *applicationget.Handler, applicationList *applicationlist.Handler, applicationTimeline *applicationtimeline.Handler, applicationOfferAccept *applicationofferaccept.Handler, applicationOfferDecline *applicationofferdecline.Handler, applicationSign *applicationsign.Handler, applicationSubmit *applicationsubmit.Handler, applicationInfo *applicationinfo.Handler, applicationUpdate *applicationupdate.Handler, product *productget.Handler, products *productlist.Handler, verifier middleware.Verifier) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
 		health:                  health.New(db, readinessTimeout),
 		company:                 company,
@@ -57,6 +59,7 @@ func New(db health.Pinger, readinessTimeout time.Duration, company *companyget.H
 		applicationDocument:     applicationDocument,
 		applicationGet:          applicationGet,
 		applicationList:         applicationList,
+		applicationTimeline:     applicationTimeline,
 		applicationOfferAccept:  applicationOfferAccept,
 		applicationOfferDecline: applicationOfferDecline,
 		applicationSign:         applicationSign,
@@ -152,4 +155,8 @@ func (s *server) ListClientProducts(ctx context.Context, request generated.ListC
 
 func (s *server) GetClientProduct(ctx context.Context, request generated.GetClientProductRequestObject) (generated.GetClientProductResponseObject, error) {
 	return s.product.Handle(ctx, request)
+}
+
+func (s *server) GetApplicationTimeline(ctx context.Context, request generated.GetApplicationTimelineRequestObject) (generated.GetApplicationTimelineResponseObject, error) {
+	return s.applicationTimeline.Handle(ctx, request)
 }

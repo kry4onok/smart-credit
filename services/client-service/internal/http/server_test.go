@@ -19,6 +19,7 @@ import (
 	applicationofferdecline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/decline"
 	applicationsign "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/sign"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
+	applicationtimeline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/timeline"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
@@ -128,8 +129,14 @@ func (applicationSignMock) Execute(_ context.Context, params model.SignContractP
 	return model.ActionAccepted{ApplicationID: params.ApplicationID, PendingAction: "SIGN_PENDING"}, nil
 }
 
+type applicationTimelineMock struct{}
+
+func (applicationTimelineMock) Execute(context.Context, uuid.UUID, uuid.UUID) ([]model.TimelineEntry, error) {
+	return []model.TimelineEntry{}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationofferaccept.New(applicationOfferAcceptMock{}), applicationofferdecline.New(applicationOfferDeclineMock{}), applicationsign.New(applicationSignMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationinfo.New(applicationInfoMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationtimeline.New(applicationTimelineMock{}), applicationofferaccept.New(applicationOfferAcceptMock{}), applicationofferdecline.New(applicationOfferDeclineMock{}), applicationsign.New(applicationSignMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationinfo.New(applicationInfoMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		method, path, authorization string
 		status                      int
@@ -141,6 +148,9 @@ func TestRoutes(t *testing.T) {
 		{http.MethodPost, "/client/applications", "Bearer test", 201},
 		{http.MethodGet, "/client/applications", "Bearer test", 200},
 		{http.MethodGet, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
+		{http.MethodGet, "/client/applications/00000000-0000-0000-0000-000000000001/timeline", "Bearer test", 200},
+		{http.MethodGet, "/client/applications/00000000-0000-0000-0000-000000000001/timeline", "", 401},
+		{http.MethodGet, "/client/applications/not-a-uuid/timeline", "Bearer test", 400},
 		{http.MethodPatch, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/documents", "Bearer test", 201},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/submit", "Bearer test", 200},
