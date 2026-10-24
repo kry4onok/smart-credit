@@ -1,0 +1,754 @@
+{
+  "info": {
+    "_postman_id": "985eaad0-1836-4426-8edf-10a629e8ae22",
+    "name": "Smart Credit — application cancellation E2E",
+    "description": "Run the complete collection with Smart Credit Local environment. Each run creates a fresh application and verifies the Kafka-mediated cancellation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Login client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{client_email}}\",\n  \"password\": \"{{client_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('application_id');",
+              "pm.environment.unset('cancel_key');",
+              "pm.environment.unset('poll_attempt');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Client login: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.environment.set('client_token', pm.response.json().access_token);",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Check company",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/company",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Company exists or needs creation', () => pm.expect([200, 404]).to.include(pm.response.code));",
+              "if (pm.response.code === 200) {",
+              "  pm.execution.setNextRequest('04 List products');",
+              "} else if (pm.response.code !== 404) {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Create company",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/client/company",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inn\": \"7707083893\",\n  \"name\": \"ООО «Северная пекарня»\",\n  \"okved\": \"10.71\",\n  \"registered_at\": \"2019-04-15\",\n  \"revenue_12m\": {\n    \"amount_kopecks\": 840000000,\n    \"currency\": \"RUB\"\n  },\n  \"profit_12m\": {\n    \"amount_kopecks\": 96000000,\n    \"currency\": \"RUB\"\n  },\n  \"obligations\": {\n    \"amount_kopecks\": 120000000,\n    \"currency\": \"RUB\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Company created: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) pm.execution.setNextRequest(null);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 List products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/products",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Products: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json();",
+              "  const product = (data.items || []).find(item => item.code === 'WORKING');",
+              "  pm.test('WORKING in published catalog', () => {",
+              "    pm.expect(data.catalog_version).to.be.above(0);",
+              "    pm.expect(product).to.exist;",
+              "  });",
+              "  if (product) pm.environment.set('product_id', product.id);",
+              "  else pm.execution.setNextRequest(null);",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Create application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": \"{{product_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Draft created: 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) {",
+              "  const data = pm.response.json();",
+              "  pm.environment.set('application_id', data.id);",
+              "  pm.test('Draft uses WORKING', () => pm.expect(data.product_id).to.eql(pm.environment.get('product_id')));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Read draft and ETag",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Draft: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json();",
+              "  pm.environment.set('application_etag', pm.response.headers.get('ETag'));",
+              "  pm.test('Draft has ETag', () => {",
+              "    pm.expect(data.status).to.eql('DRAFT');",
+              "    pm.expect(pm.environment.get('application_etag')).to.match(/^\"[1-9][0-9]*\"$/);",
+              "  });",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Fill application form",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/merge-patch+json"
+          },
+          {
+            "key": "If-Match",
+            "value": "{{application_etag}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": {\n    \"amount_kopecks\": 300000000,\n    \"currency\": \"RUB\"\n  },\n  \"term_months\": 18,\n  \"purpose\": \"WORKING_CAPITAL\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Form updated: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json();",
+              "  pm.test('Valid amount and term', () => {",
+              "    pm.expect(data.form.amount.amount_kopecks).to.eql(300000000);",
+              "    pm.expect(data.form.term_months).to.eql(18);",
+              "  });",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Upload bank statement",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/documents",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "document_type",
+              "value": "BANK_STATEMENT",
+              "type": "text"
+            },
+            {
+              "key": "file",
+              "type": "file",
+              "src": "fixtures/bank-statement.txt"
+            }
+          ]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Statement uploaded: 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) {",
+              "  pm.test('Document type is BANK_STATEMENT', () => pm.expect(pm.response.json().document_type).to.eql('BANK_STATEMENT'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Submit application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/submit",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Submitted: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Client status SUBMITTED', () => pm.expect(pm.response.json().status).to.eql('SUBMITTED'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Cancel application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{cancel_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/cancel",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Postman E2E test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('cancel_key', pm.variables.replaceIn('{{$guid}}'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Cancellation accepted: 202', () => pm.response.to.have.status(202));",
+              "if (pm.response.code === 202) {",
+              "  pm.test('Cancel pending', () => pm.expect(pm.response.json().pending_action).to.eql('CANCEL_PENDING'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Wait for CLOSED",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Application readable: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) {",
+              "  pm.execution.setNextRequest(null);",
+              "} else {",
+              "  const data = pm.response.json();",
+              "  const attempt = Number(pm.environment.get('poll_attempt') || 0) + 1;",
+              "  pm.environment.set('poll_attempt', String(attempt));",
+              "  if (data.status === 'CLOSED') {",
+              "    pm.test('Closed by bank, pending action cleared', () => {",
+              "      pm.expect(data.pending_action).to.be.oneOf([undefined, null]);",
+              "      pm.expect(data.offer).to.be.oneOf([undefined, null]);",
+              "      pm.expect(data.info_request).to.be.oneOf([undefined, null]);",
+              "    });",
+              "  } else if (attempt < 30) {",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "  } else {",
+              "    pm.test('Closed within 30 polls', () => pm.expect(data.status).to.eql('CLOSED'));",
+              "    pm.execution.setNextRequest(null);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Repeat cancellation with same key",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{cancel_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/cancel",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Postman E2E test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Same key replays 202', () => pm.response.to.have.status(202));",
+              "if (pm.response.code !== 202) pm.execution.setNextRequest(null);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 New cancellation conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/cancel",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Postman E2E test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('New key after closure: 409', () => pm.response.to.have.status(409));",
+              "if (pm.response.code !== 409) pm.execution.setNextRequest(null);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Login analyst",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{analyst_email}}\",\n  \"password\": \"{{analyst_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Analyst login: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.environment.set('analyst_token', pm.response.json().access_token);",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Check bank case",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/backoffice/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{analyst_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Bank case: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Bank case CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Check bank audit",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/backoffice/applications/{{application_id}}/audit",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{analyst_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Bank audit: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const entries = pm.response.json().items || [];",
+              "  pm.test('Cancellation is audited', () => {",
+              "    pm.expect(entries.some(entry => entry.action === 'APPLICATION_CANCELLED')).to.be.true;",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
