@@ -10,6 +10,8 @@ import (
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/config"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/jwt"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/model"
+	"github.com/google/uuid"
 )
 
 func testConfig(path string) config.Config {
@@ -58,6 +60,14 @@ func TestJWKSWithoutDatabaseOrAuthorization(t *testing.T) {
 	c.HTTPHandler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatal("test database unexpectedly ready")
+	}
+	token, err := c.Tokens.Issue(model.Principal{UserID: uuid.New(), Role: model.RoleAdmin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w = currentUserRequest(c, token.Token)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatal("unavailable profile database must return 503")
 	}
 }
 

@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/domain"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/transaction"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/model"
 	"github.com/google/uuid"
@@ -35,7 +35,7 @@ func scanUser(row pgx.Row) (model.User, error) {
 		return model.User{}, domain.ErrUserNotFound
 	}
 	if err != nil {
-		return model.User{}, fmt.Errorf("fetch auth user: %w", err)
+		return model.User{}, postgres.OperationError("fetch auth user", err)
 	}
 	if orgID != nil {
 		user.OrgID = *orgID

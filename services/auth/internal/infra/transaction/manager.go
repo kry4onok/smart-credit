@@ -2,9 +2,9 @@ package transaction
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/postgres"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -25,7 +25,7 @@ func New(db Beginner) *Manager { return &Manager{db: db} }
 func (m *Manager) Within(ctx context.Context, action func(context.Context) error) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin auth transaction: %w", err)
+		return postgres.OperationError("begin auth transaction", err)
 	}
 	defer func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -36,7 +36,7 @@ func (m *Manager) Within(ctx context.Context, action func(context.Context) error
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit auth transaction: %w", err)
+		return postgres.OperationError("commit auth transaction", err)
 	}
 	return nil
 }

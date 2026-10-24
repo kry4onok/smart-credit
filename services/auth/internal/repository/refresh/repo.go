@@ -3,9 +3,9 @@ package refresh
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/domain"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/postgres"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/transaction"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/model"
 	"github.com/google/uuid"
@@ -21,7 +21,7 @@ func (r *Repository) Save(ctx context.Context, session model.RefreshSession) err
 	INSERT INTO refresh_tokens (token_hash, user_id, created_at, expires_at) VALUES ($1, $2, $3, $4)`,
 		session.Hash[:], session.UserID, session.CreatedAt, session.ExpiresAt)
 	if err != nil {
-		return fmt.Errorf("save refresh session: %w", err)
+		return postgres.OperationError("save refresh session", err)
 	}
 	return nil
 }
@@ -41,7 +41,7 @@ func (r *Repository) Lock(ctx context.Context, hash [32]byte) (model.SessionStat
 		return model.SessionState{}, domain.ErrUnauthorized
 	}
 	if err != nil {
-		return model.SessionState{}, fmt.Errorf("fetch refresh session: %w", err)
+		return model.SessionState{}, postgres.OperationError("fetch refresh session", err)
 	}
 	if orgID != nil {
 		session.OrgID = *orgID
@@ -54,7 +54,7 @@ func (r *Repository) Revoke(ctx context.Context, hash [32]byte) error {
 	UPDATE refresh_tokens SET revoked_at = greatest(clock_timestamp(), created_at)
 	WHERE token_hash = $1 AND revoked_at IS NULL`, hash[:])
 	if err != nil {
-		return fmt.Errorf("revoke refresh session: %w", err)
+		return postgres.OperationError("revoke refresh session", err)
 	}
 	return nil
 }
