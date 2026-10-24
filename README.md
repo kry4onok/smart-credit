@@ -198,6 +198,10 @@ Auth запускается из `services/auth/cmd/service` и по умолч�
 После запуска PostgreSQL примените `make auth-db-up`. Миграция создаёт пустые
 таблицы `organizations`, `users`, `refresh_tokens`.
 Проверка миграций в изолированных схемах: `make auth-db-test`.
+Для локального входа задайте три `AUTH_DEV_*_PASSWORD` в игнорируемом Git `.env`
+и выполните `make auth-dev-seed`. Команда создаёт ANALYST, ADMIN и CLIENT с
+фиксированными UUID; детали и email приведены в [README auth](services/auth/README.md).
+Интеграционная проверка seed в отдельной схеме: `make auth-dev-seed-test`.
 
 ## client-service
 

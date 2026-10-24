@@ -33,7 +33,7 @@ OPENAPI_OUTPUT_DIRS := \
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test
 .PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
-.PHONY: auth-up auth-down auth-logs auth-keygen auth-db-up auth-db-down auth-db-status auth-db-test
+.PHONY: auth-up auth-down auth-logs auth-keygen auth-dev-seed auth-dev-seed-test auth-db-up auth-db-down auth-db-status auth-db-test
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -70,6 +70,8 @@ help:
 	@echo 'make bank-logs        Показать логи bank-service'
 	@echo 'make auth-db-up       Применить миграции auth_db'
 	@echo 'make auth-up          Создать ключ, применить миграции и запустить auth в Docker'
+	@echo 'make auth-dev-seed    Создать локальные учётки ANALYST, ADMIN и CLIENT в auth_db'
+	@echo 'make auth-dev-seed-test Проверить seed в отдельной схеме auth_db'
 	@echo 'make auth-down        Остановить auth, сохранив ключ и сессии'
 	@echo 'make auth-logs        Показать логи auth'
 	@echo 'make auth-keygen      Создать постоянный RSA-ключ в Docker volume'
@@ -300,6 +302,12 @@ auth-up: auth-keygen
 	$(COMPOSE) up -d --wait postgres
 	@$(GOOSE) -dir $(AUTH_MIGRATIONS) postgres "$(AUTH_DATABASE_URL)" up
 	$(COMPOSE) up -d --wait auth
+
+auth-dev-seed: require-env
+	@go run ./services/auth/cmd/dev-seed
+
+auth-dev-seed-test: require-env
+	@AUTH_TEST_DATABASE_URL="$(AUTH_DATABASE_URL)" go test -count=1 ./services/auth/internal/devseed
 
 auth-down: require-env
 	$(COMPOSE) rm -sf auth
