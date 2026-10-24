@@ -254,8 +254,8 @@ curl -i http://localhost:8080/readyz
 ```
 
 Обе ручки отвечают `204 No Content`, когда сервис и Postgres готовы.
-Реализованы список, карточка и взятие дела в работу (`take`); решение, аудит
-и резюме пока возвращают `501 Not Implemented`. Для demo-аналитика используется
+Реализованы список, карточка, взятие дела в работу (`take`), решение, аудит
+и резюме. Для demo-аналитика используется
 `BANK_DEMO_ANALYST_ID` из `.env.example`.
 
 Банковский scoring adapter в `services/bank-service/internal/client/scoring`
@@ -426,13 +426,12 @@ make assistant-smoke
 аналитика. Подробная проверка fallback и запуск без Docker описаны в
 [инструкции ML-2](ml/assistant/README.md).
 
-**Стык с bank-service:** Compose передаёт адрес `assistant:50052` через
-`BANK_ASSISTANT_GRPC_ADDR`, но текущий Go-код ещё не читает эту переменную.
-Бэкенду осталось подключить gRPC-вызовы, переводить `model_version=template`
-в `source=template` и делать свой шаблон при таймауте или недоступности gRPC.
-HTTP-метод резюме в bank-service пока заглушка, а вызов объяснения решения
-ещё отсутствует. Поэтому `assistant-smoke` проверяет сервис напрямую, а не
-весь пользовательский сценарий. Поля запросов и ответственность сторон
+**Стык с bank-service:** `POST /backoffice/applications/{id}/summary` вызывает
+`SummarizeCase` с дедлайном 5 секунд. Compose передаёт адрес `assistant:50052`
+через `BANK_ASSISTANT_GRPC_ADDR`; при недоступности gRPC bank-service возвращает
+собственный шаблон с `source=template`. `model_version=template` от assistant
+тоже переводится в `source=template`. Вызов объяснения решения пока отсутствует.
+Поля запросов и ответственность сторон
 описаны в [инструкции ML-2](ml/assistant/README.md#контракт-с-bank-service).
 
 **Проверено:** контейнер собирается и становится healthy; оба gRPC-метода
