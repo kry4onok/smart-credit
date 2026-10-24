@@ -44,9 +44,9 @@ func (r *Repository) Submit(ctx context.Context, params model.SubmitApplicationP
 		INSERT INTO idempotency_keys (
 			actor_id, route, idempotency_key, request_hash, response_status,
 			response_body, application_id, expires_at
-		) VALUES ($1, $2, $3, $4, 200, '{}'::jsonb, $5, now() + interval '24 hours')
+		) VALUES ($1, $2, $3, $4, 200, '{}'::jsonb, NULL, now() + interval '24 hours')
 		ON CONFLICT (actor_id, route, idempotency_key) DO NOTHING
-		RETURNING 1`, params.UserID, route, params.IdempotencyID, requestHash[:], params.ApplicationID).Scan(&reserved)
+		RETURNING 1`, params.UserID, route, params.IdempotencyID, requestHash[:]).Scan(&reserved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var storedHash []byte
 		var responseBody []byte
@@ -158,9 +158,9 @@ func (r *Repository) Submit(ctx context.Context, params model.SubmitApplicationP
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE idempotency_keys
-		SET response_body = $4
+		SET response_body = $4, application_id = $5
 		WHERE actor_id = $1 AND route = $2 AND idempotency_key = $3`,
-		params.UserID, route, params.IdempotencyID, responseBody); err != nil {
+		params.UserID, route, params.IdempotencyID, responseBody, params.ApplicationID); err != nil {
 		return model.Application{}, fmt.Errorf("save submission idempotency response: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -287,7 +287,7 @@ func moneyProto(value moneySnapshot) *commonpb.Money {
 func formProto(value model.ApplicationForm) *commonpb.ApplicationForm {
 	return &commonpb.ApplicationForm{
 		Amount:     moneyProto(moneySnapshot{AmountKopecks: value.AmountKopecks, Currency: "RUB"}),
-		TermMonths: int32(value.TermMonths), Purpose: commonpb.PurposeTag(commonpb.PurposeTag_value[value.Purpose]),
+		TermMonths: int32(value.TermMonths), Purpose: commonpb.PurposeTag(commonpb.PurposeTag_value["PURPOSE_TAG_"+value.Purpose]),
 	}
 }
 
@@ -295,7 +295,7 @@ func documentMetadataProto(values []model.ApplicationDocument) []*commonpb.Docum
 	result := make([]*commonpb.DocumentMetadata, 0, len(values))
 	for _, value := range values {
 		result = append(result, &commonpb.DocumentMetadata{
-			DocumentId: value.ID.String(), DocumentType: commonpb.DocumentType(commonpb.DocumentType_value[value.DocumentType]),
+			DocumentId: value.ID.String(), DocumentType: commonpb.DocumentType(commonpb.DocumentType_value["DOCUMENT_TYPE_"+value.DocumentType]),
 			FileName: value.FileName, Sha256: value.Sha256, UploadedAt: timestamppb.New(value.UploadedAt), IsMock: value.IsMock,
 		})
 	}

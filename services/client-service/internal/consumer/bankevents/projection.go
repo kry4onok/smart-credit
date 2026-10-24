@@ -277,10 +277,20 @@ func insertInfoRequest(ctx context.Context, tx Tx, applicationID uuid.UUID, requ
 	if len(fields) == 0 && len(documents) == 0 {
 		return errors.New("bank info request is empty")
 	}
-	if _, err := tx.Exec(ctx, `
+	result, err := tx.Exec(ctx, `
 		INSERT INTO info_requests (id, application_id, message, required_fields, required_document_types, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`, requestID, applicationID, request.GetMessage(), fields, documents, request.GetCreatedAt().AsTime()); err != nil {
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (id) DO UPDATE
+		SET message = EXCLUDED.message, required_fields = EXCLUDED.required_fields,
+		    required_document_types = EXCLUDED.required_document_types,
+		    created_at = EXCLUDED.created_at, is_active = true, responded_at = NULL
+		WHERE info_requests.application_id = EXCLUDED.application_id`,
+		requestID, applicationID, request.GetMessage(), fields, documents, request.GetCreatedAt().AsTime())
+	if err != nil {
 		return fmt.Errorf("save bank info request: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return errors.New("bank info request belongs to another application")
 	}
 	return nil
 }
@@ -309,14 +319,25 @@ func insertOffer(ctx context.Context, tx Tx, applicationID uuid.UUID, offer *com
 	if strings.TrimSpace(offer.GetProductName()) == "" {
 		return errors.New("bank offer product name is empty")
 	}
-	if _, err := tx.Exec(ctx, `
+	result, err := tx.Exec(ctx, `
 		INSERT INTO offers (
 			id, application_id, kind, product_id, product_version, product_name,
 			amount_kopecks, term_months, rate_bps, explanation, expires_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (id) DO UPDATE
+		SET kind = EXCLUDED.kind, product_id = EXCLUDED.product_id,
+		    product_version = EXCLUDED.product_version, product_name = EXCLUDED.product_name,
+		    amount_kopecks = EXCLUDED.amount_kopecks, term_months = EXCLUDED.term_months,
+		    rate_bps = EXCLUDED.rate_bps, explanation = EXCLUDED.explanation,
+		    expires_at = EXCLUDED.expires_at, is_active = true
+		WHERE offers.application_id = EXCLUDED.application_id`,
 		offerID, applicationID, kind, productID, offer.GetProductVersion(), offer.GetProductName(),
-		offer.GetAmount().GetAmountKopecks(), offer.GetTermMonths(), offer.GetRateBps(), offer.GetExplanation(), offer.GetExpiresAt().AsTime()); err != nil {
+		offer.GetAmount().GetAmountKopecks(), offer.GetTermMonths(), offer.GetRateBps(), offer.GetExplanation(), offer.GetExpiresAt().AsTime())
+	if err != nil {
 		return fmt.Errorf("save bank offer: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return errors.New("bank offer belongs to another application")
 	}
 	return nil
 }

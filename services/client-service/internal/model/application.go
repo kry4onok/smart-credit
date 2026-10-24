@@ -142,6 +142,15 @@ type DeclineOfferParams struct {
 	RequestHash   []byte
 }
 
+type SignContractParams struct {
+	OrgID         uuid.UUID
+	UserID        uuid.UUID
+	ApplicationID uuid.UUID
+	OfferID       uuid.UUID
+	IdempotencyID uuid.UUID
+	RequestHash   []byte
+}
+
 type ActionAccepted struct {
 	ApplicationID uuid.UUID `json:"application_id"`
 	PendingAction string    `json:"pending_action"`

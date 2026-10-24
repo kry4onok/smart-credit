@@ -37,9 +37,9 @@ func (r *Repository) AddDocument(ctx context.Context, params model.AddApplicatio
 		INSERT INTO idempotency_keys (
 			actor_id, route, idempotency_key, request_hash, response_status,
 			response_body, application_id, expires_at
-		) VALUES ($1, $2, $3, $4, 201, '{}'::jsonb, $5, now() + interval '24 hours')
+		) VALUES ($1, $2, $3, $4, 201, '{}'::jsonb, NULL, now() + interval '24 hours')
 		ON CONFLICT (actor_id, route, idempotency_key) DO NOTHING
-		RETURNING 1`, params.UserID, idempotencyRoute, params.IdempotencyKey, requestHash[:], params.ApplicationID).Scan(&reserved)
+		RETURNING 1`, params.UserID, idempotencyRoute, params.IdempotencyKey, requestHash[:]).Scan(&reserved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var storedHash []byte
 		var responseBody []byte

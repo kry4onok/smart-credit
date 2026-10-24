@@ -17,12 +17,13 @@ HTTP-сервис кабинета клиента с техническими р
 - `POST /client/applications/{application_id}/info` — проверяет актуальный запрос банка, сохраняет уточнённый снимок заявки и отправляет `InfoProvided` через outbox.
 - `POST /client/applications/{application_id}/offer/accept` — подтверждает выбранную актуальную оферту, переводит действие в `ACCEPT_PENDING` и отправляет `OfferAccepted` через outbox; после подтверждения банка заявка переходит к оформлению.
 - `POST /client/applications/{application_id}/offer/decline` — отказывается от выбранной актуальной оферты, переводит действие в `DECLINE_PENDING` и отправляет `OfferDeclined` через outbox; окончательное закрытие заявки выполняется после подтверждения банка.
+- `POST /client/applications/{application_id}/sign` — проверяет подтверждённую банком оферту и состояние `FORMALIZING`, переводит действие в `SIGN_PENDING` и отправляет `ContractSigned` через outbox.
 
 Технические ручки доступны без JWT и возвращают пустое тело. Бизнес-ручки
 требуют Bearer JWT с ролью `CLIENT`; профиль всегда выбирается по `org_id` из
 токена. При недоступной БД
 сервис продолжает работать, readiness восстанавливается после её подключения.
-Остальные операции контракта пока возвращают `501 Not Implemented`.
+Операции отмены заявки и просмотра timeline пока возвращают `501 Not Implemented`.
 Kafka используется для outbox relay в `client.events` и проекции входящих
 `bank.events`; недоступность брокера не останавливает HTTP-сервис и не входит в
 проверку readiness. Непубликованные события остаются в outbox и будут повторены
@@ -54,3 +55,24 @@ make client-down
 Проверить ручки через уже запущенный gateway можно по адресам
 `http://localhost:8000/internal/client/healthz` и
 `http://localhost:8000/internal/client/readyz` (при стандартном `GATEWAY_PORT`).
+
+## Проверка
+
+Из корня репозитория:
+
+```sh
+go test ./services/client-service/...
+```
+
+Регрессионные тесты SQL запускаются при заданной `CLIENT_TEST_DATABASE_URL`:
+
+```sh
+CLIENT_TEST_DATABASE_URL='postgres://user:password@127.0.0.1:5432/test_db?sslmode=disable' \
+  go test -count=1 ./services/client-service/internal/repository/application
+```
+
+Используйте отдельную тестовую БД. Каждый тест создаёт собственную временную
+схему, применяет миграции и удаляет схему после проверки. Без переменной
+интеграционные тесты пропускаются. Проверяются снимки черновиков,
+protobuf-события, идемпотентность, tenant isolation и повторные
+публичные снимки банка.

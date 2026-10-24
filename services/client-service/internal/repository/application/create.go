@@ -83,7 +83,7 @@ func (r *Repository) Create(ctx context.Context, params model.CreateApplicationP
 		RETURNING id, product_id, product_version, status, stage_label,
 		          next_action, version, created_at, updated_at`,
 		applicationID, params.OrgID, params.UserID, product.ID, product.Version,
-		companySnapshot, productSnapshot).Scan(
+		productSnapshot, companySnapshot).Scan(
 		&application.ID, &application.ProductID, &application.ProductVersion,
 		&application.Status, &application.StageLabel, &application.NextAction,
 		&application.Version, &application.CreatedAt, &application.UpdatedAt,

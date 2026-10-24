@@ -11,10 +11,6 @@ func (s *server) CancelApplication(context.Context, generated.CancelApplicationR
 	return nil, errNotImplemented
 }
 
-func (s *server) SignContract(context.Context, generated.SignContractRequestObject) (generated.SignContractResponseObject, error) {
-	return nil, errNotImplemented
-}
-
 func (s *server) GetApplicationTimeline(context.Context, generated.GetApplicationTimelineRequestObject) (generated.GetApplicationTimelineResponseObject, error) {
 	return nil, errNotImplemented
 }
