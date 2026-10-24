@@ -2,6 +2,13 @@
 
 Полное техническое задание: [TZ.md](TZ.md).
 
+## Веб-интерфейс
+
+Кабинет клиента и рабочее место аналитика — в [web/](web/README.md). Быстрый просмотр
+без backend: `make web-install web-mock` → `http://localhost:5173` (демо-учётки и
+пароль `demo` показаны на экране входа). Docker-сборка с nginx: `make web-up` →
+`http://localhost:3000`.
+
 ## Проверка Go-кода
 
 Перед pull request запустите:

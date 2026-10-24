@@ -1,0 +1,34 @@
+{
+  "name": "smart-credit-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:mock": "vite --mode mock",
+    "gen": "openapi-typescript ../api/auth.yaml -o src/api/generated/auth.ts && openapi-typescript ../api/client.yaml -o src/api/generated/client.ts && openapi-typescript ../api/bank.yaml -o src/api/generated/bank.ts",
+    "typecheck": "tsc -b",
+    "build": "tsc -b && vite build",
+    "build:mock": "tsc -b && vite build --mode mock",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/golos-text": "5.3.0",
+    "@fontsource/unbounded": "5.3.0",
+    "openapi-fetch": "0.17.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router-dom": "7.18.4"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  }
+}

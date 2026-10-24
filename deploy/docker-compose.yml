@@ -317,6 +317,19 @@ services:
     stop_grace_period: 10s
     restart: unless-stopped
 
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   client_documents:
