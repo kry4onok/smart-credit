@@ -2659,3 +2659,8 @@ fieldset.group > legend {
   font-size: 0.72rem;
   color: var(--muted);
 }
+
+.offer-accepted {
+  color: var(--ok);
+  font-weight: 600;
+}

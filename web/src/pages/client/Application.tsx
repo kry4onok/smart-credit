@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { clientApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
-import type { ApplicationFormPatch, ClientApplication, CompanyProfile, DocumentType, InfoField, Product, PurposeTag, TimelineEntry } from "../../api/types";
+import type { ApplicationFormPatch, ClientApplication, CompanyProfile, DocumentType, InfoField, Offer, Product, PurposeTag, TimelineEntry } from "../../api/types";
 import { useSession } from "../../auth/session";
 import { DocumentSlot, MoneyInput } from "../../components/inputs";
 import { CompareBars, offerRows } from "../../components/Compare";
@@ -11,7 +11,7 @@ import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useNow, useTi
 import { date, dateTime, money, moneyShort, monthlyPayment, months, rate, rub, timeLeft } from "../../lib/format";
 import { clientStatusLabel, clientStatusTone, infoFieldLabel, purposeLabel } from "../../lib/labels";
 import { usePolling, useIntent } from "../../lib/util";
-import { loadProducts, recallDraft, rememberDraft } from "./products";
+import { loadProducts, recallDraft, recallOffer, rememberDraft, rememberOffer } from "./products";
 
 const settled = new Set(["DRAFT", "DISBURSED", "REJECTED", "CLOSED"]);
 
@@ -92,7 +92,7 @@ export function ApplicationPage() {
         {/* Polling changes the status without a click; the live region announces it. */}
         <div aria-live="polite">
           <h2>{app.stage_label}</h2>
-          <p className="next-action">{app.next_action}</p>
+          {app.next_action && <p className="next-action">{app.next_action}</p>}
         </div>
         <ErrorNote error={error} />
         {app.status === "DRAFT" && <ErrorNote error={productError} onRetry={loadProduct} />}
@@ -121,9 +121,7 @@ function NextStep({ app, product, onChange, reload, fetchApp }: StepProps) {
       {app.status === "NEEDS_INFO" && app.info_request && app.allowed_actions.includes("PROVIDE_INFO") && (
         <InfoResponse app={app} onChange={onChange} reload={reload} />
       )}
-      {app.offer && (app.allowed_actions.includes("ACCEPT_OFFER") || app.allowed_actions.includes("SIGN")) && (
-        <OfferView app={app} reload={reload} />
-      )}
+      {(app.allowed_actions.includes("ACCEPT_OFFER") || app.allowed_actions.includes("SIGN")) && <OfferStep app={app} reload={reload} />}
       {app.status === "DISBURSED" && (
         <div className="outcome outcome-success">
           <strong>Кредит выдан.</strong> Это симуляция: деньги не переводились, но все этапы конвейера пройдены.
@@ -518,8 +516,18 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
   );
 }
 
-function OfferView({ app, reload }: { app: ClientApplication; reload: () => Promise<void> }) {
-  const offer = app.offer!;
+function OfferStep({ app, reload }: { app: ClientApplication; reload: () => Promise<void> }) {
+  const offer = app.offer ?? recallOffer(app.id);
+  if (offer) return <OfferView app={app} offer={offer} reload={reload} />;
+  return (
+    <p className="note note-attention">
+      Предложение принято. Условия для подписи не сохранились в этом браузере — откройте заявку там, где принимали предложение,
+      или обратитесь в банк.
+    </p>
+  );
+}
+
+function OfferView({ app, offer, reload }: { app: ClientApplication; offer: Offer; reload: () => Promise<void> }) {
   useNow();
   const act = useAction();
   const intents = { accept: useIntent(), decline: useIntent(), sign: useIntent() };
@@ -527,6 +535,7 @@ function OfferView({ app, reload }: { app: ClientApplication; reload: () => Prom
   const [simulated, setSimulated] = useState(false);
   const canAccept = app.allowed_actions.includes("ACCEPT_OFFER");
   const canSign = app.allowed_actions.includes("SIGN");
+  const accepted = !canAccept && canSign;
   const counter = offer.kind === "COUNTER_OFFER";
   const differentProduct = offer.product_id !== app.product_id;
 
@@ -541,13 +550,15 @@ function OfferView({ app, reload }: { app: ClientApplication; reload: () => Prom
       await intents[action].send((key) =>
         call(clientApi.POST(paths[action], { params: { path: { application_id: app.id }, header: { "Idempotency-Key": key } }, body: { offer_id: offer.id } })),
       );
+      if (action === "accept") rememberOffer(app.id, offer);
       await reload();
     });
   }
 
   return (
     <div className={`offer${counter ? " offer-counter" : ""}`}>
-      {counter && (
+      {accepted && <p className="offer-accepted">Вы приняли эти условия. Осталось подписать договор.</p>}
+      {counter && !accepted && (
         <p className="offer-note">
           Банк не может выдать кредит на запрошенных условиях и предлагает {differentProduct ? "другой продукт" : "другие условия"}.
         </p>
@@ -563,7 +574,7 @@ function OfferView({ app, reload }: { app: ClientApplication; reload: () => Prom
         <Dl
           items={[
             ["Платёж в месяц", `≈ ${money(monthlyPayment(offer.amount, offer.term_months, offer.rate_bps))}`],
-            ["Предложение действует", `до ${dateTime(offer.expires_at)}, ${timeLeft(offer.expires_at)}`],
+            ...(accepted ? [] : ([["Предложение действует", `до ${dateTime(offer.expires_at)}, ${timeLeft(offer.expires_at)}`]] as [string, string][])),
           ]}
         />
       </div>
@@ -703,8 +714,8 @@ function Timeline({ id, version }: { id: string; version: number }) {
             <li key={e.id}>
               <time dateTime={e.occurred_at}>{dateTime(e.occurred_at)}</time>
               <div>
-                <strong>{clientStatusLabel[e.status]}</strong>
-                <p>{e.message}</p>
+                <strong>{e.message || clientStatusLabel[e.status]}</strong>
+                {e.message && <p>{clientStatusLabel[e.status]}</p>}
               </div>
             </li>
           ))}

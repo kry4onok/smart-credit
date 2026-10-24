@@ -496,7 +496,8 @@ function view(m: MockApp): ClientApplication {
     // As in client-service: cancellable until the contract is signed.
     if (["SUBMITTED", "UNDER_REVIEW", "NEEDS_INFO", "OFFER_AVAILABLE"].includes(status) || m.bank?.status === "OFFER_ACCEPTED") allowed.push("CANCEL");
   }
-  const showOffer = m.bank && ["OFFER", "COUNTER_OFFER", "OFFER_ACCEPTED", "SIGNING", "DISBURSED"].includes(m.bank.status);
+  // As in client-service: the offer is visible only while it awaits an answer.
+  const showOffer = m.bank && ["OFFER", "COUNTER_OFFER"].includes(m.bank.status);
   const f = m.app.form;
   return {
     ...m.app,

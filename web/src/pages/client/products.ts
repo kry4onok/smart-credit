@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { clientApi } from "../../api/http";
 import { call } from "../../api/problem";
-import type { ApplicationFormPatch, ClientApplication, Product, PurposeTag } from "../../api/types";
+import type { ApplicationFormPatch, ClientApplication, Offer, Product, PurposeTag } from "../../api/types";
 import { months, moneyShort, rub } from "../../lib/format";
 
 let cache: Promise<Product[]> | null = null;
@@ -66,6 +66,27 @@ export function recallDraft(id: string): DraftValues {
     return JSON.parse(localStorage.getItem(draftKey(id)) ?? "{}") as DraftValues;
   } catch {
     return {};
+  }
+}
+
+const offerKey = (id: string) => `smart-credit:accepted-offer:${id}`;
+
+// After acceptance client-service stops returning the offer, yet /sign must name its offer_id.
+// The accepted offer is kept here so the formalizing step can show the terms and sign them.
+export function rememberOffer(applicationId: string, offer: Offer) {
+  try {
+    localStorage.setItem(offerKey(applicationId), JSON.stringify(offer));
+  } catch {
+    // Without storage the signing step explains that the terms are unavailable in this browser.
+  }
+}
+
+export function recallOffer(applicationId: string): Offer | undefined {
+  try {
+    const raw = localStorage.getItem(offerKey(applicationId));
+    return raw ? (JSON.parse(raw) as Offer) : undefined;
+  } catch {
+    return undefined;
   }
 }
 
