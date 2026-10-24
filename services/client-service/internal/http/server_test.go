@@ -15,6 +15,7 @@ import (
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
+	applicationofferaccept "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/offer/accept"
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
@@ -107,8 +108,14 @@ func (applicationInfoMock) Execute(_ context.Context, params model.ProvideInfoPa
 	return model.ActionAccepted{ApplicationID: params.ApplicationID, PendingAction: "INFO_SENT"}, nil
 }
 
+type applicationOfferAcceptMock struct{}
+
+func (applicationOfferAcceptMock) Execute(_ context.Context, params model.AcceptOfferParams) (model.ActionAccepted, error) {
+	return model.ActionAccepted{ApplicationID: params.ApplicationID, PendingAction: "ACCEPT_PENDING"}, nil
+}
+
 func TestRoutes(t *testing.T) {
-	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationinfo.New(applicationInfoMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
+	handler := New(pingerMock{}, time.Second, companyget.New(companyMock{}), nil, applicationcreate.New(applicationMock{}), applicationdocument.New(applicationDocumentMock{}), applicationget.New(applicationGetMock{}), applicationlist.New(applicationListMock{}), applicationofferaccept.New(applicationOfferAcceptMock{}), applicationsubmit.New(applicationSubmitMock{}), applicationinfo.New(applicationInfoMock{}), applicationupdate.New(applicationUpdateMock{}), productget.New(productMock{}), productlist.New(productsMock{}), verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}})
 	for _, tc := range []struct {
 		method, path, authorization string
 		status                      int
@@ -123,6 +130,7 @@ func TestRoutes(t *testing.T) {
 		{http.MethodPatch, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 200},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/documents", "Bearer test", 201},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/submit", "Bearer test", 200},
+		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/offer/accept", "Bearer test", 202},
 	} {
 		t.Run(tc.method+tc.path+tc.authorization, func(t *testing.T) {
 			request := httptest.NewRequest(tc.method, tc.path, nil)
@@ -151,6 +159,10 @@ func TestRoutes(t *testing.T) {
 				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000002")
 			} else if tc.method == http.MethodPost && strings.HasSuffix(tc.path, "/submit") {
 				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000003")
+			} else if tc.method == http.MethodPost && strings.HasSuffix(tc.path, "/offer/accept") {
+				request = httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(`{"offer_id":"00000000-0000-0000-0000-000000000004"}`))
+				request.Header.Set("Content-Type", "application/json")
+				request.Header.Set("Idempotency-Key", "00000000-0000-0000-0000-000000000005")
 			} else if tc.method == http.MethodPatch {
 				request = httptest.NewRequest(http.MethodPatch, tc.path, strings.NewReader(`{"amount":{"amount_kopecks":100,"currency":"RUB"}}`))
 				request.Header.Set("Content-Type", "application/merge-patch+json")

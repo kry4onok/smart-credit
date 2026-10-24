@@ -62,6 +62,10 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Запрос банка уже обработан или заявка находится в другом состоянии.")
 	case errors.Is(err, domain.ErrInvalidInfoResponse):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_INFO_RESPONSE", "Ответ на запрос банка заполнен некорректно.")
+	case errors.Is(err, domain.ErrApplicationOfferConflict):
+		return Problem(ctx, http.StatusConflict, "OFFER_ACTION_CONFLICT", "Оферта уже обработана, истекла или заявка находится в другом состоянии.")
+	case errors.Is(err, domain.ErrInvalidOfferAction):
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_OFFER_ACTION", "Оферта для действия указана некорректно.")
 	case errors.Is(err, domain.ErrInvalidDocumentUpload):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_DOCUMENT", "Файл документа заполнен некорректно.")
 	}
