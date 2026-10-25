@@ -9,6 +9,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 	audithandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/audit"
 	decidehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/decide"
+	documenthandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/document"
 	gethandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/get"
 	listhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/list"
 	summaryhandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/summary"
@@ -19,14 +20,15 @@ import (
 )
 
 type server struct {
-	health       *health.Handler
-	listCases    *listhandler.Handler
-	getCase      *gethandler.Handler
-	takeCase     *takehandler.Handler
-	decideCase   *decidehandler.Handler
-	auditCase    *audithandler.Handler
-	summaryCase  *summaryhandler.Handler
-	listProducts *productlisthandler.Handler
+	health          *health.Handler
+	listCases       *listhandler.Handler
+	getCase         *gethandler.Handler
+	takeCase        *takehandler.Handler
+	decideCase      *decidehandler.Handler
+	auditCase       *audithandler.Handler
+	summaryCase     *summaryhandler.Handler
+	listProducts    *productlisthandler.Handler
+	getCaseDocument *documenthandler.Handler
 }
 
 func New(
@@ -39,16 +41,18 @@ func New(
 	auditCase audithandler.UseCase,
 	summaryCase summaryhandler.UseCase,
 	products productlisthandler.Repository,
+	getCaseDocument *documenthandler.Handler,
 ) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:       health.New(db, readinessTimeout),
-		listCases:    listhandler.New(listCases),
-		getCase:      gethandler.New(getCase),
-		takeCase:     takehandler.New(takeCase),
-		decideCase:   decidehandler.New(decideCase),
-		auditCase:    audithandler.New(auditCase),
-		summaryCase:  summaryhandler.New(summaryCase),
-		listProducts: productlisthandler.New(products),
+		health:          health.New(db, readinessTimeout),
+		listCases:       listhandler.New(listCases),
+		getCase:         gethandler.New(getCase),
+		takeCase:        takehandler.New(takeCase),
+		decideCase:      decidehandler.New(decideCase),
+		auditCase:       audithandler.New(auditCase),
+		summaryCase:     summaryhandler.New(summaryCase),
+		listProducts:    productlisthandler.New(products),
+		getCaseDocument: getCaseDocument,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})

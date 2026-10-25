@@ -77,6 +77,8 @@ services:
       BANK_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-smart-credit}
       BANK_ASSISTANT_GRPC_ADDR: assistant:50052
       BANK_ASSISTANT_TIMEOUT: ${BANK_ASSISTANT_TIMEOUT:-5s}
+      BANK_CLIENT_DOCUMENT_URL: http://client-service:8080
+      BANK_CLIENT_DOCUMENT_TIMEOUT: ${BANK_CLIENT_DOCUMENT_TIMEOUT:-5s}
     depends_on:
       postgres:
         condition: service_healthy

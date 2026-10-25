@@ -3,9 +3,27 @@ package gethandler
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
+	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
+	"github.com/google/uuid"
 )
+
+func TestToBankCaseIncludesDocumentMetadata(t *testing.T) {
+	documentID := uuid.New()
+	uploadedAt := time.Date(2026, 10, 25, 12, 0, 0, 0, time.UTC)
+	caseItem := ToBankCase(getcase.Output{Case: model.Case{Documents: []model.DocumentMetadata{{
+		ID: documentID, DocumentType: "BANK_STATEMENT", FileName: "example.txt",
+		SHA256:     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		UploadedAt: uploadedAt, IsMock: true,
+	}}}})
+	if len(caseItem.Documents) != 1 || caseItem.Documents[0].Id != documentID ||
+		caseItem.Documents[0].FileName != "example.txt" || !caseItem.Documents[0].IsMock ||
+		!caseItem.Documents[0].UploadedAt.Equal(uploadedAt) {
+		t.Fatalf("case documents = %+v", caseItem.Documents)
+	}
+}
 
 func TestToScoreKeepsZeroAsAssessed(t *testing.T) {
 	zero := 0

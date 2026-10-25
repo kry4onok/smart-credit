@@ -13,6 +13,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/config"
 	clientevents "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/consumer/clientevents"
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http"
+	documenthandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/document"
 	authmiddleware "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/middleware/auth"
 	jwtverifier "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/jwt"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/postgres"
@@ -177,7 +178,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		ValidationWorker:   validation,
 		OutboxWorker:       outboxworker.New(outboxrepository.New(db), publisher),
 		ClientEvents:       consumer,
-		HTTPHandler:        authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer), catalogRepository)),
+		HTTPHandler:        authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer), catalogRepository, documenthandler.New(getCase, cfg.ClientDocumentURL, cfg.ClientDocumentTimeout))),
 		scoringClient:      client,
 		bureauClient:       bureau,
 		assistantClient:    assistant,
