@@ -2,14 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { clientApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
-import type { ApplicationFormPatch, ClientApplication, CompanyProfile, DocumentType, InfoField, Offer, Product, PurposeTag, TimelineEntry } from "../../api/types";
+import type { ApplicationFormPatch, ClientApplication, CompanyProfile, InfoField, Offer, Product, PurposeTag, TimelineEntry } from "../../api/types";
 import { useSession } from "../../auth/session";
 import { DocumentSlot, MoneyInput } from "../../components/inputs";
 import { CompareBars, offerRows } from "../../components/Compare";
 import { ClientPipeline } from "../../components/Pipeline";
 import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useNow, useTitle } from "../../components/ui";
 import { date, dateTime, money, moneyShort, monthlyPayment, months, rate, rub, timeLeft } from "../../lib/format";
-import { clientStatusLabel, clientStatusTone, infoFieldLabel, purposeLabel } from "../../lib/labels";
+import { clientStatusLabel, clientStatusTone, documentLabel, infoFieldLabel, purposeLabel } from "../../lib/labels";
+import { latestDocuments, validateInfoValue } from "../../lib/applicationValidation";
 import { usePolling, useIntent } from "../../lib/util";
 import { loadProducts, recallDraft, recallOffer, rememberDraft, rememberOffer } from "./products";
 
@@ -119,7 +120,7 @@ function NextStep({ app, product, onChange, reload, fetchApp }: StepProps) {
   return (
     <>
       {app.status === "NEEDS_INFO" && app.info_request && app.allowed_actions.includes("PROVIDE_INFO") && (
-        <InfoResponse app={app} onChange={onChange} reload={reload} />
+        <InfoResponse key={app.info_request.id} app={app} onChange={onChange} reload={reload} />
       )}
       {(app.allowed_actions.includes("ACCEPT_OFFER") || app.allowed_actions.includes("SIGN")) && <OfferStep app={app} reload={reload} />}
       {app.status === "DISBURSED" && (
@@ -277,11 +278,14 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
         ? `Для этого продукта сумма от ${moneyShort(product.min_amount)} до ${moneyShort(product.max_amount)}.`
         : null;
   const termError =
-    product && form.term !== undefined && (form.term < product.min_term_months || form.term > product.max_term_months)
+    form.term !== undefined && (!Number.isSafeInteger(form.term) || form.term <= 0 || form.term > 2147483647)
+      ? "Укажите целый положительный срок в месяцах."
+      : product && form.term !== undefined && (form.term < product.min_term_months || form.term > product.max_term_months)
       ? `Срок от ${product.min_term_months} до ${months(product.max_term_months)}.`
       : null;
   const required = product?.required_document_types ?? [];
   const missingDocs = required.filter((t) => !app.documents.some((d) => d.document_type === t));
+  const missingFields = [form.amount == null && "сумма", form.term === undefined && "срок", form.purpose === undefined && "цель кредита"].filter(Boolean);
   const formReady = form.amount != null && form.term !== undefined && form.purpose !== undefined && !amountError && !termError;
   const canSubmit =
     !!product && app.allowed_actions.includes("SUBMIT") && formReady && missingDocs.length === 0 && user?.can_submit !== false && saveState !== "error";
@@ -322,8 +326,8 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
               value={form.term ?? ""}
               aria-invalid={!!termError}
               onChange={(e) => {
-                const n = e.target.value === "" ? undefined : Math.trunc(Number(e.target.value));
-                update({ term: n }, n && n > 0 ? { term_months: n } : null);
+                const n = e.target.value === "" ? undefined : Number(e.target.value);
+                update({ term: n }, n !== undefined && Number.isSafeInteger(n) && n > 0 && n <= 2147483647 ? { term_months: n } : null);
               }}
             />
           </Field>
@@ -379,7 +383,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             }}
           />
         ))}
-        <p className="field-hint">Это прототип: файл сохраняется как демо-документ, банк проверяет только его наличие.</p>
+        <p className="field-hint">Файл сохраняется как демо-документ. Суммы и реквизиты из PDF, Excel или изображения не извлекаются автоматически — их нужно указать в форме. Банк проверяет наличие документа.</p>
       </fieldset>
 
       <fieldset className="draft-step">
@@ -393,6 +397,8 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             {user?.can_submit !== false ? "У вас есть право отправлять заявки" : "Отправить заявку может только уполномоченный сотрудник"}
           </li>
         </ul>
+        {missingFields.length > 0 && <p className="field-hint" role="status">До отправки заполните: {missingFields.join(", ")}. Заявка останется черновиком, пока вы её не отправите.</p>}
+        {missingDocs.length > 0 && <p className="field-hint" role="status">Приложите: {missingDocs.map((type) => documentLabel[type]).join(", ")}.</p>}
         <ErrorNote error={submit.error} />
         <button type="button" className="btn btn-primary" disabled={!canSubmit || submit.busy} onClick={() => void send()}>
           {submit.busy ? "Отправляем…" : "Отправить заявку"}
@@ -434,16 +440,16 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
     APPLICATION_TERM_MONTHS: app.form?.term_months,
     APPLICATION_PURPOSE: app.form?.purpose,
   }));
-  const [docIds, setDocIds] = useState<Partial<Record<DocumentType, string>>>({});
+  const documents = latestDocuments(app.documents);
   const send = useAction();
   const intent = useIntent();
 
-  const missing = [
-    ...request.required_fields.filter((f) => values[f] === null || values[f] === undefined || values[f] === ""),
-    ...request.required_document_types.filter((t) => !docIds[t]),
-  ];
+  const fieldErrors = Object.fromEntries(request.required_fields.map((field) => [field, validateInfoValue(field, values[field])])) as Partial<Record<InfoField, string | null>>;
+  const invalidFields = request.required_fields.filter((field) => fieldErrors[field]);
+  const missingDocuments = request.required_document_types.filter((type) => !documents.some((document) => document.document_type === type));
 
   async function submit() {
+    if (invalidFields.length || missingDocuments.length) return;
     const company = { ...app.company };
     const fields: ApplicationFormPatch = {};
     for (const f of request.required_fields) {
@@ -463,7 +469,8 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
               request_id: request.id,
               ...(request.required_fields.some((f) => companyFields[f]) ? { company } : {}),
               ...(Object.keys(fields).length ? { fields } : {}),
-              ...(Object.values(docIds).length ? { document_ids: Object.values(docIds) as string[] } : {}),
+              // Omit document_ids: the backend includes all attached document types,
+              // so answering a request does not discard the original attachments.
             },
           }),
         ),
@@ -478,9 +485,10 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
       <p className="field-hint">Запрос от {dateTime(request.created_at)}. Изменения касаются только этой заявки.</p>
       <div className="form-grid">
         {request.required_fields.map((f) => (
-          <Field key={f} label={infoFieldLabel[f]} htmlFor={`info-${f}`}>
+          <Field key={f} label={infoFieldLabel[f]} htmlFor={`info-${f}`} error={fieldErrors[f]}>
             {f === "APPLICATION_PURPOSE" ? (
-              <select id={`info-${f}`} value={(values[f] as string) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value })}>
+              <select id={`info-${f}`} aria-invalid={!!fieldErrors[f]} value={(values[f] as string) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value })}>
+                <option value="">Выберите цель кредита</option>
                 {(["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION"] as PurposeTag[]).map((p) => (
                   <option key={p} value={p}>
                     {purposeLabel[p]}
@@ -488,9 +496,9 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
                 ))}
               </select>
             ) : f === "APPLICATION_TERM_MONTHS" ? (
-              <input id={`info-${f}`} type="number" min={1} value={(values[f] as number) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value === "" ? null : Number(e.target.value) })} />
+              <input id={`info-${f}`} type="number" min={1} step={1} max={2147483647} aria-invalid={!!fieldErrors[f]} value={(values[f] as number) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value === "" ? null : Number(e.target.value) })} />
             ) : (
-              <MoneyInput id={`info-${f}`} allowNegative={f === "COMPANY_PROFIT_12M"} value={(values[f] as number) ?? undefined} onChange={(v) => setValues({ ...values, [f]: v })} />
+              <MoneyInput id={`info-${f}`} invalid={!!fieldErrors[f]} allowNegative={f === "COMPANY_PROFIT_12M"} value={(values[f] as number) ?? undefined} onChange={(v) => setValues({ ...values, [f]: v })} />
             )}
           </Field>
         ))}
@@ -500,16 +508,19 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
           key={type}
           applicationId={app.id}
           type={type}
-          documents={app.documents.filter((d) => d.id === docIds[type])}
+          documents={documents}
           enabled
           onUploaded={(doc) => {
-            setDocIds((ids) => ({ ...ids, [type]: doc.id }));
-            onChange({ ...app, documents: [...app.documents, doc] });
+            onChange({ ...app, documents: [...app.documents.filter((existing) => existing.id !== doc.id), doc] });
+            void reload();
           }}
         />
       ))}
+      <p className="field-hint">Ответ отправляется только после заполнения всех запрошенных полей и загрузки документов. До этого заявка остаётся в статусе «Нужны данные»; файл сам не заполняет финансовые показатели.</p>
+      {invalidFields.length > 0 && <p className="field-hint" role="status">Проверьте поля: {invalidFields.map((field) => infoFieldLabel[field]).join(", ")}.</p>}
+      {missingDocuments.length > 0 && <p className="field-hint" role="status">Не хватает документов: {missingDocuments.map((type) => documentLabel[type]).join(", ")}.</p>}
       <ErrorNote error={send.error} />
-      <button type="button" className="btn btn-primary" disabled={missing.length > 0 || send.busy} onClick={() => void submit()}>
+      <button type="button" className="btn btn-primary" disabled={invalidFields.length > 0 || missingDocuments.length > 0 || send.busy} onClick={() => void submit()}>
         {send.busy ? "Отправляем…" : "Отправить ответ банку"}
       </button>
     </div>

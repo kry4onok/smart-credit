@@ -11,6 +11,7 @@
     "dev:mock": "vite --mode mock",
     "gen": "openapi-typescript ../api/auth.yaml -o src/api/generated/auth.ts && openapi-typescript ../api/client.yaml -o src/api/generated/client.ts && openapi-typescript ../api/bank.yaml -o src/api/generated/bank.ts",
     "typecheck": "tsc -b",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "build": "tsc -b && vite build",
     "build:mock": "tsc -b && vite build --mode mock",
     "preview": "vite preview"

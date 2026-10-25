@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
@@ -31,6 +32,14 @@ func Problem(ctx context.Context, status int, code, detail string) common.Proble
 }
 
 func Map(ctx context.Context, err error) common.Problem {
+	var validation *domain.ValidationError
+	if errors.As(err, &validation) {
+		code := "INVALID_APPLICATION"
+		if errors.Is(err, domain.ErrInvalidInfoResponse) {
+			code = "INVALID_INFO_RESPONSE"
+		}
+		return Problem(ctx, http.StatusUnprocessableEntity, code, strings.Join(validation.Issues, " "))
+	}
 	switch {
 	case errors.Is(err, domain.ErrCompanyNotFound):
 		return Problem(ctx, http.StatusNotFound, "COMPANY_NOT_FOUND", "Профиль компании не найден.")
@@ -53,7 +62,7 @@ func Map(ctx context.Context, err error) common.Problem {
 	case errors.Is(err, domain.ErrInvalidCompanyProfile):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_COMPANY_PROFILE", "Профиль компании заполнен некорректно.")
 	case errors.Is(err, domain.ErrInvalidApplication):
-		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION", "Заявка не может быть создана.")
+		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION", "Проверьте обязательные поля заявки и документы выбранного продукта.")
 	case errors.Is(err, domain.ErrInvalidApplicationPatch):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION_FORM", "Форма заявки заполнена некорректно.")
 	case errors.Is(err, domain.ErrApplicationDocumentType):
