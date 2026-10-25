@@ -60,7 +60,7 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 	if err != nil {
 		return model.Application{}, err
 	}
-	application.Offer, err = r.offer(ctx, applicationID)
+	application.Offer, err = r.offer(ctx, applicationID, application.Status)
 	if err != nil {
 		return model.Application{}, err
 	}
@@ -135,15 +135,17 @@ func (r *Repository) infoRequest(ctx context.Context, applicationID uuid.UUID) (
 	return &request, nil
 }
 
-func (r *Repository) offer(ctx context.Context, applicationID uuid.UUID) (*model.ApplicationOffer, error) {
+func (r *Repository) offer(ctx context.Context, applicationID uuid.UUID, status string) (*model.ApplicationOffer, error) {
 	var offer model.ApplicationOffer
+	// Acceptance deactivates the offer, but signing still needs its ID and terms.
+	// In FORMALIZING select the latest offer, as SignContract does.
 	err := r.db.QueryRow(ctx, `
 		SELECT id, kind, product_id, product_version, product_name,
 		       amount_kopecks, term_months, rate_bps, explanation, expires_at
 		FROM offers
-		WHERE application_id = $1 AND is_active
+		WHERE application_id = $1 AND (is_active OR $2 = 'FORMALIZING')
 		ORDER BY received_at DESC, id DESC
-		LIMIT 1`, applicationID).Scan(
+		LIMIT 1`, applicationID, status).Scan(
 		&offer.ID, &offer.Kind, &offer.ProductID, &offer.ProductVersion,
 		&offer.ProductName, &offer.AmountKopecks, &offer.TermMonths,
 		&offer.RateBps, &offer.Explanation, &offer.ExpiresAt,
@@ -152,7 +154,7 @@ func (r *Repository) offer(ctx context.Context, applicationID uuid.UUID) (*model
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("fetch active offer: %w", err)
+		return nil, fmt.Errorf("fetch application offer: %w", err)
 	}
 	return &offer, nil
 }
