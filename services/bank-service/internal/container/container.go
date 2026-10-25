@@ -20,6 +20,7 @@ import (
 	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
 	catalogrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/catalog"
 	decisionrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/decision"
+	disbursementrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/disbursement"
 	enrichmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/enrichment"
 	outboxrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/outbox"
 	receiverepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/receive"
@@ -36,6 +37,7 @@ import (
 	validationstage "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	catalogworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/catalog"
 	decisionworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/decision"
+	disbursementworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/disbursement"
 	enrichmentworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/enrichment"
 	outboxworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/outbox"
 	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
@@ -44,21 +46,22 @@ import (
 )
 
 type Container struct {
-	DB               *pgxpool.Pool
-	Transactions     *transaction.Manager
-	Scoring          *scoringrepository.Repository
-	ScoringWorker    *scoringworker.Worker
-	DecisionWorker   *decisionworker.Worker
-	CatalogWorker    *catalogworker.Worker
-	EnrichmentWorker *enrichmentworker.Worker
-	ValidationWorker *validationworker.Worker
-	OutboxWorker     *outboxworker.Worker
-	ClientEvents     *clientevents.Consumer
-	HTTPHandler      http.Handler
-	scoringClient    *scoringclient.Client
-	bureauClient     *bureauclient.Client
-	assistantClient  *assistantclient.Client
-	outboxPublisher  *outboxworker.KafkaPublisher
+	DB                 *pgxpool.Pool
+	Transactions       *transaction.Manager
+	Scoring            *scoringrepository.Repository
+	ScoringWorker      *scoringworker.Worker
+	DecisionWorker     *decisionworker.Worker
+	DisbursementWorker *disbursementworker.Worker
+	CatalogWorker      *catalogworker.Worker
+	EnrichmentWorker   *enrichmentworker.Worker
+	ValidationWorker   *validationworker.Worker
+	OutboxWorker       *outboxworker.Worker
+	ClientEvents       *clientevents.Consumer
+	HTTPHandler        http.Handler
+	scoringClient      *scoringclient.Client
+	bureauClient       *bureauclient.Client
+	assistantClient    *assistantclient.Client
+	outboxPublisher    *outboxworker.KafkaPublisher
 
 	closeOnce sync.Once
 }
@@ -158,21 +161,22 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		summarizer = assistant
 	}
 	return &Container{
-		DB:               db,
-		Transactions:     transactions,
-		Scoring:          scoringAttempts,
-		ScoringWorker:    worker,
-		DecisionWorker:   decisionworker.New(decisionrepository.New(db, transactions)),
-		CatalogWorker:    catalogworker.New(catalogrepository.New(db, transactions)),
-		EnrichmentWorker: enrichment,
-		ValidationWorker: validation,
-		OutboxWorker:     outboxworker.New(outboxrepository.New(db), publisher),
-		ClientEvents:     consumer,
-		HTTPHandler:      authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer))),
-		scoringClient:    client,
-		bureauClient:     bureau,
-		assistantClient:  assistant,
-		outboxPublisher:  publisher,
+		DB:                 db,
+		Transactions:       transactions,
+		Scoring:            scoringAttempts,
+		ScoringWorker:      worker,
+		DecisionWorker:     decisionworker.New(decisionrepository.New(db, transactions)),
+		DisbursementWorker: disbursementworker.New(disbursementrepository.New(db, transactions)),
+		CatalogWorker:      catalogworker.New(catalogrepository.New(db, transactions)),
+		EnrichmentWorker:   enrichment,
+		ValidationWorker:   validation,
+		OutboxWorker:       outboxworker.New(outboxrepository.New(db), publisher),
+		ClientEvents:       consumer,
+		HTTPHandler:        authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer))),
+		scoringClient:      client,
+		bureauClient:       bureau,
+		assistantClient:    assistant,
+		outboxPublisher:    publisher,
 	}, nil
 }
 

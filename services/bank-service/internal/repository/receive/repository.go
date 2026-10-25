@@ -17,6 +17,7 @@ var ErrEventConflict = errors.New("client event ID or aggregate version conflict
 var ErrInfoProvidedConflict = errors.New("InfoProvided does not match an open request on a NEEDS_INFO case")
 var ErrOfferResponseConflict = errors.New("offer response does not match a current, unexpired offer")
 var ErrCancellationConflict = errors.New("cancellation requires a current case before signing")
+var ErrSigningConflict = errors.New("contract signing requires the accepted offer and next client event version")
 
 type Repository struct {
 	db transaction.Queryer
@@ -55,6 +56,9 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 	}
 	if input.Cancelled {
 		return r.applyCancellation(ctx, q, input)
+	}
+	if input.OfferAction == "ContractSigned" {
+		return r.applyContractSigned(ctx, q, input)
 	}
 	if input.OfferAction != "" {
 		return r.applyOfferResponse(ctx, q, input)
