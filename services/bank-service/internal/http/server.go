@@ -15,16 +15,18 @@ import (
 	takehandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/take"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/health"
+	productlisthandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/product/list"
 )
 
 type server struct {
-	health      *health.Handler
-	listCases   *listhandler.Handler
-	getCase     *gethandler.Handler
-	takeCase    *takehandler.Handler
-	decideCase  *decidehandler.Handler
-	auditCase   *audithandler.Handler
-	summaryCase *summaryhandler.Handler
+	health       *health.Handler
+	listCases    *listhandler.Handler
+	getCase      *gethandler.Handler
+	takeCase     *takehandler.Handler
+	decideCase   *decidehandler.Handler
+	auditCase    *audithandler.Handler
+	summaryCase  *summaryhandler.Handler
+	listProducts *productlisthandler.Handler
 }
 
 func New(
@@ -36,15 +38,17 @@ func New(
 	decideCase decidehandler.UseCase,
 	auditCase audithandler.UseCase,
 	summaryCase summaryhandler.UseCase,
+	products productlisthandler.Repository,
 ) http.Handler {
 	strictHandler := generated.NewStrictHandlerWithOptions(&server{
-		health:      health.New(db, readinessTimeout),
-		listCases:   listhandler.New(listCases),
-		getCase:     gethandler.New(getCase),
-		takeCase:    takehandler.New(takeCase),
-		decideCase:  decidehandler.New(decideCase),
-		auditCase:   audithandler.New(auditCase),
-		summaryCase: summaryhandler.New(summaryCase),
+		health:       health.New(db, readinessTimeout),
+		listCases:    listhandler.New(listCases),
+		getCase:      gethandler.New(getCase),
+		takeCase:     takehandler.New(takeCase),
+		decideCase:   decidehandler.New(decideCase),
+		auditCase:    audithandler.New(auditCase),
+		summaryCase:  summaryhandler.New(summaryCase),
+		listProducts: productlisthandler.New(products),
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
 	})
