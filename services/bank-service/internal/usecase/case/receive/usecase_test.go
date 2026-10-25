@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
@@ -223,5 +224,43 @@ func TestParseApplicationCancelled(t *testing.T) {
 	}}
 	if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
 		t.Fatalf("long reason error = %v", err)
+	}
+}
+
+func TestParseContractSigned(t *testing.T) {
+	makeEvent := func() *eventspb.Event {
+		event := submittedEvent()
+		event.AggregateVersion = 3
+		event.Payload = &eventspb.Event_ContractSigned{ContractSigned: &eventspb.ContractSigned{
+			OfferId:  "11111111-1111-4111-8111-111111111111",
+			SignedAt: event.OccurredAt,
+		}}
+		return event
+	}
+	event := makeEvent()
+	input, err := parse(event)
+	if err != nil || input.OfferAction != "ContractSigned" ||
+		input.OfferID.String() != event.GetContractSigned().GetOfferId() ||
+		!input.SignedAt.Equal(event.OccurredAt.AsTime()) {
+		t.Fatalf("contract signed input = %+v, %v", input, err)
+	}
+	for _, test := range []struct {
+		name string
+		edit func(*eventspb.Event)
+	}{
+		{"missing payload", func(e *eventspb.Event) { e.Payload = &eventspb.Event_ContractSigned{} }},
+		{"invalid offer", func(e *eventspb.Event) { e.GetContractSigned().OfferId = "bad" }},
+		{"missing signed_at", func(e *eventspb.Event) { e.GetContractSigned().SignedAt = nil }},
+		{"inconsistent signed_at", func(e *eventspb.Event) {
+			e.GetContractSigned().SignedAt = timestamppb.New(e.OccurredAt.AsTime().Add(6 * time.Minute))
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			event := makeEvent()
+			test.edit(event)
+			if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+				t.Fatalf("parse error = %v", err)
+			}
+		})
 	}
 }

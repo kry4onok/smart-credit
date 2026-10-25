@@ -153,7 +153,7 @@ make bank-info-smoke APPLICATION_ID=<application_id> REQUEST_ID=<info_request.id
 быстро перейти в `ENRICHMENT` или следующую стадию.
 
 Consumer обрабатывает `ApplicationSubmitted`, `InfoProvided`, `OfferAccepted`,
-`OfferDeclined` и `ApplicationCancelled`. Для ответа на оферту он проверяет статус дела, возрастающую версию
+`OfferDeclined`, `ApplicationCancelled` и `ContractSigned`. Для ответа на оферту он проверяет статус дела, возрастающую версию
 события клиента, текущий `offer_id` и срок оферты. Принятие переводит дело в
 `OFFER_ACCEPTED`, отказ — в `CANCELLED`. Если ответ пришёл после срока, дело
 переходит в `EXPIRED`, а клиент получает закрытое публичное состояние. Аудит и событие сохраняются
@@ -165,6 +165,14 @@ Consumer обрабатывает `ApplicationSubmitted`, `InfoProvided`, `Offer
 оферту, снимает запланированную обработку и публикует `CLOSED`. Причина отзыва
 остаётся в аудите. Повтор события не создаёт новый переход. Интеграционная
 проверка: `make bank-cancel-test` при запущенном PostgreSQL.
+
+`ContractSigned` принимается только из `OFFER_ACCEPTED` для принятой оферты и
+следующей версии события клиента. Банк проверяет время подписи относительно
+времени принятия и события, атомарно переводит оферту в `SIGNED`, дело в
+`SIGNING`, пишет аудит и публикует `FORMALIZING`. Через три секунды worker
+демо-выдачи переводит дело в `DISBURSED`, добавляет аудит и публичное событие.
+Сквозной путь доступен в Postman коллекции `Smart-Credit-Sign-Disburse`.
+Интеграционная проверка: `make bank-signing-test` при запущенном PostgreSQL.
 
 Сообщение другого типа
 или с нарушенным контрактом остаётся без подтверждения offset и повторяется с

@@ -25,6 +25,7 @@ type Input struct {
 	CancelReason     string
 	OfferAction      string
 	OfferID          uuid.UUID
+	SignedAt         time.Time
 	RequestID        uuid.UUID
 	EventID          uuid.UUID
 	ApplicationID    uuid.UUID
@@ -120,6 +121,22 @@ func parse(event *eventspb.Event) (Input, error) {
 		}
 		if payload.OfferDeclined == nil || err != nil {
 			return Input{}, fmt.Errorf("%w: offer_id", ErrInvalidEvent)
+		}
+		return input, nil
+	case *eventspb.Event_ContractSigned:
+		input.OfferAction = "ContractSigned"
+		if payload.ContractSigned == nil || payload.ContractSigned.GetSignedAt() == nil ||
+			payload.ContractSigned.GetSignedAt().CheckValid() != nil {
+			return Input{}, fmt.Errorf("%w: signed_at", ErrInvalidEvent)
+		}
+		input.OfferID, err = nonzeroUUID(payload.ContractSigned.GetOfferId())
+		if err != nil {
+			return Input{}, fmt.Errorf("%w: offer_id", ErrInvalidEvent)
+		}
+		input.SignedAt = payload.ContractSigned.GetSignedAt().AsTime()
+		if input.SignedAt.IsZero() || input.SignedAt.Before(event.GetOccurredAt().AsTime().Add(-5*time.Minute)) ||
+			input.SignedAt.After(event.GetOccurredAt().AsTime().Add(5*time.Minute)) {
+			return Input{}, fmt.Errorf("%w: signed_at differs from event time", ErrInvalidEvent)
 		}
 		return input, nil
 	case *eventspb.Event_ApplicationSubmitted, *eventspb.Event_InfoProvided:

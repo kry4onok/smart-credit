@@ -1,0 +1,828 @@
+{
+  "info": {
+    "_postman_id": "a9f7afcd-9280-44b4-8ee0-4c092203aaeb",
+    "name": "Smart Credit — signing and disbursement E2E",
+    "description": "Creates a fresh application, accepts its offer, signs the contract and waits for simulated disbursement.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Login client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{client_email}}\",\n  \"password\": \"{{client_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('application_id');",
+              "pm.environment.unset('offer_id');",
+              "pm.environment.unset('poll_attempt');",
+              "pm.environment.unset('result_poll_attempt');",
+              "pm.environment.unset('disbursement_poll_attempt');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Client login: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.environment.set('client_token', pm.response.json().access_token);",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Check company",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/company",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Company exists or needs creation', () => pm.expect([200, 404]).to.include(pm.response.code));",
+              "if (pm.response.code === 200) {",
+              "  pm.execution.setNextRequest('04 List products');",
+              "} else if (pm.response.code !== 404) {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Create company",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/client/company",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inn\": \"7707083893\",\n  \"name\": \"ООО «Северная пекарня»\",\n  \"okved\": \"10.71\",\n  \"registered_at\": \"2019-04-15\",\n  \"revenue_12m\": {\n    \"amount_kopecks\": 840000000,\n    \"currency\": \"RUB\"\n  },\n  \"profit_12m\": {\n    \"amount_kopecks\": 96000000,\n    \"currency\": \"RUB\"\n  },\n  \"obligations\": {\n    \"amount_kopecks\": 120000000,\n    \"currency\": \"RUB\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Company created: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) pm.execution.setNextRequest(null);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 List products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/products",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Products: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json();",
+              "  const product = (data.items || []).find(item => item.code === 'WORKING');",
+              "  pm.test('WORKING in published catalog', () => {",
+              "    pm.expect(data.catalog_version).to.be.above(0);",
+              "    pm.expect(product).to.exist;",
+              "  });",
+              "  if (product) pm.environment.set('product_id', product.id);",
+              "  else pm.execution.setNextRequest(null);",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Create application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": \"{{product_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Draft created: 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) {",
+              "  const data = pm.response.json();",
+              "  pm.environment.set('application_id', data.id);",
+              "  pm.test('Draft uses WORKING', () => pm.expect(data.product_id).to.eql(pm.environment.get('product_id')));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Read draft and ETag",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Draft: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json();",
+              "  pm.environment.set('application_etag', pm.response.headers.get('ETag'));",
+              "  pm.test('Draft has ETag', () => {",
+              "    pm.expect(data.status).to.eql('DRAFT');",
+              "    pm.expect(pm.environment.get('application_etag')).to.match(/^\"[1-9][0-9]*\"$/);",
+              "  });",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Fill application form",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/merge-patch+json"
+          },
+          {
+            "key": "If-Match",
+            "value": "{{application_etag}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": {\n    \"amount_kopecks\": 300000000,\n    \"currency\": \"RUB\"\n  },\n  \"term_months\": 18,\n  \"purpose\": \"WORKING_CAPITAL\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Form updated: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json();",
+              "  pm.test('Valid amount and term', () => {",
+              "    pm.expect(data.form.amount.amount_kopecks).to.eql(300000000);",
+              "    pm.expect(data.form.term_months).to.eql(18);",
+              "  });",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Upload bank statement",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/documents",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "document_type",
+              "value": "BANK_STATEMENT",
+              "type": "text"
+            },
+            {
+              "key": "file",
+              "type": "file",
+              "src": "fixtures/bank-statement.txt"
+            }
+          ]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Statement uploaded: 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) {",
+              "  pm.test('Document type is BANK_STATEMENT', () => pm.expect(pm.response.json().document_type).to.eql('BANK_STATEMENT'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Submit application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/submit",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Submitted: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Client status SUBMITTED', () => pm.expect(pm.response.json().status).to.eql('SUBMITTED'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Wait for offer",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Application readable: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) {",
+              "  pm.execution.setNextRequest(null);",
+              "} else {",
+              "  const data = pm.response.json();",
+              "  const attempt = Number(pm.environment.get('poll_attempt') || 0) + 1;",
+              "  pm.environment.set('poll_attempt', String(attempt));",
+              "  if (data.status === 'OFFER_AVAILABLE' && data.offer && data.offer.offer_id) {",
+              "    pm.environment.set('offer_id', data.offer.offer_id);",
+              "    pm.test('Bank published an offer', () => pm.expect(data.offer.offer_id).to.match(/^[0-9a-f-]{36}$/i));",
+              "  } else if (['CLOSED', 'REJECTED', 'NEEDS_INFO'].includes(data.status)) {",
+              "    pm.test('Expected automatic offer; received ' + data.status, () => pm.expect(data.status).to.eql('OFFER_AVAILABLE'));",
+              "    pm.execution.setNextRequest(null);",
+              "  } else if (attempt < 60) {",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "  } else {",
+              "    pm.test('Offer published within 60 polls', () => pm.expect(data.status).to.eql('OFFER_AVAILABLE'));",
+              "    pm.execution.setNextRequest(null);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Accept offer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/offer/accept",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offer_id\": \"{{offer_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Offer accept accepted: 202', () => pm.response.to.have.status(202));",
+              "if (pm.response.code === 202) {",
+              "  pm.test('Pending action is ACCEPT_PENDING', () => pm.expect(pm.response.json().pending_action).to.eql('ACCEPT_PENDING'));",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Wait for FORMALIZING",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Application readable: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) {",
+              "  pm.execution.setNextRequest(null);",
+              "} else {",
+              "  const data = pm.response.json();",
+              "  const attempt = Number(pm.environment.get('result_poll_attempt') || 0) + 1;",
+              "  pm.environment.set('result_poll_attempt', String(attempt));",
+              "  if (data.status === 'FORMALIZING') {",
+              "    pm.test('Bank confirmed FORMALIZING', () => {",
+              "      pm.expect(data.pending_action).to.be.oneOf([undefined, null]);",
+              "      pm.expect(data.status).to.eql('FORMALIZING');",
+              "    });",
+              "  } else if (attempt < 60) {",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "  } else {",
+              "    pm.test('Expected FORMALIZING within 60 polls', () => pm.expect(data.status).to.eql('FORMALIZING'));",
+              "    pm.execution.setNextRequest(null);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Login analyst",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{analyst_email}}\",\n  \"password\": \"{{analyst_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Analyst login: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.environment.set('analyst_token', pm.response.json().access_token);",
+              "} else {",
+              "  pm.execution.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Check accepted bank case",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/backoffice/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{analyst_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Bank case: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Bank status is OFFER_ACCEPTED', () => pm.expect(pm.response.json().status).to.eql('OFFER_ACCEPTED'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Sign contract",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}/sign",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offer_id\": \"{{offer_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Signing accepted: 202', () => pm.response.to.have.status(202));",
+              "if (pm.response.code === 202) {",
+              "  pm.test('SIGN_PENDING', () => pm.expect(pm.response.json().pending_action).to.eql('SIGN_PENDING'));",
+              "} else pm.execution.setNextRequest(null);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Wait for DISBURSED",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/client/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{client_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Application readable: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) {",
+              "  pm.execution.setNextRequest(null);",
+              "} else {",
+              "  const data = pm.response.json();",
+              "  const attempt = Number(pm.environment.get('disbursement_poll_attempt') || 0) + 1;",
+              "  pm.environment.set('disbursement_poll_attempt', String(attempt));",
+              "  if (data.status === 'DISBURSED') {",
+              "    pm.test('Disbursement confirmed and pending action cleared', () => {",
+              "      pm.expect(data.pending_action).to.be.oneOf([undefined, null]);",
+              "      pm.expect(data.status).to.eql('DISBURSED');",
+              "    });",
+              "  } else if (attempt < 60) {",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "  } else {",
+              "    pm.test('DISBURSED within 60 polls', () => pm.expect(data.status).to.eql('DISBURSED'));",
+              "    pm.execution.setNextRequest(null);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Check disbursed bank case",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/backoffice/applications/{{application_id}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{analyst_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Bank case: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Bank status DISBURSED', () => pm.expect(pm.response.json().status).to.eql('DISBURSED'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 Check signing audit",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/backoffice/applications/{{application_id}}/audit",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{analyst_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Bank audit: 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) {",
+              "  const actions = (pm.response.json().items || []).map(item => item.action);",
+              "  pm.test('Signing and demo disbursement audited', () => {",
+              "    pm.expect(actions).to.include('CONTRACT_SIGNED');",
+              "    pm.expect(actions).to.include('DEMO_DISBURSED');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
