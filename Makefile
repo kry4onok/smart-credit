@@ -35,7 +35,7 @@ OPENAPI_OUTPUT_DIRS := \
 .PHONY: web-install web-gen web-dev web-mock web-build web-up web-down web-logs
 .PHONY: client-up client-down client-logs client-test assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
-.PHONY: auth-up auth-down auth-logs auth-keygen auth-dev-seed auth-dev-seed-test auth-db-up auth-db-down auth-db-status auth-db-test
+.PHONY: auth-up auth-down auth-logs auth-keygen auth-dev-seed auth-dev-seed-test auth-db-up auth-db-down auth-db-status auth-db-test auth-test auth-smoke-test
 
 help:
 	@echo 'Сначала: cp .env.example .env'
@@ -81,6 +81,8 @@ help:
 	@echo 'make auth-db-down     Откатить миграцию auth_db'
 	@echo 'make auth-db-status   Показать состояние миграций auth_db'
 	@echo 'make auth-db-test     Проверить миграции в изолированной схеме auth_db'
+	@echo 'make auth-test        Unit/SQL-тесты auth с race detector; нужен AUTH_TEST_DATABASE_URL'
+	@echo 'make auth-smoke-test  Docker smoke auth/client/gateway в отдельном временном проекте'
 	@echo 'make bank-db-up       Применить миграции bank_db'
 	@echo 'make bank-db-down     Откатить миграцию bank_db'
 	@echo 'make bank-db-status   Показать состояние миграций bank_db'
@@ -337,6 +339,13 @@ auth-db-status: require-env
 
 auth-db-test: require-env
 	@AUTH_TEST_DATABASE_URL="$(AUTH_DATABASE_URL)" go test -count=1 ./services/auth/migrations
+
+auth-test:
+	@test -n "$$AUTH_TEST_DATABASE_URL" || { echo 'Задайте AUTH_TEST_DATABASE_URL для отдельной тестовой PostgreSQL.' >&2; exit 1; }
+	go test -race -count=1 -timeout=5m -skip '^TestDockerAuthClientIntegration$$' ./services/auth/...
+
+auth-smoke-test:
+	python3 scripts/auth_docker_smoke.py
 
 auth-keygen: require-env
 	$(COMPOSE) build auth

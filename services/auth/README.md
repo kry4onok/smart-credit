@@ -275,10 +275,10 @@ SQL-проверки запускаются отдельно:
 make auth-db-test
 ```
 
-Полный набор с интеграционными сценариями сессий:
+Unit/SQL-тесты с интеграционными сценариями сессий и race detector:
 
 ```sh
-AUTH_TEST_DATABASE_URL="$AUTH_DATABASE_URL" go test -count=1 ./services/auth/...
+AUTH_TEST_DATABASE_URL="$AUTH_DATABASE_URL" make auth-test
 ```
 
 Они проверяют ограничения ролей и организаций, email без учёта регистра,
@@ -289,6 +289,28 @@ refresh-хеши и сроки, откат миграции, цикл login/refr
 JWT, trace ID, безопасные логи, recovery и `404/405`.
 Без `AUTH_TEST_DATABASE_URL` SQL-тесты пропускаются. Для каждого теста
 создаётся отдельная схема; существующие таблицы auth не затрагиваются.
+`make auth-test` требует эту переменную и завершится ошибкой без неё или при
+недоступной БД. Docker smoke-тест исключён из этого прогона и запускается отдельно.
+
+Для автоматического Docker smoke-прогона нужны Docker Compose с поддержкой
+`!override`/`!reset`, Go из `go.mod`, make и Python 3:
+
+```sh
+make auth-smoke-test
+```
+
+Команда создаёт отдельный проект `smart-credit-auth-smoke-*`, использует только
+настройки из `.env.example`, временные файлы и динамические порты. Собирает auth
+и client-service, поднимает PostgreSQL/Kafka/gateway/Swagger, применяет миграции,
+создаёт топики и запускает существующий `TestDockerAuthClientIntegration` с
+`-race`. В конце, включая ошибку, удаляет только свой проект и его volumes;
+при ошибке сначала выводит логи. Обычный `.env` и рабочий стенд не меняются.
+
+CI `.github/workflows/auth.yml` запускается при push/PR с изменениями auth или
+его зависимостей и вручную. Первое задание поднимает PostgreSQL 16.15, выполняет
+`make auth-test`, lint и проверку Compose. После его успеха второе задание
+выполняет `make auth-smoke-test`. Таким образом проверяются все существующие
+тесты auth, включая Docker-интеграцию и сохранение ключа/сессий после рестарта.
 
 Docker smoke-тест `TestDockerAuthClientIntegration` запускается отдельно при
 заданных переменных для уже запущенного отдельного окружения:
