@@ -53,6 +53,14 @@ func TestVerifyAndRotateJWKS(t *testing.T) {
 	if calls.Load() != 1 {
 		t.Fatalf("JWKS requests = %d", calls.Load())
 	}
+	for _, role := range []string{"ANALYST", "ADMIN"} {
+		staffClaims := map[string]any{"sub": userID.String(), "role": role,
+			"iss": "issuer", "aud": "audience", "exp": time.Now().Add(time.Hour).Unix()}
+		principal, err := verifier.Verify(t.Context(), signToken(t, key, "first", "RS256", staffClaims))
+		if err != nil || principal.Role != role || principal.UserID != userID || principal.OrgID != uuid.Nil {
+			t.Fatalf("staff JWT without org_id: principal=%+v, err=%v", principal, err)
+		}
+	}
 	active.Store("second")
 	if _, err := verifier.Verify(context.Background(), signToken(t, key, "second", "RS256", payload)); err != nil {
 		t.Fatal(err)

@@ -69,8 +69,12 @@ bank сохраняет существующий адрес на компьют�
 
 Технические ручки получают отдельный префикс, чтобы Swagger мог определить
 конкретный сервис: `/internal/auth/healthz`, `/internal/client/healthz` и
-`/internal/bank/healthz`. Gateway удаляет этот префикс и передаёт сервису
-обычный `/healthz` или `/readyz`.
+`/internal/bank/healthz`. Для технических ручек gateway удаляет этот префикс
+и передаёт сервису обычный `/healthz` или `/readyz`.
+
+Оригинал вложения отправленной заявки доступен сотрудникам банка с JWT роли
+`ANALYST`/`ADMIN` по `GET /internal/client/applications/{application_id}/documents/{document_id}/content`.
+Для этого маршрута gateway сохраняет полный путь до client-service.
 
 Gateway удаляет только внешний префикс `/api`. Например,
 `/api/backoffice/applications` передаётся bank-service как

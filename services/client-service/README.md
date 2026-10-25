@@ -14,6 +14,7 @@ HTTP-сервис кабинета клиента с техническими р
 - `GET /client/applications/{application_id}/timeline` — возвращает публичную историю заявки своей организации от старой записи к новой; для чужой или несуществующей заявки отвечает `404`.
 - `PATCH /client/applications/{application_id}` — автосохраняет форму черновика по `If-Match`.
 - `POST /client/applications/{application_id}/documents` — принимает демо-файл до 5 MiB и сохраняет его метаданные с `Idempotency-Key`.
+- `GET /internal/client/applications/{application_id}/documents/{document_id}/content` — возвращает исходные байты документа с Content-Type его формата. Требует JWT роли `ANALYST` или `ADMIN`; проверяет связь документа с заявкой, `submitted_at` и статус, отличный от `DRAFT`. Несовпадающая заявка, черновик, отсутствующий документ или файл дают `404 DOCUMENT_NOT_FOUND`. Внутренний `storage_key` не возвращается.
 - `POST /client/applications/{application_id}/submit` — проверяет заполненность черновика, переводит его в `SUBMITTED` и сохраняет событие `ApplicationSubmitted` в outbox.
 - `POST /client/applications/{application_id}/info` — проверяет актуальный запрос банка, сохраняет уточнённый снимок заявки и отправляет `InfoProvided` через outbox.
 - `POST /client/applications/{application_id}/offer/accept` — подтверждает выбранную актуальную оферту, переводит действие в `ACCEPT_PENDING` и отправляет `OfferAccepted` через outbox; после подтверждения банка заявка переходит к оформлению.
@@ -22,7 +23,7 @@ HTTP-сервис кабинета клиента с техническими р
 - `POST /client/applications/{application_id}/cancel` — отзывает отправленную заявку до подписи, устанавливает `CANCEL_PENDING` и отправляет `ApplicationCancelled` через outbox. Требует `Idempotency-Key`; необязательная причина содержит до 500 символов. Черновики, завершённые заявки, подписанные договоры и заявки с pending-действием возвращают `409`. Окончательное закрытие подтверждает банк.
 
 Технические ручки доступны без JWT и возвращают пустое тело. Бизнес-ручки
-требуют Bearer JWT с ролью `CLIENT`; профиль всегда выбирается по `org_id` из
+`/client/*` требуют Bearer JWT с ролью `CLIENT`; профиль всегда выбирается по `org_id` из
 токена. При недоступной БД
 сервис продолжает работать, readiness восстанавливается после её подключения.
 Kafka используется для outbox relay в `client.events` и проекции входящих
@@ -87,6 +88,13 @@ make client-down
 `http://localhost:8000/internal/client/readyz` (при стандартном `GATEWAY_PORT`).
 Gateway направляет `/api/client/*` в `client-service:8080`, `/api/auth/*` —
 в `auth:8080`. Для Go-процессов на компьютере используйте прямые порты.
+Внутреннее скачивание доступно напрямую на порту `8083` и через gateway на
+порту `8000` с полным путём `/internal/client/applications/.../documents/.../content`.
+Для этого пути gateway сохраняет префикс; технические `/internal/client/healthz`
+и `/internal/client/readyz` продолжают перенаправляться на `/healthz` и `/readyz`.
+Ответ скачивания содержит `Content-Disposition: attachment`, `Cache-Control: no-store`
+и `X-Content-Type-Options: nosniff`. Чтение ограничено volume документов;
+небезопасный ключ и символьная ссылка вместо файла не обслуживаются.
 
 ## Проверка
 

@@ -50,6 +50,8 @@ func Map(ctx context.Context, err error) common.Problem {
 		return Problem(ctx, http.StatusNotFound, "PRODUCT_NOT_FOUND", "Продукт не найден.")
 	case errors.Is(err, domain.ErrApplicationNotFound):
 		return Problem(ctx, http.StatusNotFound, "APPLICATION_NOT_FOUND", "Заявка не найдена.")
+	case errors.Is(err, domain.ErrDocumentNotFound):
+		return Problem(ctx, http.StatusNotFound, "DOCUMENT_NOT_FOUND", "Документ не найден.")
 	case errors.Is(err, domain.ErrApplicationVersionConflict):
 		return Problem(ctx, http.StatusConflict, "APPLICATION_VERSION_CONFLICT", "Заявка уже изменена; обновите карточку и повторите запрос.")
 	case errors.Is(err, domain.ErrApplicationNotDraft):

@@ -12,6 +12,7 @@ import (
 	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
+	documentcontent "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document/content"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
@@ -33,6 +34,7 @@ import (
 	cancelapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/cancel"
 	createapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/create"
 	addapplicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document"
+	getdocumentcontent "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document/content"
 	getapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/get"
 	provideinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/info"
 	listapplications "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/list"
@@ -91,6 +93,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			ApplicationCreate:       applicationcreate.New(createapplication.New(applicationRepository)),
 			ApplicationCancel:       applicationcancel.New(cancelapplication.New(applicationRepository)),
 			ApplicationDocument:     applicationdocument.New(addapplicationdocument.New(applicationRepository)),
+			DocumentContent:         documentcontent.New(getdocumentcontent.New(applicationRepository)),
 			ApplicationGet:          applicationget.New(getapplication.New(applicationRepository)),
 			ApplicationList:         applicationlist.New(listapplications.New(applicationRepository)),
 			ApplicationTimeline:     applicationtimeline.New(gettimeline.New(applicationRepository)),
