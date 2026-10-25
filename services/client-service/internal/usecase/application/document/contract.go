@@ -24,5 +24,8 @@ func (u *Usecase) Execute(ctx context.Context, params model.AddApplicationDocume
 	if !validDocumentType(params.DocumentType) || strings.TrimSpace(params.FileName) == "" || len(params.Content) == 0 || len(params.Content) > MaxDocumentSize {
 		return model.ApplicationDocument{}, domain.ErrInvalidDocumentUpload
 	}
+	if err := validateFile(params.FileName, params.Content); err != nil {
+		return model.ApplicationDocument{}, err
+	}
 	return u.repository.AddDocument(ctx, params)
 }
