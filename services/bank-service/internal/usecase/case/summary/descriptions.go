@@ -2,7 +2,6 @@ package summary
 
 import "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 
-
 var purposeDescriptions = map[string]string{
 	"WORKING_CAPITAL": "Пополнение оборотных средств",
 	"EQUIPMENT":       "Покупка оборудования",
@@ -26,7 +25,6 @@ var statusDescriptions = map[model.CaseStatus]string{
 	model.CaseStatusCancelled:     "Заявка отменена",
 	model.CaseStatusExpired:       "Срок действия истёк",
 }
-
 
 var ruleDescriptions = map[string]string{
 	"UNKNOWN_PRODUCT":             "Продукт заявки не найден",
