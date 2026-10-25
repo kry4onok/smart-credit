@@ -33,10 +33,10 @@ func (a *assistantStub) Summarize(_ context.Context, facts Facts) (string, strin
 
 func TestSummaryUsesMinimalCaseFacts(t *testing.T) {
 	id := uuid.New()
-	caseItem := model.Case{ID: id, ProductName: "Оборотный кредит",
+	caseItem := model.Case{ID: id, ProductName: "Оборотный кредит", Status: model.CaseStatusManualReview,
 		Application:    model.SubmittedApplication{Purpose: "WORKING_CAPITAL"},
-		Score:          &model.ScoreResult{AssessmentStatus: "ASSESSED", Grade: "B", Reasons: []model.ScoreReason{{Code: "NO_OVERDUE"}}},
-		TriggeredRules: []string{"AUTO_OFFER"},
+		Score:          &model.ScoreResult{AssessmentStatus: "ASSESSED", Grade: "B", Reasons: []model.ScoreReason{{Code: "NO_OVERDUE", Description: "Нет просрочек"}}},
+		TriggeredRules: []string{"REVIEW_REQUIRED"},
 		Company:        model.Company{INN: "7707083893", Name: "Internal company name"}}
 	assistant := &assistantStub{text: "  Краткое резюме.  ", source: "assistant"}
 	result, err := New(repositoryStub{caseItem: caseItem, found: true}, assistant).Execute(context.Background(), id)
@@ -45,24 +45,39 @@ func TestSummaryUsesMinimalCaseFacts(t *testing.T) {
 	}
 	if assistant.facts.ApplicationID != id.String() || assistant.facts.ProductName != "Оборотный кредит" ||
 		assistant.facts.Purpose != "WORKING_CAPITAL" || assistant.facts.Grade != "B" ||
+		assistant.facts.PurposeDescription != "Пополнение оборотных средств" ||
+		assistant.facts.Status != "MANUAL_REVIEW" || assistant.facts.StatusDescription != "Ручное рассмотрение" ||
 		len(assistant.facts.ReasonCodes) != 1 || assistant.facts.ReasonCodes[0] != "NO_OVERDUE" ||
-		len(assistant.facts.TriggeredRuleCodes) != 1 || assistant.facts.TriggeredRuleCodes[0] != "AUTO_OFFER" {
+		len(assistant.facts.ReasonFacts) != 1 || assistant.facts.ReasonFacts[0].Description != "Нет просрочек" ||
+		len(assistant.facts.TriggeredRuleCodes) != 1 || assistant.facts.TriggeredRuleCodes[0] != "REVIEW_REQUIRED" ||
+		len(assistant.facts.RuleFacts) != 1 || assistant.facts.RuleFacts[0].Description != "Необходим ручной разбор; конкретная причина этим кодом не указана" {
 		t.Fatalf("facts = %+v", assistant.facts)
 	}
 }
 
 func TestSummaryFallsBackWhenAssistantFails(t *testing.T) {
-	caseItem := model.Case{ID: uuid.New(), ProductName: "Оборотный кредит",
+	caseItem := model.Case{ID: uuid.New(), ProductName: "Оборотный кредит", Status: model.CaseStatusScoring,
 		Application: model.SubmittedApplication{Purpose: "WORKING_CAPITAL"},
 		Score:       &model.ScoreResult{AssessmentStatus: "ASSESSED", Grade: "B"},
 		Company:     model.Company{INN: "7707083893"}}
 	assistant := &assistantStub{err: errors.New("unavailable")}
 	result, err := New(repositoryStub{caseItem: caseItem, found: true}, assistant).Execute(context.Background(), caseItem.ID)
-	if err != nil || result.Source != "template" || !strings.Contains(result.Text, "Грейд скоринга: B.") {
+	if err != nil || result.Source != "template" || !strings.Contains(result.Text, "Грейд скоринга: B.") ||
+		!strings.Contains(result.Text, "Статус: Расчёт скоринговой оценки.") {
 		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 	if strings.Contains(result.Text, caseItem.Company.INN) || strings.Contains(result.Text, "одобр") {
 		t.Fatalf("fallback claims extra facts: %q", result.Text)
+	}
+}
+
+func TestUnknownRuleIsNotExplained(t *testing.T) {
+	caseItem := model.Case{ID: uuid.New(), Status: model.CaseStatusManualReview,
+		TriggeredRules: []string{"NEW_RULE"}}
+	facts := factsFromCase(caseItem)
+	if len(facts.RuleFacts) != 1 || facts.RuleFacts[0].Description != "" ||
+		!strings.Contains(template(facts), "NEW_RULE") {
+		t.Fatalf("unexpected facts or template: %+v, %q", facts, template(facts))
 	}
 }
 

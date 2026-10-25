@@ -18,6 +18,17 @@ message SummarizeCaseRequest {
   string grade = 4;
   repeated string reason_codes = 5;
   repeated string triggered_rule_codes = 6;
+  string status = 7;
+  string status_description = 8;
+  string purpose_description = 9;
+  repeated SummaryFact reason_facts = 10;
+  repeated SummaryFact triggered_rule_facts = 11;
+}
+
+// Проверенное банком описание кода. Ассистент не должен угадывать его смысл.
+message SummaryFact {
+  string code = 1;
+  string description = 2;
 }
 
 message ExplainDecisionRequest {

@@ -26,7 +26,14 @@ func (s *rpcStub) SummarizeCase(ctx context.Context, request *assistantpb.Summar
 
 func TestSummarizeMapsFactsAndSetsDeadline(t *testing.T) {
 	rpc := &rpcStub{response: &assistantpb.TextResponse{Text: "Текст", ModelVersion: "qwen2.5:3b"}}
-	facts := summary.Facts{ApplicationID: "case-id", ProductName: "Продукт", Purpose: "WORKING_CAPITAL", Grade: "B", ReasonCodes: []string{"NO_OVERDUE"}, TriggeredRuleCodes: []string{"AUTO_OFFER"}}
+	facts := summary.Facts{
+		ApplicationID: "case-id", ProductName: "Продукт", Purpose: "WORKING_CAPITAL",
+		PurposeDescription: "Пополнение оборотных средств", Status: "MANUAL_REVIEW",
+		StatusDescription: "Ручное рассмотрение", Grade: "B",
+		ReasonCodes: []string{"NO_OVERDUE"}, TriggeredRuleCodes: []string{"REVIEW_REQUIRED"},
+		ReasonFacts: []summary.DescribedCode{{Code: "NO_OVERDUE", Description: "Нет просрочек"}},
+		RuleFacts:   []summary.DescribedCode{{Code: "REVIEW_REQUIRED", Description: "Нужен ручной разбор"}},
+	}
 	before := time.Now()
 	text, source, err := New(rpc).Summarize(context.Background(), facts)
 	if err != nil || text != "Текст" || source != "assistant" {
@@ -36,7 +43,11 @@ func TestSummarizeMapsFactsAndSetsDeadline(t *testing.T) {
 		t.Fatalf("deadline = %v", rpc.deadline)
 	}
 	if rpc.request.GetApplicationId() != facts.ApplicationID || rpc.request.GetGrade() != "B" ||
-		len(rpc.request.GetReasonCodes()) != 1 || len(rpc.request.GetTriggeredRuleCodes()) != 1 {
+		len(rpc.request.GetReasonCodes()) != 1 || len(rpc.request.GetTriggeredRuleCodes()) != 1 ||
+		rpc.request.GetStatus() != "MANUAL_REVIEW" || rpc.request.GetStatusDescription() != "Ручное рассмотрение" ||
+		rpc.request.GetPurposeDescription() != "Пополнение оборотных средств" ||
+		len(rpc.request.GetReasonFacts()) != 1 || rpc.request.GetReasonFacts()[0].GetDescription() != "Нет просрочек" ||
+		len(rpc.request.GetTriggeredRuleFacts()) != 1 || rpc.request.GetTriggeredRuleFacts()[0].GetDescription() != "Нужен ручной разбор" {
 		t.Fatalf("request = %+v", rpc.request)
 	}
 }

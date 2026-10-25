@@ -29,6 +29,11 @@ type SummarizeCaseRequest struct {
 	Grade              string                 `protobuf:"bytes,4,opt,name=grade,proto3" json:"grade,omitempty"`
 	ReasonCodes        []string               `protobuf:"bytes,5,rep,name=reason_codes,json=reasonCodes,proto3" json:"reason_codes,omitempty"`
 	TriggeredRuleCodes []string               `protobuf:"bytes,6,rep,name=triggered_rule_codes,json=triggeredRuleCodes,proto3" json:"triggered_rule_codes,omitempty"`
+	Status             string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	StatusDescription  string                 `protobuf:"bytes,8,opt,name=status_description,json=statusDescription,proto3" json:"status_description,omitempty"`
+	PurposeDescription string                 `protobuf:"bytes,9,opt,name=purpose_description,json=purposeDescription,proto3" json:"purpose_description,omitempty"`
+	ReasonFacts        []*SummaryFact         `protobuf:"bytes,10,rep,name=reason_facts,json=reasonFacts,proto3" json:"reason_facts,omitempty"`
+	TriggeredRuleFacts []*SummaryFact         `protobuf:"bytes,11,rep,name=triggered_rule_facts,json=triggeredRuleFacts,proto3" json:"triggered_rule_facts,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -105,6 +110,94 @@ func (x *SummarizeCaseRequest) GetTriggeredRuleCodes() []string {
 	return nil
 }
 
+func (x *SummarizeCaseRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SummarizeCaseRequest) GetStatusDescription() string {
+	if x != nil {
+		return x.StatusDescription
+	}
+	return ""
+}
+
+func (x *SummarizeCaseRequest) GetPurposeDescription() string {
+	if x != nil {
+		return x.PurposeDescription
+	}
+	return ""
+}
+
+func (x *SummarizeCaseRequest) GetReasonFacts() []*SummaryFact {
+	if x != nil {
+		return x.ReasonFacts
+	}
+	return nil
+}
+
+func (x *SummarizeCaseRequest) GetTriggeredRuleFacts() []*SummaryFact {
+	if x != nil {
+		return x.TriggeredRuleFacts
+	}
+	return nil
+}
+
+// Проверенное банком описание кода. Ассистент не должен угадывать его смысл.
+type SummaryFact struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SummaryFact) Reset() {
+	*x = SummaryFact{}
+	mi := &file_proto_assistant_assistant_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SummaryFact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SummaryFact) ProtoMessage() {}
+
+func (x *SummaryFact) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_assistant_assistant_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SummaryFact.ProtoReflect.Descriptor instead.
+func (*SummaryFact) Descriptor() ([]byte, []int) {
+	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *SummaryFact) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *SummaryFact) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 type ExplainDecisionRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	ApplicationId       string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
@@ -118,7 +211,7 @@ type ExplainDecisionRequest struct {
 
 func (x *ExplainDecisionRequest) Reset() {
 	*x = ExplainDecisionRequest{}
-	mi := &file_proto_assistant_assistant_proto_msgTypes[1]
+	mi := &file_proto_assistant_assistant_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -130,7 +223,7 @@ func (x *ExplainDecisionRequest) String() string {
 func (*ExplainDecisionRequest) ProtoMessage() {}
 
 func (x *ExplainDecisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_assistant_assistant_proto_msgTypes[1]
+	mi := &file_proto_assistant_assistant_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -143,7 +236,7 @@ func (x *ExplainDecisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExplainDecisionRequest.ProtoReflect.Descriptor instead.
 func (*ExplainDecisionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{1}
+	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ExplainDecisionRequest) GetApplicationId() string {
@@ -191,7 +284,7 @@ type TextResponse struct {
 
 func (x *TextResponse) Reset() {
 	*x = TextResponse{}
-	mi := &file_proto_assistant_assistant_proto_msgTypes[2]
+	mi := &file_proto_assistant_assistant_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +296,7 @@ func (x *TextResponse) String() string {
 func (*TextResponse) ProtoMessage() {}
 
 func (x *TextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_assistant_assistant_proto_msgTypes[2]
+	mi := &file_proto_assistant_assistant_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +309,7 @@ func (x *TextResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TextResponse.ProtoReflect.Descriptor instead.
 func (*TextResponse) Descriptor() ([]byte, []int) {
-	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{2}
+	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TextResponse) GetText() string {
@@ -237,14 +330,23 @@ var File_proto_assistant_assistant_proto protoreflect.FileDescriptor
 
 const file_proto_assistant_assistant_proto_rawDesc = "" +
 	"\n" +
-	"\x1fproto/assistant/assistant.proto\x12\x15smartcredit.assistant\"\xe5\x01\n" +
+	"\x1fproto/assistant/assistant.proto\x12\x15smartcredit.assistant\"\xfa\x03\n" +
 	"\x14SummarizeCaseRequest\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12!\n" +
 	"\fproduct_name\x18\x02 \x01(\tR\vproductName\x12\x18\n" +
 	"\apurpose\x18\x03 \x01(\tR\apurpose\x12\x14\n" +
 	"\x05grade\x18\x04 \x01(\tR\x05grade\x12!\n" +
 	"\freason_codes\x18\x05 \x03(\tR\vreasonCodes\x120\n" +
-	"\x14triggered_rule_codes\x18\x06 \x03(\tR\x12triggeredRuleCodes\"\xe0\x01\n" +
+	"\x14triggered_rule_codes\x18\x06 \x03(\tR\x12triggeredRuleCodes\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12-\n" +
+	"\x12status_description\x18\b \x01(\tR\x11statusDescription\x12/\n" +
+	"\x13purpose_description\x18\t \x01(\tR\x12purposeDescription\x12E\n" +
+	"\freason_facts\x18\n" +
+	" \x03(\v2\".smartcredit.assistant.SummaryFactR\vreasonFacts\x12T\n" +
+	"\x14triggered_rule_facts\x18\v \x03(\v2\".smartcredit.assistant.SummaryFactR\x12triggeredRuleFacts\"C\n" +
+	"\vSummaryFact\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"\xe0\x01\n" +
 	"\x16ExplainDecisionRequest\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12\x18\n" +
 	"\aoutcome\x18\x02 \x01(\tR\aoutcome\x12!\n" +
@@ -270,22 +372,25 @@ func file_proto_assistant_assistant_proto_rawDescGZIP() []byte {
 	return file_proto_assistant_assistant_proto_rawDescData
 }
 
-var file_proto_assistant_assistant_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_proto_assistant_assistant_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_assistant_assistant_proto_goTypes = []any{
 	(*SummarizeCaseRequest)(nil),   // 0: smartcredit.assistant.SummarizeCaseRequest
-	(*ExplainDecisionRequest)(nil), // 1: smartcredit.assistant.ExplainDecisionRequest
-	(*TextResponse)(nil),           // 2: smartcredit.assistant.TextResponse
+	(*SummaryFact)(nil),            // 1: smartcredit.assistant.SummaryFact
+	(*ExplainDecisionRequest)(nil), // 2: smartcredit.assistant.ExplainDecisionRequest
+	(*TextResponse)(nil),           // 3: smartcredit.assistant.TextResponse
 }
 var file_proto_assistant_assistant_proto_depIdxs = []int32{
-	0, // 0: smartcredit.assistant.AssistantService.SummarizeCase:input_type -> smartcredit.assistant.SummarizeCaseRequest
-	1, // 1: smartcredit.assistant.AssistantService.ExplainDecision:input_type -> smartcredit.assistant.ExplainDecisionRequest
-	2, // 2: smartcredit.assistant.AssistantService.SummarizeCase:output_type -> smartcredit.assistant.TextResponse
-	2, // 3: smartcredit.assistant.AssistantService.ExplainDecision:output_type -> smartcredit.assistant.TextResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: smartcredit.assistant.SummarizeCaseRequest.reason_facts:type_name -> smartcredit.assistant.SummaryFact
+	1, // 1: smartcredit.assistant.SummarizeCaseRequest.triggered_rule_facts:type_name -> smartcredit.assistant.SummaryFact
+	0, // 2: smartcredit.assistant.AssistantService.SummarizeCase:input_type -> smartcredit.assistant.SummarizeCaseRequest
+	2, // 3: smartcredit.assistant.AssistantService.ExplainDecision:input_type -> smartcredit.assistant.ExplainDecisionRequest
+	3, // 4: smartcredit.assistant.AssistantService.SummarizeCase:output_type -> smartcredit.assistant.TextResponse
+	3, // 5: smartcredit.assistant.AssistantService.ExplainDecision:output_type -> smartcredit.assistant.TextResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_assistant_assistant_proto_init() }
@@ -299,7 +404,7 @@ func file_proto_assistant_assistant_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_assistant_assistant_proto_rawDesc), len(file_proto_assistant_assistant_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

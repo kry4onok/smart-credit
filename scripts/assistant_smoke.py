@@ -14,18 +14,27 @@ SCENARIOS = Path(__file__).resolve().parents[1] / "ml/assistant/scenarios.json"
 
 
 def check_summary(text: str, fields: dict) -> None:
-    for field in ("product_name", "purpose", "grade"):
+    for field in ("product_name", "grade"):
         if fields.get(field):
             assert fields[field] in text, f"нет {field}: {text}"
-    for field in ("reason_codes", "triggered_rule_codes"):
-        for code in fields.get(field, []):
-            assert code in text, f"нет {code}: {text}"
+    for field in ("purpose", "status"):
+        expected = fields.get(f"{field}_description") or fields.get(field)
+        if expected:
+            assert expected in text, f"нет {field}: {text}"
+    for details_key, codes_key in (
+        ("reason_facts", "reason_codes"),
+        ("triggered_rule_facts", "triggered_rule_codes"),
+    ):
+        details = fields.get(details_key, [])
+        expected = [item["description"] or item["code"] for item in details] if details else fields.get(codes_key, [])
+        for value in expected:
+            assert value in text, f"нет {value}: {text}"
     if not fields.get("grade"):
         assert "Грейд" not in text and "grade" not in text.casefold(), f"выдуман грейд: {text}"
-    if not fields.get("reason_codes"):
-        assert "Коды причин" not in text, f"выдуманы причины: {text}"
-    if not fields.get("triggered_rule_codes"):
-        assert "Коды сработавших правил" not in text, f"выдуманы правила: {text}"
+    if not fields.get("reason_codes") and not fields.get("reason_facts"):
+        assert "Факторы скоринга" not in text, f"выдуманы причины: {text}"
+    if not fields.get("triggered_rule_codes") and not fields.get("triggered_rule_facts"):
+        assert "Правила банка" not in text, f"выдуманы правила: {text}"
 
 
 def check_version(version: str, expected: str | None) -> None:

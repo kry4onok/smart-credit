@@ -20,9 +20,19 @@ type Facts struct {
 	ApplicationID      string
 	ProductName        string
 	Purpose            string
+	PurposeDescription string
+	Status             string
+	StatusDescription  string
 	Grade              string
 	ReasonCodes        []string
 	TriggeredRuleCodes []string
+	ReasonFacts        []DescribedCode
+	RuleFacts          []DescribedCode
+}
+
+type DescribedCode struct {
+	Code        string
+	Description string
 }
 
 type Assistant interface {
@@ -65,36 +75,65 @@ func factsFromCase(caseItem model.Case) Facts {
 	facts := Facts{
 		ApplicationID: caseItem.ID.String(), ProductName: caseItem.ProductName,
 		Purpose:            string(caseItem.Application.Purpose),
+		PurposeDescription: purposeDescriptions[string(caseItem.Application.Purpose)],
+		Status:             string(caseItem.Status),
+		StatusDescription:  statusDescriptions[caseItem.Status],
 		TriggeredRuleCodes: append([]string(nil), caseItem.TriggeredRules...),
+	}
+	for _, code := range facts.TriggeredRuleCodes {
+		facts.RuleFacts = append(facts.RuleFacts, DescribedCode{Code: code, Description: ruleDescriptions[code]})
 	}
 	if caseItem.Score != nil && caseItem.Score.AssessmentStatus == "ASSESSED" {
 		facts.Grade = string(caseItem.Score.Grade)
 		for _, reason := range caseItem.Score.Reasons {
-			facts.ReasonCodes = append(facts.ReasonCodes, string(reason.Code))
+			code := string(reason.Code)
+			facts.ReasonCodes = append(facts.ReasonCodes, code)
+			facts.ReasonFacts = append(facts.ReasonFacts, DescribedCode{Code: code, Description: strings.TrimSpace(reason.Description)})
 		}
 	}
 	return facts
 }
 
 func template(facts Facts) string {
-	parts := make([]string, 0, 5)
+	parts := make([]string, 0, 6)
 	if facts.ProductName != "" {
 		parts = append(parts, "Продукт: "+facts.ProductName+".")
 	}
 	if facts.Purpose != "" {
-		parts = append(parts, "Цель: "+facts.Purpose+".")
+		purpose := facts.Purpose
+		if facts.PurposeDescription != "" {
+			purpose = facts.PurposeDescription
+		}
+		parts = append(parts, "Цель: "+purpose+".")
+	}
+	if facts.StatusDescription != "" {
+		parts = append(parts, "Статус: "+facts.StatusDescription+".")
+	} else if facts.Status != "" {
+		parts = append(parts, "Статус: "+facts.Status+".")
 	}
 	if facts.Grade != "" {
 		parts = append(parts, "Грейд скоринга: "+facts.Grade+".")
 	}
 	if len(facts.ReasonCodes) > 0 {
-		parts = append(parts, "Коды причин: "+strings.Join(facts.ReasonCodes, ", ")+".")
+		parts = append(parts, "Факторы скоринга: "+formatFacts(facts.ReasonFacts, facts.ReasonCodes)+".")
 	}
 	if len(facts.TriggeredRuleCodes) > 0 {
-		parts = append(parts, "Коды сработавших правил: "+strings.Join(facts.TriggeredRuleCodes, ", ")+".")
+		parts = append(parts, "Правила банка: "+formatFacts(facts.RuleFacts, facts.TriggeredRuleCodes)+".")
 	}
 	if len(parts) == 0 {
 		return "Данные для резюме не переданы."
 	}
 	return strings.Join(parts, " ")
+}
+
+func formatFacts(described []DescribedCode, codes []string) string {
+	items := make([]string, 0, len(codes))
+	for i, code := range codes {
+		item := code
+		if i < len(described) && described[i].Code == code && described[i].Description != "" {
+			item = described[i].Description
+		}
+		items = append(items, strings.TrimRight(item, "."))
+	}
+	return strings.Join(items, "; ")
 }
