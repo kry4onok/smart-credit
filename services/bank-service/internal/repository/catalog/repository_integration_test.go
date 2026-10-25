@@ -88,6 +88,15 @@ func TestPublishesFullCatalogOnlyWhenChanged(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	active, err := repository.ListActive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(active) != 2 || active[0].GetCode() != "FLEX" || active[1].GetCode() != "WORKING" ||
+		active[1].GetProductId() != firstID.String() || active[1].GetVersion() != 1 ||
+		active[1].GetMaxAmount().GetAmountKopecks() != 500000000 {
+		t.Fatalf("active bank products = %+v", active)
+	}
 	products := assertPublished(true, 2, 2).GetProductCatalogPublished().GetProducts()
 	if len(products) != 2 || products[0].GetCode() != "FLEX" || products[1].GetCode() != "WORKING" ||
 		products[1].GetProductId() != firstID.String() || products[1].GetVersion() != 1 ||

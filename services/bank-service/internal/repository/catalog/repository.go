@@ -28,6 +28,10 @@ func New(db transaction.Queryer, transactions *transaction.Manager) *Repository 
 	return &Repository{db: db, transactions: transactions}
 }
 
+func (r *Repository) ListActive(ctx context.Context) ([]*commonpb.Product, error) {
+	return loadProducts(ctx, r.db)
+}
+
 func (r *Repository) RunOnce(ctx context.Context) (bool, error) {
 	var changed bool
 	err := r.transactions.WithinTransaction(ctx, func(ctx context.Context) error {

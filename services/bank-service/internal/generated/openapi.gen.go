@@ -600,6 +600,9 @@ type ServerInterface interface {
 	// TakeCase Атомарно назначить дело себе
 	// (POST /backoffice/applications/{application_id}/take)
 	TakeCase(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params TakeCaseParams)
+	// ListBankProducts Активные продукты банка для аналитика
+	// (GET /backoffice/products)
+	ListBankProducts(w http.ResponseWriter, r *http.Request)
 	// BankHealth Liveness процесса
 	// (GET /healthz)
 	BankHealth(w http.ResponseWriter, r *http.Request)
@@ -645,6 +648,12 @@ func (_ Unimplemented) SummarizeCase(w http.ResponseWriter, r *http.Request, app
 // TakeCase Атомарно назначить дело себе
 // (POST /backoffice/applications/{application_id}/take)
 func (_ Unimplemented) TakeCase(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params TakeCaseParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListBankProducts Активные продукты банка для аналитика
+// (GET /backoffice/products)
+func (_ Unimplemented) ListBankProducts(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1015,6 +1024,20 @@ func (siw *ServerInterfaceWrapper) TakeCase(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// ListBankProducts operation middleware
+func (siw *ServerInterfaceWrapper) ListBankProducts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBankProducts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // BankHealth operation middleware
 func (siw *ServerInterfaceWrapper) BankHealth(w http.ResponseWriter, r *http.Request) {
 
@@ -1161,6 +1184,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/readyz", wrapper.BankReady)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/backoffice/products", wrapper.ListBankProducts)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/backoffice/applications", wrapper.ListCases)
@@ -1723,6 +1749,61 @@ func (response TakeCase409ApplicationProblemPlusJSONResponse) VisitTakeCaseRespo
 	return err
 }
 
+type ListBankProductsRequestObject struct {
+}
+
+type ListBankProductsResponseObject interface {
+	VisitListBankProductsResponse(w http.ResponseWriter) error
+}
+
+type ListBankProducts200JSONResponse struct {
+	Items []externalRef0.Product `json:"items"`
+}
+
+func (response ListBankProducts200JSONResponse) VisitListBankProductsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBankProducts401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListBankProducts401ApplicationProblemPlusJSONResponse) VisitListBankProductsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBankProducts403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ListBankProducts403ApplicationProblemPlusJSONResponse) VisitListBankProductsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BankHealthRequestObject struct {
 }
 
@@ -1781,6 +1862,9 @@ type StrictServerInterface interface {
 	// TakeCase Атомарно назначить дело себе
 	// (POST /backoffice/applications/{application_id}/take)
 	TakeCase(ctx context.Context, request TakeCaseRequestObject) (TakeCaseResponseObject, error)
+	// ListBankProducts Активные продукты банка для аналитика
+	// (GET /backoffice/products)
+	ListBankProducts(ctx context.Context, request ListBankProductsRequestObject) (ListBankProductsResponseObject, error)
 	// BankHealth Liveness процесса
 	// (GET /healthz)
 	BankHealth(ctx context.Context, request BankHealthRequestObject) (BankHealthResponseObject, error)
@@ -1987,6 +2071,30 @@ func (sh *strictHandler) TakeCase(w http.ResponseWriter, r *http.Request, applic
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(TakeCaseResponseObject); ok {
 		if err := validResponse.VisitTakeCaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBankProducts operation middleware
+func (sh *strictHandler) ListBankProducts(w http.ResponseWriter, r *http.Request) {
+	var request ListBankProductsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBankProducts(ctx, request.(ListBankProductsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBankProducts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBankProductsResponseObject); ok {
+		if err := validResponse.VisitListBankProductsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

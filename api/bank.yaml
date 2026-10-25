@@ -9,6 +9,7 @@ security:
   - BearerAuth: []
 tags:
   - name: Cases
+  - name: Products
 paths:
   /healthz:
     get:
@@ -27,6 +28,26 @@ paths:
       responses:
         '204': { description: Сервис готов. }
         '503': { description: Сервис ещё не готов. }
+  /backoffice/products:
+    get:
+      tags: [Products]
+      operationId: listBankProducts
+      summary: Активные продукты банка для аналитика
+      description: Ориентировочная ставка не является офертой. Контроферта проверяется по банковским правилам.
+      responses:
+        '200':
+          description: Активные версии продуктов из bank_db, отсортированные по коду и UUID.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: './common.yaml#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /backoffice/applications:
     get:
       tags: [Cases]

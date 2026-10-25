@@ -86,6 +86,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	listCases := listcase.New(caseRepository)
 	getCase := getcase.New(caseRepository)
 	transactions := transaction.New(db)
+	catalogRepository := catalogrepository.New(db, transactions)
 	validationCases := validationrepository.New(db)
 	validation := validationworker.New(validationstage.New(validationCases, transactions))
 	receiveCases := receivecase.New(receiverepository.New(db), transactions)
@@ -171,12 +172,12 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		DecisionWorker:     decisionworker.New(decisionrepository.New(db, transactions)),
 		DisbursementWorker: disbursementworker.New(disbursementrepository.New(db, transactions)),
 		OfferExpiryWorker:  offerexpiryworker.New(offerexpiryrepository.New(db, transactions)),
-		CatalogWorker:      catalogworker.New(catalogrepository.New(db, transactions)),
+		CatalogWorker:      catalogworker.New(catalogRepository),
 		EnrichmentWorker:   enrichment,
 		ValidationWorker:   validation,
 		OutboxWorker:       outboxworker.New(outboxrepository.New(db), publisher),
 		ClientEvents:       consumer,
-		HTTPHandler:        authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer))),
+		HTTPHandler:        authmiddleware.RequireEmployee(jwtverifier.New(cfg.JWT), httpapi.New(db, cfg.ReadinessTimeout, listCases, getCase, takeCase, decideCase, auditCase, summarycase.New(caseRepository, summarizer), catalogRepository)),
 		scoringClient:      client,
 		bureauClient:       bureau,
 		assistantClient:    assistant,
