@@ -33,7 +33,7 @@ OPENAPI_OUTPUT_DIRS := \
 
 .PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs demo-up infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test bank-offer-test bank-cancel-test bank-signing-test bank-offer-expiry-test
 .PHONY: web-install web-gen web-dev web-mock web-build web-up web-down web-logs
-.PHONY: client-up client-down client-logs assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
+.PHONY: client-up client-down client-logs client-test assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
 .PHONY: auth-up auth-down auth-logs auth-keygen auth-dev-seed auth-dev-seed-test auth-db-up auth-db-down auth-db-status auth-db-test
 
@@ -99,6 +99,7 @@ help:
 	@echo 'make client-up        Собрать и запустить client-service в Docker'
 	@echo 'make client-down      Остановить и удалить контейнер client-service'
 	@echo 'make client-logs      Показать логи client-service'
+	@echo 'make client-test      Все тесты client-service с PostgreSQL и race detector; нужен CLIENT_TEST_DATABASE_URL'
 	@echo 'make client-db-down   Откатить миграцию client_db'
 	@echo 'make client-db-status Показать состояние миграций client_db'
 	@echo 'make infra-down       Остановить контейнеры, сохранив данные'
@@ -311,6 +312,10 @@ client-down: require-env
 
 client-logs: require-env
 	$(COMPOSE) logs -f client-service
+
+client-test:
+	@test -n "$$CLIENT_TEST_DATABASE_URL" || { echo 'Задайте CLIENT_TEST_DATABASE_URL для отдельной тестовой PostgreSQL; полный прогон без БД запрещён.' >&2; exit 1; }
+	go test -race -count=1 -timeout=5m ./services/client-service/...
 
 client-db-up: require-env
 	$(GOOSE) -dir $(CLIENT_MIGRATIONS) postgres "$(CLIENT_DATABASE_URL)" up
