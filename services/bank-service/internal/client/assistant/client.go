@@ -60,6 +60,10 @@ func (c *Client) Summarize(ctx context.Context, facts summary.Facts) (string, st
 		ApplicationId: facts.ApplicationID, ProductName: facts.ProductName,
 		Purpose: facts.Purpose, Grade: facts.Grade,
 		ReasonCodes: facts.ReasonCodes, TriggeredRuleCodes: facts.TriggeredRuleCodes,
+		Status: facts.Status, StatusDescription: facts.StatusDescription,
+		PurposeDescription: facts.PurposeDescription,
+		ReasonFacts:        protoFacts(facts.ReasonFacts),
+		TriggeredRuleFacts: protoFacts(facts.RuleFacts),
 	})
 	if err != nil {
 		return "", "", fmt.Errorf("summarize case RPC: %w", err)
@@ -72,4 +76,12 @@ func (c *Client) Summarize(ctx context.Context, facts summary.Facts) (string, st
 		source = "template"
 	}
 	return response.GetText(), source, nil
+}
+
+func protoFacts(facts []summary.DescribedCode) []*assistantpb.SummaryFact {
+	result := make([]*assistantpb.SummaryFact, 0, len(facts))
+	for _, fact := range facts {
+		result = append(result, &assistantpb.SummaryFact{Code: fact.Code, Description: fact.Description})
+	}
+	return result
 }

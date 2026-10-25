@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1fproto/assistant/assistant.proto\x12\x15smartcredit.assistant\"\x98\x01\n\x14SummarizeCaseRequest\x12\x16\n\x0e\x61pplication_id\x18\x01 \x01(\t\x12\x14\n\x0cproduct_name\x18\x02 \x01(\t\x12\x0f\n\x07purpose\x18\x03 \x01(\t\x12\r\n\x05grade\x18\x04 \x01(\t\x12\x14\n\x0creason_codes\x18\x05 \x03(\t\x12\x1c\n\x14triggered_rule_codes\x18\x06 \x03(\t\"\x93\x01\n\x16\x45xplainDecisionRequest\x12\x16\n\x0e\x61pplication_id\x18\x01 \x01(\t\x12\x0f\n\x07outcome\x18\x02 \x01(\t\x12\x14\n\x0cproduct_name\x18\x03 \x01(\t\x12\x1b\n\x13public_reason_codes\x18\x04 \x03(\t\x12\x1d\n\x15\x61nalyst_public_reason\x18\x05 \x01(\t\"3\n\x0cTextResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x15\n\rmodel_version\x18\x02 \x01(\t2\xdc\x01\n\x10\x41ssistantService\x12\x61\n\rSummarizeCase\x12+.smartcredit.assistant.SummarizeCaseRequest\x1a#.smartcredit.assistant.TextResponse\x12\x65\n\x0f\x45xplainDecision\x12-.smartcredit.assistant.ExplainDecisionRequest\x1a#.smartcredit.assistant.TextResponseBTZRgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant;assistantpbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1fproto/assistant/assistant.proto\x12\x15smartcredit.assistant\"\xdd\x02\n\x14SummarizeCaseRequest\x12\x16\n\x0e\x61pplication_id\x18\x01 \x01(\t\x12\x14\n\x0cproduct_name\x18\x02 \x01(\t\x12\x0f\n\x07purpose\x18\x03 \x01(\t\x12\r\n\x05grade\x18\x04 \x01(\t\x12\x14\n\x0creason_codes\x18\x05 \x03(\t\x12\x1c\n\x14triggered_rule_codes\x18\x06 \x03(\t\x12\x0e\n\x06status\x18\x07 \x01(\t\x12\x1a\n\x12status_description\x18\x08 \x01(\t\x12\x1b\n\x13purpose_description\x18\t \x01(\t\x12\x38\n\x0creason_facts\x18\n \x03(\x0b\x32\".smartcredit.assistant.SummaryFact\x12@\n\x14triggered_rule_facts\x18\x0b \x03(\x0b\x32\".smartcredit.assistant.SummaryFact\"0\n\x0bSummaryFact\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"\x93\x01\n\x16\x45xplainDecisionRequest\x12\x16\n\x0e\x61pplication_id\x18\x01 \x01(\t\x12\x0f\n\x07outcome\x18\x02 \x01(\t\x12\x14\n\x0cproduct_name\x18\x03 \x01(\t\x12\x1b\n\x13public_reason_codes\x18\x04 \x03(\t\x12\x1d\n\x15\x61nalyst_public_reason\x18\x05 \x01(\t\"3\n\x0cTextResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x15\n\rmodel_version\x18\x02 \x01(\t2\xdc\x01\n\x10\x41ssistantService\x12\x61\n\rSummarizeCase\x12+.smartcredit.assistant.SummarizeCaseRequest\x1a#.smartcredit.assistant.TextResponse\x12\x65\n\x0f\x45xplainDecision\x12-.smartcredit.assistant.ExplainDecisionRequest\x1a#.smartcredit.assistant.TextResponseBTZRgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant;assistantpbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,11 +33,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'ZRgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant;assistantpb'
   _globals['_SUMMARIZECASEREQUEST']._serialized_start=59
-  _globals['_SUMMARIZECASEREQUEST']._serialized_end=211
-  _globals['_EXPLAINDECISIONREQUEST']._serialized_start=214
-  _globals['_EXPLAINDECISIONREQUEST']._serialized_end=361
-  _globals['_TEXTRESPONSE']._serialized_start=363
-  _globals['_TEXTRESPONSE']._serialized_end=414
-  _globals['_ASSISTANTSERVICE']._serialized_start=417
-  _globals['_ASSISTANTSERVICE']._serialized_end=637
+  _globals['_SUMMARIZECASEREQUEST']._serialized_end=408
+  _globals['_SUMMARYFACT']._serialized_start=410
+  _globals['_SUMMARYFACT']._serialized_end=458
+  _globals['_EXPLAINDECISIONREQUEST']._serialized_start=461
+  _globals['_EXPLAINDECISIONREQUEST']._serialized_end=608
+  _globals['_TEXTRESPONSE']._serialized_start=610
+  _globals['_TEXTRESPONSE']._serialized_end=661
+  _globals['_ASSISTANTSERVICE']._serialized_start=664
+  _globals['_ASSISTANTSERVICE']._serialized_end=884
 # @@protoc_insertion_point(module_scope)

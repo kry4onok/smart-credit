@@ -35,6 +35,59 @@ class AssistantTests(unittest.TestCase):
         self.assertEqual(result.text, text)
         self.assertEqual(result.model_version, "qwen2.5:3b")
 
+    def test_summary_uses_verified_descriptions_without_guessing_codes(self):
+        request = assistant_pb2.SummarizeCaseRequest(
+            product_name="Оборотный кредит",
+            purpose="WORKING_CAPITAL",
+            purpose_description="Пополнение оборотных средств",
+            status="MANUAL_REVIEW",
+            status_description="Ручное рассмотрение",
+            grade="B",
+            reason_codes=["NO_OVERDUE"],
+            reason_facts=[assistant_pb2.SummaryFact(code="NO_OVERDUE", description="Нет просрочек")],
+            triggered_rule_codes=["REVIEW_REQUIRED"],
+            triggered_rule_facts=[
+                assistant_pb2.SummaryFact(
+                    code="REVIEW_REQUIRED",
+                    description="Необходим ручной разбор; конкретная причина этим кодом не указана",
+                )
+            ],
+        )
+        text = (
+            "Оборотный кредит: Пополнение оборотных средств. Ручное рассмотрение, грейд B. "
+            "Нет просрочек. Нужен ручной разбор."
+        )
+        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:3b")):
+            result = self.service.SummarizeCase(request, self.context)
+        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.text, text)
+
+        guessed = text + " Кредит одобрен."
+        with patch.object(server, "generate_json", return_value=({"text": guessed}, "qwen2.5:3b")):
+            rejected = self.service.SummarizeCase(request, self.context)
+        self.assertEqual(rejected.model_version, "template")
+        self.assertIn("Нужен ручной разбор", rejected.text)
+        self.assertNotIn("конкретная причина", rejected.text)
+        self.assertNotIn("одобрен", rejected.text)
+
+    def test_summary_prompt_omits_missing_score_and_raw_known_codes(self):
+        request = assistant_pb2.SummarizeCaseRequest(
+            product_name="Оборотный кредит",
+            purpose="WORKING_CAPITAL",
+            purpose_description="Пополнение оборотных средств",
+            status="NEEDS_INFO",
+            status_description="Запрошены дополнительные данные",
+        )
+        text = "Продукт: Оборотный кредит. Цель: Пополнение оборотных средств. Статус: Запрошены дополнительные данные."
+        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:3b")) as generate:
+            result = self.service.SummarizeCase(request, self.context)
+        prompt, facts = generate.call_args.args[:2]
+        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertNotIn("grade", prompt)
+        self.assertNotIn("score_factors", prompt)
+        self.assertNotIn("WORKING_CAPITAL", json.dumps(facts))
+        self.assertNotIn("NEEDS_INFO", json.dumps(facts))
+
     def test_summary_rejects_claim_about_missing_rules(self):
         request = assistant_pb2.SummarizeCaseRequest(
             product_name="Потребительский кредит", purpose="ремонт квартиры", grade="B"
