@@ -104,15 +104,24 @@ Gateway направляет `/api/client/*` в `client-service:8080`, `/api/aut
 go test ./services/client-service/...
 ```
 
-Регрессионные тесты SQL запускаются при заданной `CLIENT_TEST_DATABASE_URL`:
+Полный прогон всех тестов, включая SQL и файловое хранилище, с race detector:
 
 ```sh
 CLIENT_TEST_DATABASE_URL='postgres://user:password@127.0.0.1:5432/test_db?sslmode=disable' \
-  go test -count=1 ./services/client-service/internal/repository/application
+  make client-test
 ```
 
 Используйте отдельную тестовую БД. Каждый тест создаёт собственную временную
-схему, применяет миграции и удаляет схему после проверки. Без переменной
-интеграционные тесты пропускаются. Проверяются снимки черновиков,
+схему, применяет миграции и удаляет схему после проверки. `make client-test`
+требует непустую `CLIENT_TEST_DATABASE_URL` и при недоступной БД завершится
+ошибкой. Обычный `go test` без переменной пропускает SQL-тесты.
+Проверяются снимки черновиков,
 protobuf-события, идемпотентность, tenant isolation и повторные
-публичные снимки банка.
+публичные снимки банка, принятие оферты, права доступа к скачиванию документов
+и чтение исходных файлов.
+
+CI `.github/workflows/client.yml` выполняет `make client-test` при push и PR
+с изменениями client-service или его зависимостей, а также по ручному запуску.
+Для каждого задания поднимается отдельная PostgreSQL 16.15 и задаётся
+`CLIENT_TEST_DATABASE_URL`. Все существующие тесты client-service запускаются
+с `-race -count=1 -timeout=5m`, затем выполняются lint и проверка Compose.

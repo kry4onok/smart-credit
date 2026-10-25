@@ -1,6 +1,7 @@
 name: Client service
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - ".github/workflows/client.yml"
@@ -11,6 +12,7 @@ on:
       - "api/common.yaml"
       - "deploy/docker-compose.yml"
       - "deploy/docker/**"
+      - "deploy/nginx/**"
       - "go.mod"
       - "go.sum"
       - "pkg/api/**"
@@ -26,6 +28,7 @@ on:
       - "api/common.yaml"
       - "deploy/docker-compose.yml"
       - "deploy/docker/**"
+      - "deploy/nginx/**"
       - "go.mod"
       - "go.sum"
       - "pkg/api/**"
@@ -39,6 +42,22 @@ jobs:
   client-service:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_USER: client_test
+          POSTGRES_PASSWORD: client_test
+          POSTGRES_DB: client_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U client_test -d client_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CLIENT_TEST_DATABASE_URL: postgres://client_test:client_test@127.0.0.1:5432/client_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -47,8 +66,8 @@ jobs:
           cache: true
       - name: Prepare local configuration
         run: cp .env.example .env
-      - name: Unit tests
-        run: go test ./services/client-service/...
+      - name: All client tests with PostgreSQL and race detector
+        run: make client-test
       - name: Go lint
         uses: golangci/golangci-lint-action@v7
         with:
