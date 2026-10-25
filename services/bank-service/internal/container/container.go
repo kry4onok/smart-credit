@@ -22,6 +22,7 @@ import (
 	decisionrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/decision"
 	disbursementrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/disbursement"
 	enrichmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/enrichment"
+	offerexpiryrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/offerexpiry"
 	outboxrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/outbox"
 	receiverepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/receive"
 	scoringrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/scoring"
@@ -39,6 +40,7 @@ import (
 	decisionworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/decision"
 	disbursementworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/disbursement"
 	enrichmentworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/enrichment"
+	offerexpiryworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/offerexpiry"
 	outboxworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/outbox"
 	scoringworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/scoring"
 	validationworker "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/worker/validation"
@@ -52,6 +54,7 @@ type Container struct {
 	ScoringWorker      *scoringworker.Worker
 	DecisionWorker     *decisionworker.Worker
 	DisbursementWorker *disbursementworker.Worker
+	OfferExpiryWorker  *offerexpiryworker.Worker
 	CatalogWorker      *catalogworker.Worker
 	EnrichmentWorker   *enrichmentworker.Worker
 	ValidationWorker   *validationworker.Worker
@@ -167,6 +170,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		ScoringWorker:      worker,
 		DecisionWorker:     decisionworker.New(decisionrepository.New(db, transactions)),
 		DisbursementWorker: disbursementworker.New(disbursementrepository.New(db, transactions)),
+		OfferExpiryWorker:  offerexpiryworker.New(offerexpiryrepository.New(db, transactions)),
 		CatalogWorker:      catalogworker.New(catalogrepository.New(db, transactions)),
 		EnrichmentWorker:   enrichment,
 		ValidationWorker:   validation,
