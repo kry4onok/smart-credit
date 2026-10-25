@@ -57,6 +57,7 @@ dist/
 *.rst
 *.adoc
 *.txt
+!services/bank-service/internal/document/statement/testdata/example.txt
 !README
 !README.*
 !/TZ.md
