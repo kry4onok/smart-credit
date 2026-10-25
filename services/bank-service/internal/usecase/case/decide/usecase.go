@@ -36,23 +36,73 @@ type Input struct {
 	Outcome, Comment, PublicReason    string
 	Offer                             *Offer
 	InfoRequest                       *InfoRequest
+	ClientText                        string `json:"-"`
 }
 type Repository interface {
 	Decide(context.Context, Input) (model.Case, error)
+	PrepareDecision(context.Context, Input) (Preview, bool)
 }
 type TransactionManager interface {
 	WithinTransaction(context.Context, func(context.Context) error) error
 }
+type Assistant interface {
+	Explain(context.Context, Facts) (string, error)
+}
+type Preview struct {
+	RequestedProductName string
+	OfferedProductName   string
+}
+type OfferFacts struct {
+	ProductName   string
+	AmountKopecks int64
+	TermMonths    int
+	RateBPS       int
+}
+type Facts struct {
+	ApplicationID string
+	Outcome       string
+	ProductName   string
+	PublicReason  string
+	Offer         *OfferFacts
+}
 type UseCase struct {
 	repository   Repository
 	transactions TransactionManager
+	assistant    Assistant
 }
 
-func New(r Repository, t TransactionManager) *UseCase { return &UseCase{r, t} }
+func New(r Repository, t TransactionManager, assistant Assistant) *UseCase {
+	return &UseCase{repository: r, transactions: t, assistant: assistant}
+}
 
 func (u *UseCase) Execute(ctx context.Context, input Input) (model.Case, error) {
 	if err := Validate(input); err != nil {
 		return model.Case{}, err
+	}
+	if input.Outcome == "APPROVE" && strings.TrimSpace(input.PublicReason) == "" {
+		input.ClientText = "По вашей заявке принято решение об одобрении."
+	}
+	if u.assistant != nil && input.Outcome != "REQUEST_INFO" {
+		if preview, ready := u.repository.PrepareDecision(ctx, input); ready {
+			facts := Facts{
+				ApplicationID: input.CaseID.String(), Outcome: input.Outcome,
+				ProductName: preview.RequestedProductName, PublicReason: input.PublicReason,
+			}
+			if input.Offer != nil {
+				facts.Offer = &OfferFacts{
+					ProductName:   preview.OfferedProductName,
+					AmountKopecks: input.Offer.AmountKopecks,
+					TermMonths:    input.Offer.TermMonths, RateBPS: input.Offer.RateBPS,
+				}
+			}
+			text, err := u.assistant.Explain(ctx, facts)
+			if err == nil {
+				text = strings.TrimSpace(text)
+				if text != "" && utf8.RuneCountInString(text) <= 1000 {
+					input.ClientText = text
+				}
+			}
+		}
 	}
 	var result model.Case
 	err := u.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {

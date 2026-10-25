@@ -8,6 +8,7 @@ import (
 	"time"
 
 	assistantpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/decide"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/summary"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,6 +18,7 @@ const defaultRequestTimeout = 5 * time.Second
 
 type RPC interface {
 	SummarizeCase(context.Context, *assistantpb.SummarizeCaseRequest, ...grpc.CallOption) (*assistantpb.TextResponse, error)
+	ExplainDecision(context.Context, *assistantpb.ExplainDecisionRequest, ...grpc.CallOption) (*assistantpb.TextResponse, error)
 }
 
 type Client struct {
@@ -76,6 +78,36 @@ func (c *Client) Summarize(ctx context.Context, facts summary.Facts) (string, st
 		source = "template"
 	}
 	return response.GetText(), source, nil
+}
+
+func (c *Client) Explain(ctx context.Context, facts decide.Facts) (string, error) {
+	if c == nil || c.rpc == nil {
+		return "", errors.New("assistant client is not configured")
+	}
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	request := &assistantpb.ExplainDecisionRequest{
+		ApplicationId:       facts.ApplicationID,
+		Outcome:             facts.Outcome,
+		ProductName:         facts.ProductName,
+		AnalystPublicReason: facts.PublicReason,
+	}
+	if facts.Offer != nil {
+		request.SelectedOffer = &assistantpb.DecisionOffer{
+			ProductName:   facts.Offer.ProductName,
+			AmountKopecks: facts.Offer.AmountKopecks,
+			TermMonths:    int32(facts.Offer.TermMonths),
+			RateBps:       int32(facts.Offer.RateBPS),
+		}
+	}
+	response, err := c.rpc.ExplainDecision(ctx, request)
+	if err != nil {
+		return "", fmt.Errorf("explain decision RPC: %w", err)
+	}
+	if response == nil || strings.TrimSpace(response.GetText()) == "" {
+		return "", errors.New("assistant returned empty explanation")
+	}
+	return response.GetText(), nil
 }
 
 func protoFacts(facts []summary.DescribedCode) []*assistantpb.SummaryFact {

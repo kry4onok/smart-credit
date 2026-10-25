@@ -264,7 +264,30 @@ def polish_summary(text: str) -> str:
     return text if text.endswith((".", "!", "?")) else text + "."
 
 
-def explanation_template(outcome: str, product_name: str, public_reason: str, style: str) -> str:
+def format_roubles(amount_kopecks: int) -> str:
+    roubles, kopecks = divmod(amount_kopecks, 100)
+    formatted = f"{roubles:,}".replace(",", " ")
+    return f"{formatted},{kopecks:02d} ₽" if kopecks else f"{formatted} ₽"
+
+
+def selected_offer(request, context) -> dict | None:
+    if not request.HasField("selected_offer"):
+        return None
+    offer = request.selected_offer
+    if (clean(request.outcome).upper() not in ("APPROVE", "COUNTER")
+            or not clean(offer.product_name) or offer.amount_kopecks <= 0
+            or offer.term_months <= 0 or offer.rate_bps < 0):
+        context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Некорректные условия оферты")
+        raise ValueError("Некорректные условия оферты")
+    return {
+        "product_name": clean(offer.product_name),
+        "amount_kopecks": offer.amount_kopecks,
+        "term_months": offer.term_months,
+        "rate_bps": offer.rate_bps,
+    }
+
+
+def explanation_template(outcome: str, product_name: str, public_reason: str, style: str, offer: dict | None = None) -> str:
     product = f" на продукт «{product_name}»" if product_name else ""
     decision = DECISION_SENTENCES[outcome].format(product=product)
     if outcome == "REJECT" and style == "empathetic":
@@ -273,6 +296,14 @@ def explanation_template(outcome: str, product_name: str, public_reason: str, st
     parts = ["Здравствуйте.", decision]
     if reason:
         parts.append(reason if reason.endswith((".", "!", "?")) else reason + ".")
+    if offer:
+        percent, hundredths = divmod(offer["rate_bps"], 100)
+        rate = f"{percent},{hundredths:02d}"
+        parts.append(
+            f"Предложение: продукт «{offer['product_name']}», сумма "
+            f"{format_roubles(offer['amount_kopecks'])}, срок {offer['term_months']} мес., "
+            f"ставка {rate}%."
+        )
     return " ".join(parts)
 
 
@@ -306,7 +337,8 @@ class AssistantService(assistant_pb2_grpc.AssistantServiceServicer):
 
         product_name = clean(request.product_name)
         public_reason = clean(request.analyst_public_reason)
-        fallback = explanation_template(outcome, product_name, public_reason, "neutral")
+        offer = selected_offer(request, context)
+        fallback = explanation_template(outcome, product_name, public_reason, "neutral", offer)
         facts = {"outcome": outcome}
         system_prompt = (
             "Выбери только тон клиентского уведомления по уже принятому решению. "
@@ -323,7 +355,7 @@ class AssistantService(assistant_pb2_grpc.AssistantServiceServicer):
         if style not in ("neutral", "empathetic"):
             LOGGER.warning("ExplainDecision: шаблон из-за некорректного стиля модели")
             return response(fallback, TEMPLATE_VERSION)
-        return response(explanation_template(outcome, product_name, public_reason, style), model_version)
+        return response(explanation_template(outcome, product_name, public_reason, style, offer), model_version)
 
 
 def serve():

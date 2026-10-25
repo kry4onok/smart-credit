@@ -23,6 +23,31 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func (r *Repository) PrepareDecision(ctx context.Context, in decide.Input) (decide.Preview, bool) {
+	q := transaction.QueryerFromContext(ctx, r.db)
+	var status model.CaseStatus
+	var assignee *uuid.UUID
+	var version int64
+	var company, documents []byte
+	var purpose, requestedProductName string
+	err := q.QueryRow(ctx, previewDecisionCase, in.CaseID).Scan(
+		&status, &assignee, &version, &company, &documents, &purpose, &requestedProductName,
+	)
+	if err != nil || assignee == nil || *assignee != in.AnalystID ||
+		status != model.CaseStatusManualReview || version != in.ExpectedVersion {
+		return decide.Preview{}, false
+	}
+	preview := decide.Preview{RequestedProductName: requestedProductName}
+	if in.Outcome == "APPROVE" || in.Outcome == "COUNTER" {
+		product, err := r.validateDecisionOffer(ctx, in, company, documents, purpose, time.Now().UTC())
+		if err != nil {
+			return decide.Preview{}, false
+		}
+		preview.OfferedProductName = product.name
+	}
+	return preview, true
+}
+
 type decisionProduct struct {
 	version                                                                  int64
 	name                                                                     string
@@ -82,6 +107,10 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 
 	now := time.Now().UTC()
 	decisionID := uuid.New()
+	clientText := in.PublicReason
+	if strings.TrimSpace(in.ClientText) != "" {
+		clientText = in.ClientText
+	}
 	var productID any
 	var productVersion any
 	var ruleVersion any
@@ -105,15 +134,15 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 			kind = model.CaseStatusCounterOffer
 			offerKind = commonpb.OfferKind_OFFER_KIND_COUNTER_OFFER
 		}
-		publicReason = nullableReason(in.PublicReason)
+		publicReason = nullableReason(clientText)
 		nextStatus = kind
 		offerID := uuid.New()
 		expires := now.Add(time.Duration(p.ttl) * time.Hour)
 		var explanation string
-		if in.Outcome == "COUNTER" {
-			explanation = in.PublicReason
+		if in.Outcome == "COUNTER" || in.ClientText != "" {
+			explanation = clientText
 		}
-		_, err = q.Exec(ctx, insertDecision, decisionID, in.CaseID, in.AnalystID, in.Outcome, in.Comment, nullableReason(in.PublicReason), productID, productVersion, ruleVersion)
+		_, err = q.Exec(ctx, insertDecision, decisionID, in.CaseID, in.AnalystID, in.Outcome, in.Comment, nullableReason(clientText), productID, productVersion, ruleVersion)
 		if err != nil {
 			return model.Case{}, fmt.Errorf("insert decision: %w", err)
 		}
@@ -143,8 +172,8 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 		}
 	case "REJECT":
 		nextStatus = model.CaseStatusRejected
-		publicReason = in.PublicReason
-		_, err = q.Exec(ctx, insertDecision, decisionID, in.CaseID, in.AnalystID, in.Outcome, in.Comment, in.PublicReason, nil, nil, nil)
+		publicReason = clientText
+		_, err = q.Exec(ctx, insertDecision, decisionID, in.CaseID, in.AnalystID, in.Outcome, in.Comment, clientText, nil, nil, nil)
 		if err != nil {
 			return model.Case{}, fmt.Errorf("insert decision: %w", err)
 		}

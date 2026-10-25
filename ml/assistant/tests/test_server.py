@@ -128,6 +128,37 @@ class AssistantTests(unittest.TestCase):
         self.assertIn("отказе", result.text)
         self.assertIn("Недостаточно подтверждённого дохода.", result.text)
 
+    def test_counter_includes_only_approved_offer_terms(self):
+        request = assistant_pb2.ExplainDecisionRequest(
+            outcome="COUNTER", product_name="Оборотный кредит",
+            analyst_public_reason="Предлагаем меньшую сумму по другому продукту.",
+            selected_offer=assistant_pb2.DecisionOffer(
+                product_name="Гибкий кредит", amount_kopecks=400000050,
+                term_months=24, rate_bps=1850,
+            ),
+        )
+        with patch.object(server, "generate_json", return_value=({"style": "neutral"}, "qwen2.5:3b")):
+            result = self.service.ExplainDecision(request, self.context)
+        self.assertEqual(result.model_version, "qwen2.5:3b")
+        for fragment in ("Оборотный кредит", "Гибкий кредит", "4 000 000,50 ₽", "24 мес.", "18,50%"):
+            self.assertIn(fragment, result.text)
+
+        with patch.object(server, "generate_json", side_effect=server.ModelUnavailable("offline")):
+            fallback = self.service.ExplainDecision(request, self.context)
+        self.assertEqual(fallback.model_version, "template")
+        for fragment in ("Гибкий кредит", "4 000 000,50 ₽", "24 мес.", "18,50%"):
+            self.assertIn(fragment, fallback.text)
+
+    def test_invalid_offer_is_rejected(self):
+        request = assistant_pb2.ExplainDecisionRequest(
+            outcome="COUNTER",
+            selected_offer=assistant_pb2.DecisionOffer(
+                product_name="Гибкий кредит", amount_kopecks=0, term_months=24, rate_bps=1850,
+            ),
+        )
+        with self.assertRaises(grpc.RpcError):
+            self.service.ExplainDecision(request, self.context)
+
     def test_summary_rejects_invented_number(self):
         request = assistant_pb2.SummarizeCaseRequest(product_name="Кредит", grade="B")
         invented = "Продукт: Кредит. Грейд скоринга: B. Ставка 12%."
