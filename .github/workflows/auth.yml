@@ -1,0 +1,98 @@
+name: Auth service
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/auth.yml"
+      - ".dockerignore"
+      - ".env.example"
+      - ".golangci.yml"
+      - "Makefile"
+      - "api/auth.yaml"
+      - "api/client.yaml"
+      - "api/common.yaml"
+      - "deploy/docker-compose.yml"
+      - "deploy/docker/go-service.Dockerfile"
+      - "deploy/nginx/nginx.conf"
+      - "deploy/postgres/**"
+      - "go.mod"
+      - "go.sum"
+      - "pkg/api/**"
+      - "proto/**"
+      - "scripts/auth_docker_smoke.py"
+      - "services/auth/**"
+      - "services/client-service/**"
+  pull_request:
+    paths:
+      - ".github/workflows/auth.yml"
+      - ".dockerignore"
+      - ".env.example"
+      - ".golangci.yml"
+      - "Makefile"
+      - "api/auth.yaml"
+      - "api/client.yaml"
+      - "api/common.yaml"
+      - "deploy/docker-compose.yml"
+      - "deploy/docker/go-service.Dockerfile"
+      - "deploy/nginx/nginx.conf"
+      - "deploy/postgres/**"
+      - "go.mod"
+      - "go.sum"
+      - "pkg/api/**"
+      - "proto/**"
+      - "scripts/auth_docker_smoke.py"
+      - "services/auth/**"
+      - "services/client-service/**"
+
+permissions:
+  contents: read
+
+jobs:
+  auth-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_USER: auth_test
+          POSTGRES_PASSWORD: auth_test
+          POSTGRES_DB: auth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U auth_test -d auth_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      AUTH_TEST_DATABASE_URL: postgres://auth_test:auth_test@127.0.0.1:5432/auth_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Auth unit and PostgreSQL tests with race detector
+        run: make auth-test
+      - name: Go lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.15.0
+          args: ./services/auth/...
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example -f deploy/docker-compose.yml config --quiet
+
+  docker-smoke:
+    needs: auth-service
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Auth, client and gateway Docker smoke test
+        run: make auth-smoke-test
