@@ -36,7 +36,7 @@ type Input struct {
 	Outcome, Comment, PublicReason    string
 	Offer                             *Offer
 	InfoRequest                       *InfoRequest
-	ClientText string `json:"-"`
+	ClientText                        string `json:"-"`
 }
 type Repository interface {
 	Decide(context.Context, Input) (model.Case, error)
