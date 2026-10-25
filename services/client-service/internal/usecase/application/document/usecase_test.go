@@ -12,17 +12,19 @@ import (
 
 type repositoryMock struct {
 	called bool
+	params model.AddApplicationDocumentParams
 }
 
 func (m *repositoryMock) AddDocument(_ context.Context, params model.AddApplicationDocumentParams) (model.ApplicationDocument, error) {
 	m.called = true
+	m.params = params
 	return model.ApplicationDocument{DocumentType: params.DocumentType}, nil
 }
 
 func validParams() model.AddApplicationDocumentParams {
 	return model.AddApplicationDocumentParams{
 		OrgID: uuid.New(), UserID: uuid.New(), ApplicationID: uuid.New(), IdempotencyKey: uuid.New(),
-		DocumentType: "BANK_STATEMENT", FileName: "statement.pdf", Content: []byte("demo"),
+		DocumentType: "BANK_STATEMENT", FileName: "statement.txt", Content: []byte("demo"),
 	}
 }
 

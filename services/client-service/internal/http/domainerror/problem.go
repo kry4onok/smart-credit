@@ -38,6 +38,9 @@ func Map(ctx context.Context, err error) common.Problem {
 		if errors.Is(err, domain.ErrInvalidInfoResponse) {
 			code = "INVALID_INFO_RESPONSE"
 		}
+		if errors.Is(err, domain.ErrInvalidDocumentUpload) {
+			code = "INVALID_DOCUMENT"
+		}
 		return Problem(ctx, http.StatusUnprocessableEntity, code, strings.Join(validation.Issues, " "))
 	}
 	switch {
