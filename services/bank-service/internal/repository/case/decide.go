@@ -23,8 +23,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// PrepareDecision checks the current case and offer outside the decision transaction.
-// Decide repeats all checks under a row lock before persisting anything.
 func (r *Repository) PrepareDecision(ctx context.Context, in decide.Input) (decide.Preview, bool) {
 	q := transaction.QueryerFromContext(ctx, r.db)
 	var status model.CaseStatus

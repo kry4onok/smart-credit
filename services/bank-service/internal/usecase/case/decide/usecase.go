@@ -36,7 +36,6 @@ type Input struct {
 	Outcome, Comment, PublicReason    string
 	Offer                             *Offer
 	InfoRequest                       *InfoRequest
-	// ClientText is derived from the assistant and excluded from the request hash.
 	ClientText string `json:"-"`
 }
 type Repository interface {
