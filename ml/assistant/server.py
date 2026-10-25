@@ -120,11 +120,16 @@ def summary_facts(request) -> dict:
         if values:
             facts[field] = values
     for field in ("reason_facts", "triggered_rule_facts"):
-        values = [
-            {"code": clean(item.code), "description": clean(item.description)}
-            for item in getattr(request, field)
-            if clean(item.code)
-        ]
+        values = []
+        for item in getattr(request, field):
+            code = clean(item.code)
+            if not code:
+                continue
+            description = clean(item.description)
+            if (field == "triggered_rule_facts" and code == "REVIEW_REQUIRED"
+                    and description == "Необходим ручной разбор; конкретная причина этим кодом не указана"):
+                description = "Нужен ручной разбор"
+            values.append({"code": code, "description": description})
         if values:
             facts[field] = values
     return facts

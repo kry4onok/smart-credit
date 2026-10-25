@@ -27,6 +27,13 @@ def check_summary(text: str, fields: dict) -> None:
     ):
         details = fields.get(details_key, [])
         expected = [item["description"] or item["code"] for item in details] if details else fields.get(codes_key, [])
+        if details_key == "triggered_rule_facts":
+            expected = [
+                "Нужен ручной разбор" if item["code"] == "REVIEW_REQUIRED"
+                and item["description"] == "Необходим ручной разбор; конкретная причина этим кодом не указана"
+                else item["description"] or item["code"]
+                for item in details
+            ] if details else expected
         for value in expected:
             assert value in text, f"нет {value}: {text}"
     if not fields.get("grade"):

@@ -55,7 +55,7 @@ class AssistantTests(unittest.TestCase):
         )
         text = (
             "Оборотный кредит: Пополнение оборотных средств. Ручное рассмотрение, грейд B. "
-            "Нет просрочек. Необходим ручной разбор; конкретная причина этим кодом не указана."
+            "Нет просрочек. Нужен ручной разбор."
         )
         with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:3b")):
             result = self.service.SummarizeCase(request, self.context)
@@ -66,6 +66,8 @@ class AssistantTests(unittest.TestCase):
         with patch.object(server, "generate_json", return_value=({"text": guessed}, "qwen2.5:3b")):
             rejected = self.service.SummarizeCase(request, self.context)
         self.assertEqual(rejected.model_version, "template")
+        self.assertIn("Нужен ручной разбор", rejected.text)
+        self.assertNotIn("конкретная причина", rejected.text)
         self.assertNotIn("одобрен", rejected.text)
 
     def test_summary_prompt_omits_missing_score_and_raw_known_codes(self):
