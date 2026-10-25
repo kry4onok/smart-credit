@@ -92,6 +92,9 @@ func parseMultipart(reader *multipart.Reader) (upload, error) {
 			if len(content) > documentusecase.MaxDocumentSize {
 				return upload{}, errors.New("размер файла не должен превышать 5 MiB")
 			}
+			if len(content) == 0 {
+				return upload{}, errors.New("файл пустой; выберите документ с содержимым")
+			}
 			result.Content = content
 			fileSeen = true
 		default:

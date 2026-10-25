@@ -210,9 +210,8 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 	if err := json.Unmarshal(productRaw, &result.product); err != nil {
 		return submitSnapshot{}, fmt.Errorf("decode product snapshot for submission: %w", err)
 	}
-	if amount != nil && term != nil && purpose != nil {
-		result.application.Form = &model.ApplicationForm{AmountKopecks: *amount, TermMonths: *term, Purpose: *purpose}
-	}
+	// Preserve the fields that are present so validation can name only what is missing.
+	result.application.Form = &model.ApplicationForm{AmountKopecks: valueOrZero(amount), TermMonths: valueOrZero(term), Purpose: valueOrEmpty(purpose)}
 	rows, err := tx.Query(ctx, `
 		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at
 		FROM application_documents
@@ -237,16 +236,26 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 }
 
 func validateSubmitSnapshot(snapshot submitSnapshot) error {
-	if snapshot.application.Form == nil || snapshot.company.RegisteredAt == "" ||
-		snapshot.application.Form.AmountKopecks <= 0 || snapshot.application.Form.TermMonths <= 0 ||
-		!validPurpose(snapshot.application.Form.Purpose) {
-		return domain.ErrInvalidApplication
+	var issues []string
+	form := model.ApplicationForm{}
+	if snapshot.application.Form != nil {
+		form = *snapshot.application.Form
 	}
-	if snapshot.application.Form.AmountKopecks < snapshot.product.MinAmount.AmountKopecks ||
-		snapshot.application.Form.AmountKopecks > snapshot.product.MaxAmount.AmountKopecks ||
-		snapshot.application.Form.TermMonths < snapshot.product.MinTermMonths ||
-		snapshot.application.Form.TermMonths > snapshot.product.MaxTermMonths {
-		return domain.ErrInvalidApplication
+	if snapshot.company.RegisteredAt == "" {
+		issues = append(issues, "Заполните дату регистрации компании.")
+	}
+	if form.AmountKopecks <= 0 {
+		issues = append(issues, "Укажите сумму кредита.")
+	} else if form.AmountKopecks < snapshot.product.MinAmount.AmountKopecks || form.AmountKopecks > snapshot.product.MaxAmount.AmountKopecks {
+		issues = append(issues, "Сумма кредита должна соответствовать диапазону выбранного продукта.")
+	}
+	if form.TermMonths <= 0 {
+		issues = append(issues, "Укажите срок кредита.")
+	} else if form.TermMonths < snapshot.product.MinTermMonths || form.TermMonths > snapshot.product.MaxTermMonths {
+		issues = append(issues, "Срок кредита должен соответствовать диапазону выбранного продукта.")
+	}
+	if !validPurpose(form.Purpose) {
+		issues = append(issues, "Укажите цель кредита.")
 	}
 	for _, required := range snapshot.product.RequiredDocumentTypes {
 		found := false
@@ -257,10 +266,21 @@ func validateSubmitSnapshot(snapshot submitSnapshot) error {
 			}
 		}
 		if !found {
-			return domain.ErrInvalidApplication
+			issues = append(issues, "Приложите документ: "+documentLabel(required)+".")
 		}
 	}
-	return nil
+	return domain.InvalidFields(domain.ErrInvalidApplication, issues...)
+}
+
+func documentLabel(value string) string {
+	switch value {
+	case "BANK_STATEMENT":
+		return "выписка по расчётному счёту"
+	case "BUSINESS_PLAN":
+		return "бизнес-план"
+	default:
+		return "документ, указанный в запросе"
+	}
 }
 
 func validPurpose(value string) bool {

@@ -44,6 +44,7 @@ func TestExecuteRejectsInvalidDocument(t *testing.T) {
 		{name: "type", mutate: func(params *model.AddApplicationDocumentParams) { params.DocumentType = "OTHER" }},
 		{name: "filename", mutate: func(params *model.AddApplicationDocumentParams) { params.FileName = " " }},
 		{name: "size", mutate: func(params *model.AddApplicationDocumentParams) { params.Content = make([]byte, MaxDocumentSize+1) }},
+		{name: "empty", mutate: func(params *model.AddApplicationDocumentParams) { params.Content = nil }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			params := validParams()

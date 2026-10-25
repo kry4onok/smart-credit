@@ -265,45 +265,59 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 }
 
 func validateInfoResponse(snapshot infoSnapshot, params model.ProvideInfoParams, company model.Company, form model.ApplicationForm) error {
+	var issues []string
 	if err := domain.ValidateCompany(company); err != nil {
-		return domain.ErrInvalidInfoResponse
+		issues = append(issues, "Проверьте реквизиты и финансовые показатели компании.")
 	}
 	if form.AmountKopecks < snapshot.product.MinAmount.AmountKopecks ||
 		form.AmountKopecks > snapshot.product.MaxAmount.AmountKopecks ||
 		form.TermMonths < snapshot.product.MinTermMonths ||
 		form.TermMonths > snapshot.product.MaxTermMonths ||
 		!validPurpose(form.Purpose) {
-		return domain.ErrInvalidInfoResponse
+		issues = append(issues, "Проверьте сумму, срок и цель кредита: они должны соответствовать условиям продукта.")
 	}
 	for _, field := range snapshot.requiredFields {
 		switch field {
 		case "COMPANY_REVENUE_12M", "COMPANY_PROFIT_12M", "COMPANY_OBLIGATIONS":
 			if params.Company == nil {
-				return domain.ErrInvalidInfoResponse
+				issues = append(issues, "Укажите запрошенный показатель: "+infoFieldLabel(field)+".")
 			}
 		case "APPLICATION_AMOUNT":
 			if params.Fields == nil || params.Fields.AmountKopecks == nil {
-				return domain.ErrInvalidInfoResponse
+				issues = append(issues, "Укажите сумму кредита в ответе банку.")
 			}
 		case "APPLICATION_TERM_MONTHS":
 			if params.Fields == nil || params.Fields.TermMonths == nil {
-				return domain.ErrInvalidInfoResponse
+				issues = append(issues, "Укажите срок кредита в ответе банку.")
 			}
 		case "APPLICATION_PURPOSE":
 			if params.Fields == nil || params.Fields.Purpose == nil {
-				return domain.ErrInvalidInfoResponse
+				issues = append(issues, "Укажите цель кредита в ответе банку.")
 			}
 		default:
-			return domain.ErrInvalidInfoResponse
+			issues = append(issues, "Запрос банка содержит неподдерживаемое поле. Обновите карточку заявки.")
 		}
 	}
-	return nil
+	return domain.InvalidFields(domain.ErrInvalidInfoResponse, issues...)
+}
+
+func infoFieldLabel(value string) string {
+	switch value {
+	case "COMPANY_REVENUE_12M":
+		return "выручка за 12 месяцев"
+	case "COMPANY_PROFIT_12M":
+		return "прибыль за 12 месяцев"
+	case "COMPANY_OBLIGATIONS":
+		return "текущие кредиты и займы"
+	default:
+		return "показатель компании"
+	}
 }
 
 func selectInfoDocuments(documents []model.ApplicationDocument, required []string, params model.ProvideInfoParams) ([]model.ApplicationDocument, error) {
 	if !params.DocumentsSpecified {
 		if !hasRequiredDocuments(documents, required) {
-			return nil, domain.ErrInvalidInfoResponse
+			return nil, missingInfoDocuments(documents, required)
 		}
 		return documents, nil
 	}
@@ -328,9 +342,19 @@ func selectInfoDocuments(documents []model.ApplicationDocument, required []strin
 		selected = append(selected, document)
 	}
 	if !hasRequiredDocuments(selected, required) {
-		return nil, domain.ErrInvalidInfoResponse
+		return nil, missingInfoDocuments(selected, required)
 	}
 	return selected, nil
+}
+
+func missingInfoDocuments(documents []model.ApplicationDocument, required []string) error {
+	var issues []string
+	for _, kind := range required {
+		if !hasRequiredDocuments(documents, []string{kind}) {
+			issues = append(issues, "Приложите запрошенный документ: "+documentLabel(kind)+".")
+		}
+	}
+	return domain.InvalidFields(domain.ErrInvalidInfoResponse, issues...)
 }
 
 func hasRequiredDocuments(documents []model.ApplicationDocument, required []string) bool {

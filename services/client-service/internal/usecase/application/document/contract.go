@@ -21,7 +21,7 @@ func (u *Usecase) Execute(ctx context.Context, params model.AddApplicationDocume
 	if params.ApplicationID == uuid.Nil || params.OrgID == uuid.Nil || params.UserID == uuid.Nil || params.IdempotencyKey == uuid.Nil {
 		return model.ApplicationDocument{}, domain.ErrInvalidDocumentUpload
 	}
-	if !validDocumentType(params.DocumentType) || strings.TrimSpace(params.FileName) == "" || len(params.Content) > MaxDocumentSize {
+	if !validDocumentType(params.DocumentType) || strings.TrimSpace(params.FileName) == "" || len(params.Content) == 0 || len(params.Content) > MaxDocumentSize {
 		return model.ApplicationDocument{}, domain.ErrInvalidDocumentUpload
 	}
 	return u.repository.AddDocument(ctx, params)

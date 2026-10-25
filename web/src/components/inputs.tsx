@@ -67,6 +67,10 @@ export function DocumentSlot({ applicationId, type, documents, enabled, onUpload
   const attached = documents.filter((d) => d.document_type === type);
 
   async function send(file: File) {
+    if (file.size === 0) {
+      upload.setError(new ApiError(422, "Файл пустой. Выберите документ с содержимым."));
+      return;
+    }
     if (file.size > MAX_FILE) {
       upload.setError(new ApiError(413, "Файл больше 5 МБ. Выберите файл поменьше."));
       return;
@@ -99,6 +103,7 @@ export function DocumentSlot({ applicationId, type, documents, enabled, onUpload
             {d.is_mock && <em className="tag">демо-документ</em>}
           </span>
         ))}
+        {attached.length > 0 && <span role="status">Файл сохранён. Данные из него не извлекаются — заполните поля формы вручную.</span>}
         {upload.error ? <ErrorNote error={upload.error} /> : null}
       </div>
       {enabled && (
