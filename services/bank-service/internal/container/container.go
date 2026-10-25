@@ -124,7 +124,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		enrichment = enrichmentworker.New(enrichmentResults, bureau)
 	}
 	if cfg.AssistantTarget != "" {
-		assistant, err = assistantclient.Dial(cfg.AssistantTarget)
+		assistant, err = assistantclient.Dial(cfg.AssistantTarget, cfg.AssistantTimeout)
 		if err != nil {
 			consumer.Close()
 			if client != nil {

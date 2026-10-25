@@ -1,5 +1,7 @@
 import sys
+import json
 import unittest
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
@@ -67,7 +69,7 @@ class AssistantTests(unittest.TestCase):
         request = assistant_pb2.ExplainDecisionRequest(
             outcome="REJECT", analyst_public_reason="Недостаточно подтверждённого дохода."
         )
-        with patch.object(server, "generate_json", side_effect=server.OllamaUnavailable("offline")):
+        with patch.object(server, "generate_json", side_effect=server.ModelUnavailable("offline")):
             result = self.service.ExplainDecision(request, self.context)
         self.assertEqual(result.model_version, "template")
         self.assertIn("отказе", result.text)
@@ -80,6 +82,39 @@ class AssistantTests(unittest.TestCase):
             result = self.service.SummarizeCase(request, self.context)
         self.assertEqual(result.model_version, "template")
         self.assertNotIn("12", result.text)
+
+    def test_summary_rejects_grade_when_score_is_missing(self):
+        request = assistant_pb2.SummarizeCaseRequest(
+            product_name="Оборотный кредит", purpose="WORKING_CAPITAL"
+        )
+        invented = "Продукт: Оборотный кредит. Цель: WORKING_CAPITAL. Грейд скоринга: B."
+        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:3b")):
+            result = self.service.SummarizeCase(request, self.context)
+        self.assertEqual(result.model_version, "template")
+        self.assertNotIn("Грейд", result.text)
+
+    def test_ollama_transport_uses_custom_url_model_and_key(self):
+        answer = BytesIO(json.dumps({"response": '{"style":"neutral"}', "model": "local"}).encode())
+        with patch.multiple(server, LLM_PROVIDER="ollama", LLM_BASE_URL="http://localhost:11434", LLM_MODEL="local", LLM_API_KEY="secret"):
+            with patch.object(server, "urlopen", return_value=answer) as open_mock:
+                data, version = server.generate_json("Выбери стиль", {"outcome": "COUNTER"}, server.STYLE_FORMAT, 5)
+        request = open_mock.call_args.args[0]
+        self.assertEqual(request.full_url, "http://localhost:11434/api/generate")
+        self.assertEqual(request.get_header("Authorization"), "Bearer secret")
+        self.assertEqual(json.loads(request.data)["model"], "local")
+        self.assertEqual((data, version), ({"style": "neutral"}, "local"))
+
+    def test_openai_compatible_transport_uses_base_url_model_and_key(self):
+        answer = BytesIO(json.dumps({"choices": [{"message": {"content": '{"style":"empathetic"}'}}], "model": "remote"}).encode())
+        with patch.multiple(server, LLM_PROVIDER="openai", LLM_BASE_URL="https://example.test/v1", LLM_MODEL="remote", LLM_API_KEY="secret"):
+            with patch.object(server, "urlopen", return_value=answer) as open_mock:
+                data, version = server.generate_json("Выбери стиль", {"outcome": "REJECT"}, server.STYLE_FORMAT, 5)
+        request = open_mock.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(request.full_url, "https://example.test/v1/chat/completions")
+        self.assertEqual(request.get_header("Authorization"), "Bearer secret")
+        self.assertEqual(payload["model"], "remote")
+        self.assertEqual((data, version), ({"style": "empathetic"}, "remote"))
 
     def test_all_decision_outcomes_use_known_status(self):
         expected = {
@@ -101,6 +136,25 @@ class AssistantTests(unittest.TestCase):
         request = assistant_pb2.ExplainDecisionRequest(outcome="DISBURSED")
         with self.assertRaises(grpc.RpcError):
             self.service.ExplainDecision(request, self.context)
+
+    def test_all_bank_demo_scenarios_work_without_model(self):
+        scenarios = json.loads((Path(__file__).resolve().parents[1] / "scenarios.json").read_text())
+        seed = (Path(__file__).resolve().parents[3] / "services/bank-service/seeds/demo.sql").read_text()
+        self.assertEqual([case["number"] for case in scenarios], list(range(1, 8)))
+        with patch.object(server, "generate_json", side_effect=server.ModelUnavailable("offline")):
+            for case in scenarios:
+                with self.subTest(case=case["number"]):
+                    fields = case["summary"]
+                    self.assertIn(fields["application_id"], seed)
+                    summary = self.service.SummarizeCase(assistant_pb2.SummarizeCaseRequest(**fields), self.context)
+                    self.assertEqual(summary.model_version, "template")
+                    self.assertEqual(summary.text, server.summary_template(server.summary_facts(assistant_pb2.SummarizeCaseRequest(**fields))))
+                    if explanation_fields := case.get("explanation"):
+                        explanation = self.service.ExplainDecision(
+                            assistant_pb2.ExplainDecisionRequest(**explanation_fields), self.context
+                        )
+                        self.assertEqual(explanation.model_version, "template")
+                        self.assertIn(explanation_fields["analyst_public_reason"], explanation.text)
 
 
 if __name__ == "__main__":

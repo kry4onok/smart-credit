@@ -64,6 +64,19 @@ func TestLoadAssistantTarget(t *testing.T) {
 	}
 }
 
+func TestLoadAssistantTimeout(t *testing.T) {
+	setValidEnvironment(t)
+	t.Setenv("BANK_ASSISTANT_TIMEOUT", "20s")
+	cfg, err := Load()
+	if err != nil || cfg.AssistantTimeout != 20*time.Second {
+		t.Fatalf("AssistantTimeout=%s, err=%v", cfg.AssistantTimeout, err)
+	}
+	t.Setenv("BANK_ASSISTANT_TIMEOUT", "30s")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "BANK_ASSISTANT_TIMEOUT") {
+		t.Fatalf("expected timeout validation error, got %v", err)
+	}
+}
+
 func TestLoadRejectsInvalidEnvironment(t *testing.T) {
 	tests := []struct {
 		name string
