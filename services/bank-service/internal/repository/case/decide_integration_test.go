@@ -57,15 +57,21 @@ func TestDecidePersistsOfferAuditOutboxAndReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := New(tx)
-	in := decide.Input{CaseID: caseID, AnalystID: analystID, IdempotencyKey: uuid.New(), ExpectedVersion: 1, Outcome: "APPROVE", Comment: "Internal review only", Offer: &decide.Offer{ProductID: productID, AmountKopecks: 300000000, TermMonths: 18, RateBPS: 1600}}
+	in := decide.Input{CaseID: caseID, AnalystID: analystID, IdempotencyKey: uuid.New(), ExpectedVersion: 1, Outcome: "APPROVE", Comment: "Internal review only", ClientText: "Здравствуйте. Одобрено предложение.", Offer: &decide.Offer{ProductID: productID, AmountKopecks: 300000000, TermMonths: 18, RateBPS: 1600}}
+	if preview, ready := repo.PrepareDecision(ctx, in); !ready || preview.RequestedProductName != "Test loan" || preview.OfferedProductName != "Test loan" {
+		t.Fatalf("prepare decision: preview=%+v ready=%t", preview, ready)
+	}
 	result, err := repo.Decide(ctx, in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Status != "OFFER" || result.Version != 2 || result.Offer == nil || result.Offer.ProductID != productID {
+	if result.Status != "OFFER" || result.Version != 2 || result.Offer == nil || result.Offer.ProductID != productID ||
+		result.Offer.Explanation != in.ClientText || result.PublicReason == nil || *result.PublicReason != in.ClientText {
 		t.Fatalf("case = %+v", result)
 	}
-	replay, err := repo.Decide(ctx, in)
+	replayInput := in
+	replayInput.ClientText = "Другой ответ модели"
+	replay, err := repo.Decide(ctx, replayInput)
 	if err != nil || replay.Version != result.Version {
 		t.Fatalf("replay = %+v, %v", replay, err)
 	}
@@ -90,7 +96,8 @@ func TestDecidePersistsOfferAuditOutboxAndReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 	state := event.GetApplicationPublicStatePublished()
-	if state.GetStatus() != eventspb.ClientStatus_CLIENT_STATUS_OFFER_AVAILABLE || state.GetActiveOffer().GetProductId() != productID.String() || bytes.Contains(payload, []byte(in.Comment)) {
+	if state.GetStatus() != eventspb.ClientStatus_CLIENT_STATUS_OFFER_AVAILABLE || state.GetActiveOffer().GetProductId() != productID.String() || state.GetPublicReason() != in.ClientText ||
+		state.GetActiveOffer().GetExplanation() != in.ClientText || bytes.Contains(payload, []byte(in.Comment)) {
 		t.Fatalf("public event = %v", &event)
 	}
 }

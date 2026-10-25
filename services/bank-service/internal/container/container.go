@@ -103,7 +103,6 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	scoringAttempts := scoringrepository.New(db, transactions)
 	enrichmentResults := enrichmentrepository.New(db, transactions)
 	takeCase := takecase.New(caseRepository, transactions)
-	decideCase := decidecase.New(caseRepository, transactions)
 	auditCase := auditcase.New(caseRepository)
 	var client *scoringclient.Client
 	var worker *scoringworker.Worker
@@ -161,6 +160,11 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		return nil, fmt.Errorf("create bank outbox publisher: %w", err)
 	}
 
+	var explainer decidecase.Assistant
+	if assistant != nil {
+		explainer = assistant
+	}
+	decideCase := decidecase.New(caseRepository, transactions, explainer)
 	var summarizer summarycase.Assistant
 	if assistant != nil {
 		summarizer = assistant

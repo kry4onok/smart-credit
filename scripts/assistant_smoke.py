@@ -90,6 +90,8 @@ def main() -> None:
                 check_version(explanation.model_version, args.expect_version)
                 assert explanation_fields["analyst_public_reason"] in explanation.text
                 assert explanation_fields["product_name"] in explanation.text
+                for fragment in scenario.get("explanation_expected", []):
+                    assert fragment in explanation.text, f"нет {fragment}: {explanation.text}"
                 print(f"#{scenario['number']} {label} ExplainDecision [{explanation.model_version}, {time.perf_counter() - started:.1f} с]: {explanation.text}", flush=True)
                 calls += 1
                 templates += explanation.model_version == "template"

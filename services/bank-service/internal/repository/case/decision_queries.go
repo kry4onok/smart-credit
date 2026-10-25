@@ -22,6 +22,11 @@ UPDATE idempotency_keys
 SET response_body=$4,response_headers=jsonb_build_object('ETag',$5::text),case_id=$6 
 WHERE actor_id=$1 AND route=$2 AND idempotency_key=$3`
 
+const previewDecisionCase = `
+SELECT status,assignee_id,version,company_snapshot,documents_snapshot,purpose_tag,product_name
+FROM cases
+WHERE id=$1`
+
 const lockDecisionCase = `
 SELECT status,assignee_id,version,company_snapshot,documents_snapshot,purpose_tag 
 FROM cases 

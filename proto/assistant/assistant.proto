@@ -37,6 +37,14 @@ message ExplainDecisionRequest {
   string product_name = 3;
   repeated string public_reason_codes = 4;
   string analyst_public_reason = 5; // Безопасное основание; не внутренний comment.
+  DecisionOffer selected_offer = 6; // Уже выбранная и проверенная банком оферта.
+}
+
+message DecisionOffer {
+  string product_name = 1;
+  int64 amount_kopecks = 2;
+  int32 term_months = 3;
+  int32 rate_bps = 4;
 }
 
 message TextResponse {

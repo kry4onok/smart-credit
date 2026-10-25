@@ -205,6 +205,7 @@ type ExplainDecisionRequest struct {
 	ProductName         string                 `protobuf:"bytes,3,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
 	PublicReasonCodes   []string               `protobuf:"bytes,4,rep,name=public_reason_codes,json=publicReasonCodes,proto3" json:"public_reason_codes,omitempty"`
 	AnalystPublicReason string                 `protobuf:"bytes,5,opt,name=analyst_public_reason,json=analystPublicReason,proto3" json:"analyst_public_reason,omitempty"` // Безопасное основание; не внутренний comment.
+	SelectedOffer       *DecisionOffer         `protobuf:"bytes,6,opt,name=selected_offer,json=selectedOffer,proto3" json:"selected_offer,omitempty"`                     // Уже выбранная и проверенная банком оферта.
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -274,6 +275,81 @@ func (x *ExplainDecisionRequest) GetAnalystPublicReason() string {
 	return ""
 }
 
+func (x *ExplainDecisionRequest) GetSelectedOffer() *DecisionOffer {
+	if x != nil {
+		return x.SelectedOffer
+	}
+	return nil
+}
+
+type DecisionOffer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductName   string                 `protobuf:"bytes,1,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
+	AmountKopecks int64                  `protobuf:"varint,2,opt,name=amount_kopecks,json=amountKopecks,proto3" json:"amount_kopecks,omitempty"`
+	TermMonths    int32                  `protobuf:"varint,3,opt,name=term_months,json=termMonths,proto3" json:"term_months,omitempty"`
+	RateBps       int32                  `protobuf:"varint,4,opt,name=rate_bps,json=rateBps,proto3" json:"rate_bps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecisionOffer) Reset() {
+	*x = DecisionOffer{}
+	mi := &file_proto_assistant_assistant_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecisionOffer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecisionOffer) ProtoMessage() {}
+
+func (x *DecisionOffer) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_assistant_assistant_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecisionOffer.ProtoReflect.Descriptor instead.
+func (*DecisionOffer) Descriptor() ([]byte, []int) {
+	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DecisionOffer) GetProductName() string {
+	if x != nil {
+		return x.ProductName
+	}
+	return ""
+}
+
+func (x *DecisionOffer) GetAmountKopecks() int64 {
+	if x != nil {
+		return x.AmountKopecks
+	}
+	return 0
+}
+
+func (x *DecisionOffer) GetTermMonths() int32 {
+	if x != nil {
+		return x.TermMonths
+	}
+	return 0
+}
+
+func (x *DecisionOffer) GetRateBps() int32 {
+	if x != nil {
+		return x.RateBps
+	}
+	return 0
+}
+
 type TextResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
@@ -284,7 +360,7 @@ type TextResponse struct {
 
 func (x *TextResponse) Reset() {
 	*x = TextResponse{}
-	mi := &file_proto_assistant_assistant_proto_msgTypes[3]
+	mi := &file_proto_assistant_assistant_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -296,7 +372,7 @@ func (x *TextResponse) String() string {
 func (*TextResponse) ProtoMessage() {}
 
 func (x *TextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_assistant_assistant_proto_msgTypes[3]
+	mi := &file_proto_assistant_assistant_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -309,7 +385,7 @@ func (x *TextResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TextResponse.ProtoReflect.Descriptor instead.
 func (*TextResponse) Descriptor() ([]byte, []int) {
-	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{3}
+	return file_proto_assistant_assistant_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TextResponse) GetText() string {
@@ -346,13 +422,20 @@ const file_proto_assistant_assistant_proto_rawDesc = "" +
 	"\x14triggered_rule_facts\x18\v \x03(\v2\".smartcredit.assistant.SummaryFactR\x12triggeredRuleFacts\"C\n" +
 	"\vSummaryFact\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\"\xe0\x01\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"\xad\x02\n" +
 	"\x16ExplainDecisionRequest\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12\x18\n" +
 	"\aoutcome\x18\x02 \x01(\tR\aoutcome\x12!\n" +
 	"\fproduct_name\x18\x03 \x01(\tR\vproductName\x12.\n" +
 	"\x13public_reason_codes\x18\x04 \x03(\tR\x11publicReasonCodes\x122\n" +
-	"\x15analyst_public_reason\x18\x05 \x01(\tR\x13analystPublicReason\"G\n" +
+	"\x15analyst_public_reason\x18\x05 \x01(\tR\x13analystPublicReason\x12K\n" +
+	"\x0eselected_offer\x18\x06 \x01(\v2$.smartcredit.assistant.DecisionOfferR\rselectedOffer\"\x95\x01\n" +
+	"\rDecisionOffer\x12!\n" +
+	"\fproduct_name\x18\x01 \x01(\tR\vproductName\x12%\n" +
+	"\x0eamount_kopecks\x18\x02 \x01(\x03R\ramountKopecks\x12\x1f\n" +
+	"\vterm_months\x18\x03 \x01(\x05R\n" +
+	"termMonths\x12\x19\n" +
+	"\brate_bps\x18\x04 \x01(\x05R\arateBps\"G\n" +
 	"\fTextResponse\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12#\n" +
 	"\rmodel_version\x18\x02 \x01(\tR\fmodelVersion2\xdc\x01\n" +
@@ -372,25 +455,27 @@ func file_proto_assistant_assistant_proto_rawDescGZIP() []byte {
 	return file_proto_assistant_assistant_proto_rawDescData
 }
 
-var file_proto_assistant_assistant_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_assistant_assistant_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_assistant_assistant_proto_goTypes = []any{
 	(*SummarizeCaseRequest)(nil),   // 0: smartcredit.assistant.SummarizeCaseRequest
 	(*SummaryFact)(nil),            // 1: smartcredit.assistant.SummaryFact
 	(*ExplainDecisionRequest)(nil), // 2: smartcredit.assistant.ExplainDecisionRequest
-	(*TextResponse)(nil),           // 3: smartcredit.assistant.TextResponse
+	(*DecisionOffer)(nil),          // 3: smartcredit.assistant.DecisionOffer
+	(*TextResponse)(nil),           // 4: smartcredit.assistant.TextResponse
 }
 var file_proto_assistant_assistant_proto_depIdxs = []int32{
 	1, // 0: smartcredit.assistant.SummarizeCaseRequest.reason_facts:type_name -> smartcredit.assistant.SummaryFact
 	1, // 1: smartcredit.assistant.SummarizeCaseRequest.triggered_rule_facts:type_name -> smartcredit.assistant.SummaryFact
-	0, // 2: smartcredit.assistant.AssistantService.SummarizeCase:input_type -> smartcredit.assistant.SummarizeCaseRequest
-	2, // 3: smartcredit.assistant.AssistantService.ExplainDecision:input_type -> smartcredit.assistant.ExplainDecisionRequest
-	3, // 4: smartcredit.assistant.AssistantService.SummarizeCase:output_type -> smartcredit.assistant.TextResponse
-	3, // 5: smartcredit.assistant.AssistantService.ExplainDecision:output_type -> smartcredit.assistant.TextResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 2: smartcredit.assistant.ExplainDecisionRequest.selected_offer:type_name -> smartcredit.assistant.DecisionOffer
+	0, // 3: smartcredit.assistant.AssistantService.SummarizeCase:input_type -> smartcredit.assistant.SummarizeCaseRequest
+	2, // 4: smartcredit.assistant.AssistantService.ExplainDecision:input_type -> smartcredit.assistant.ExplainDecisionRequest
+	4, // 5: smartcredit.assistant.AssistantService.SummarizeCase:output_type -> smartcredit.assistant.TextResponse
+	4, // 6: smartcredit.assistant.AssistantService.ExplainDecision:output_type -> smartcredit.assistant.TextResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_assistant_assistant_proto_init() }
@@ -404,7 +489,7 @@ func file_proto_assistant_assistant_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_assistant_assistant_proto_rawDesc), len(file_proto_assistant_assistant_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
