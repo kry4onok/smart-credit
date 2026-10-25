@@ -2,8 +2,7 @@ package summary
 
 import "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 
-// These labels describe facts already established by the bank. They must not
-// turn a scoring grade or a technical failure into a credit decision.
+
 var purposeDescriptions = map[string]string{
 	"WORKING_CAPITAL": "Пополнение оборотных средств",
 	"EQUIPMENT":       "Покупка оборудования",
@@ -28,9 +27,7 @@ var statusDescriptions = map[model.CaseStatus]string{
 	model.CaseStatusExpired:       "Срок действия истёк",
 }
 
-// The decision and validation use cases own these meanings. Demo-only codes
-// have deliberately conservative descriptions because no concrete threshold
-// is recorded for them.
+
 var ruleDescriptions = map[string]string{
 	"UNKNOWN_PRODUCT":             "Продукт заявки не найден",
 	"VALIDATION_INVALID_SNAPSHOT": "Данные компании или документов не удалось проверить",
