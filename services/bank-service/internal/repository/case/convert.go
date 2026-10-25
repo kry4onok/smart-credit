@@ -42,6 +42,7 @@ func scanCase(row rowScanner) (model.Case, error) {
 	var status string
 	var purpose string
 	var documentTypes []string
+	var documentsJSON []byte
 	var hasChecks bool
 	var companyStatus string
 	var registeredAt *time.Time
@@ -94,6 +95,7 @@ func scanCase(row rowScanner) (model.Case, error) {
 		&item.Application.TermMonths,
 		&purpose,
 		&documentTypes,
+		&documentsJSON,
 		&hasChecks,
 		&companyStatus,
 		&registeredAt,
@@ -145,6 +147,10 @@ func scanCase(row rowScanner) (model.Case, error) {
 	item.Application.DocumentTypes = make([]model.DocumentType, len(documentTypes))
 	for index, documentType := range documentTypes {
 		item.Application.DocumentTypes[index] = model.DocumentType(documentType)
+	}
+	item.Documents, err = decodeCaseDocuments(documentsJSON)
+	if err != nil {
+		return model.Case{}, fmt.Errorf("decode case documents: %w", err)
 	}
 	if hasChecks {
 		item.Checks = &model.Checks{
@@ -218,6 +224,36 @@ func scanCase(row rowScanner) (model.Case, error) {
 	}
 
 	return item, nil
+}
+
+func decodeCaseDocuments(raw []byte) ([]model.DocumentMetadata, error) {
+	var stored []struct {
+		DocumentID   uuid.UUID `json:"document_id"`
+		LegacyID     uuid.UUID `json:"id"`
+		DocumentType string    `json:"document_type"`
+		FileName     string    `json:"file_name"`
+		SHA256       string    `json:"sha256"`
+		UploadedAt   time.Time `json:"uploaded_at"`
+		IsMock       bool      `json:"is_mock"`
+	}
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		return nil, err
+	}
+	documents := make([]model.DocumentMetadata, 0, len(stored))
+	for _, document := range stored {
+		id := document.DocumentID
+		if id == uuid.Nil {
+			id = document.LegacyID
+		}
+		if id == uuid.Nil {
+			return nil, fmt.Errorf("missing document id")
+		}
+		documents = append(documents, model.DocumentMetadata{
+			ID: id, DocumentType: document.DocumentType, FileName: document.FileName,
+			SHA256: document.SHA256, UploadedAt: document.UploadedAt, IsMock: document.IsMock,
+		})
+	}
+	return documents, nil
 }
 
 func decodeCurrentScore(data []byte, attemptID uuid.UUID, revision int64, asOfDate time.Time) (*model.ScoreResult, error) {

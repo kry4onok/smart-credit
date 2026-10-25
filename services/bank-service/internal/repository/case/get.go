@@ -33,6 +33,7 @@ SELECT
         FROM jsonb_array_elements(cases.documents_snapshot)
             WITH ORDINALITY AS documents(document, ordinality)
     ), ARRAY[]::text[]),
+    cases.documents_snapshot,
     company_check.id IS NOT NULL OR credit_check.id IS NOT NULL,
     COALESCE(
         CASE WHEN company_check.outcome = 'SUCCESS'

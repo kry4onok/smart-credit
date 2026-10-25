@@ -8,6 +8,7 @@ import (
 
 type userIDContextKey struct{}
 type analystIDContextKey struct{}
+type accessTokenContextKey struct{}
 
 func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
 	return context.WithValue(ctx, userIDContextKey{}, userID)
@@ -25,4 +26,13 @@ func WithAnalystID(ctx context.Context, analystID uuid.UUID) context.Context {
 func AnalystID(ctx context.Context) (uuid.UUID, bool) {
 	id, ok := ctx.Value(analystIDContextKey{}).(uuid.UUID)
 	return id, ok && id != uuid.Nil
+}
+
+func withAccessToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, accessTokenContextKey{}, token)
+}
+
+func AccessToken(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(accessTokenContextKey{}).(string)
+	return token, ok && token != ""
 }

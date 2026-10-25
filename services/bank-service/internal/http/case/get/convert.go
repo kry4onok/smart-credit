@@ -29,6 +29,14 @@ func ToBankCase(output getcase.Output) generated.BankCase {
 	for index, documentType := range caseItem.Application.DocumentTypes {
 		documentTypes[index] = common.DocumentType(documentType)
 	}
+	documents := make([]common.DocumentMetadata, 0, len(caseItem.Documents))
+	for _, document := range caseItem.Documents {
+		documents = append(documents, common.DocumentMetadata{
+			Id: document.ID, DocumentType: common.DocumentType(document.DocumentType),
+			FileName: document.FileName, Sha256: document.SHA256,
+			UploadedAt: document.UploadedAt, IsMock: document.IsMock,
+		})
+	}
 	triggeredRules := append([]string{}, caseItem.TriggeredRules...)
 
 	result := generated.BankCase{
@@ -44,6 +52,7 @@ func ToBankCase(output getcase.Output) generated.BankCase {
 			Purpose:       common.PurposeTag(caseItem.Application.Purpose),
 			DocumentTypes: documentTypes,
 		},
+		Documents:      documents,
 		TriggeredRules: &triggeredRules,
 		AssigneeId:     caseItem.AssigneeID,
 		PublicReason:   caseItem.PublicReason,

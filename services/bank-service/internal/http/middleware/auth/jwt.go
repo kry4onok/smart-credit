@@ -35,7 +35,7 @@ func RequireEmployee(verifier Verifier, next http.Handler) http.Handler {
 			domainerror.Write(w, r, domainerror.Forbidden("FORBIDDEN", errors.New("требуется роль ANALYST или ADMIN")))
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(WithAnalystID(r.Context(), principal.UserID)))
+		next.ServeHTTP(w, r.WithContext(withAccessToken(WithAnalystID(r.Context(), principal.UserID), authorization[1])))
 	})
 }
 

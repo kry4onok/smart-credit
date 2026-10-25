@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	externalRef0 "github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
@@ -359,11 +360,14 @@ type BankCase struct {
 	Company        externalRef0.CompanyProfile `json:"company"`
 
 	// CreatedAt RFC 3339, UTC.
-	CreatedAt   externalRef0.Timestamp    `json:"created_at"`
-	Id          externalRef0.Id           `json:"id"`
-	InfoRequest *externalRef0.InfoRequest `json:"info_request,omitempty"`
-	Offer       *externalRef0.Offer       `json:"offer,omitempty"`
-	ProductId   externalRef0.Id           `json:"product_id"`
+	CreatedAt externalRef0.Timestamp `json:"created_at"`
+
+	// Documents Метаданные вложений, полученные банком в событиях заявки.
+	Documents   []externalRef0.DocumentMetadata `json:"documents"`
+	Id          externalRef0.Id                 `json:"id"`
+	InfoRequest *externalRef0.InfoRequest       `json:"info_request,omitempty"`
+	Offer       *externalRef0.Offer             `json:"offer,omitempty"`
+	ProductId   externalRef0.Id                 `json:"product_id"`
 
 	// ProductName Снимок исходного продукта заявки.
 	ProductName    string `json:"product_name"`
@@ -594,6 +598,9 @@ type ServerInterface interface {
 	// DecideCase Решение назначенного аналитика по MANUAL_REVIEW
 	// (POST /backoffice/applications/{application_id}/decision)
 	DecideCase(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params DecideCaseParams)
+	// GetCaseDocumentContent Открыть оригинал вложения из карточки дела
+	// (GET /backoffice/applications/{application_id}/documents/{document_id}/content)
+	GetCaseDocumentContent(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, documentId externalRef0.Id)
 	// SummarizeCase Резюме дела для сотрудника с помощью assistant
 	// (POST /backoffice/applications/{application_id}/summary)
 	SummarizeCase(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId)
@@ -636,6 +643,12 @@ func (_ Unimplemented) GetCaseAudit(w http.ResponseWriter, r *http.Request, appl
 // DecideCase Решение назначенного аналитика по MANUAL_REVIEW
 // (POST /backoffice/applications/{application_id}/decision)
 func (_ Unimplemented) DecideCase(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params DecideCaseParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetCaseDocumentContent Открыть оригинал вложения из карточки дела
+// (GET /backoffice/applications/{application_id}/documents/{document_id}/content)
+func (_ Unimplemented) GetCaseDocumentContent(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, documentId externalRef0.Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -921,6 +934,41 @@ func (siw *ServerInterfaceWrapper) DecideCase(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetCaseDocumentContent operation middleware
+func (siw *ServerInterfaceWrapper) GetCaseDocumentContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "application_id" -------------
+	var applicationId externalRef0.ApplicationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "application_id", chi.URLParam(r, "application_id"), &applicationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId externalRef0.Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", chi.URLParam(r, "document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCaseDocumentContent(w, r, applicationId, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SummarizeCase operation middleware
 func (siw *ServerInterfaceWrapper) SummarizeCase(w http.ResponseWriter, r *http.Request) {
 
@@ -1193,6 +1241,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/backoffice/applications/{application_id}", wrapper.GetCase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/backoffice/applications/{application_id}/documents/{document_id}/content", wrapper.GetCaseDocumentContent)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/backoffice/applications/{application_id}/take", wrapper.TakeCase)
@@ -1547,6 +1598,97 @@ func (response DecideCase422ApplicationProblemPlusJSONResponse) VisitDecideCaseR
 	return err
 }
 
+type GetCaseDocumentContentRequestObject struct {
+	ApplicationId externalRef0.ApplicationId `json:"application_id"`
+	DocumentId    externalRef0.Id            `json:"document_id"`
+}
+
+type GetCaseDocumentContentResponseObject interface {
+	VisitGetCaseDocumentContentResponse(w http.ResponseWriter) error
+}
+
+type GetCaseDocumentContent200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetCaseDocumentContent200ApplicationoctetStreamResponse) VisitGetCaseDocumentContentResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetCaseDocumentContent401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetCaseDocumentContent401ApplicationProblemPlusJSONResponse) VisitGetCaseDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCaseDocumentContent403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response GetCaseDocumentContent403ApplicationProblemPlusJSONResponse) VisitGetCaseDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCaseDocumentContent404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetCaseDocumentContent404ApplicationProblemPlusJSONResponse) VisitGetCaseDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCaseDocumentContent502ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetCaseDocumentContent502ApplicationProblemPlusJSONResponse) VisitGetCaseDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SummarizeCaseRequestObject struct {
 	ApplicationId externalRef0.ApplicationId `json:"application_id"`
 }
@@ -1856,6 +1998,9 @@ type StrictServerInterface interface {
 	// DecideCase Решение назначенного аналитика по MANUAL_REVIEW
 	// (POST /backoffice/applications/{application_id}/decision)
 	DecideCase(ctx context.Context, request DecideCaseRequestObject) (DecideCaseResponseObject, error)
+	// GetCaseDocumentContent Открыть оригинал вложения из карточки дела
+	// (GET /backoffice/applications/{application_id}/documents/{document_id}/content)
+	GetCaseDocumentContent(ctx context.Context, request GetCaseDocumentContentRequestObject) (GetCaseDocumentContentResponseObject, error)
 	// SummarizeCase Резюме дела для сотрудника с помощью assistant
 	// (POST /backoffice/applications/{application_id}/summary)
 	SummarizeCase(ctx context.Context, request SummarizeCaseRequestObject) (SummarizeCaseResponseObject, error)
@@ -2018,6 +2163,33 @@ func (sh *strictHandler) DecideCase(w http.ResponseWriter, r *http.Request, appl
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DecideCaseResponseObject); ok {
 		if err := validResponse.VisitDecideCaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCaseDocumentContent operation middleware
+func (sh *strictHandler) GetCaseDocumentContent(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, documentId externalRef0.Id) {
+	var request GetCaseDocumentContentRequestObject
+
+	request.ApplicationId = applicationId
+	request.DocumentId = documentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCaseDocumentContent(ctx, request.(GetCaseDocumentContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCaseDocumentContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCaseDocumentContentResponseObject); ok {
+		if err := validResponse.VisitGetCaseDocumentContentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

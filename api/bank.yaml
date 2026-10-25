@@ -94,6 +94,35 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /backoffice/applications/{application_id}/documents/{document_id}/content:
+    get:
+      tags: [Cases]
+      operationId: getCaseDocumentContent
+      summary: Открыть оригинал вложения из карточки дела
+      description: >-
+        Банк проверяет право сотрудника и наличие документа в снимке дела,
+        затем запрашивает неизменённый файл у client-service. Финансовые данные
+        из содержимого не извлекаются.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - name: document_id
+          in: path
+          required: true
+          schema: { $ref: './common.yaml#/components/schemas/Id' }
+      responses:
+        '200':
+          description: Исходные байты документа.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502':
+          description: Client-service недоступен или содержимое не совпадает с метаданными.
+          content:
+            application/problem+json:
+              schema: { $ref: './common.yaml#/components/schemas/Problem' }
   /backoffice/applications/{application_id}/take:
     post:
       tags: [Cases]
@@ -249,7 +278,7 @@ components:
         next_cursor: { type: [string, 'null'] }
     BankCase:
       type: object
-      required: [id, status, product_id, product_name, product_version, company, application, audit_version, allowed_actions, created_at, updated_at, version]
+      required: [id, status, product_id, product_name, product_version, company, application, documents, audit_version, allowed_actions, created_at, updated_at, version]
       properties:
         id: { $ref: './common.yaml#/components/schemas/Id' }
         status: { $ref: './common.yaml#/components/schemas/BankStatus' }
@@ -258,6 +287,10 @@ components:
         product_version: { type: integer, format: int64, minimum: 1 }
         company: { $ref: './common.yaml#/components/schemas/CompanyProfile' }
         application: { $ref: '#/components/schemas/SubmittedApplication' }
+        documents:
+          type: array
+          description: Метаданные вложений, полученные банком в событиях заявки.
+          items: { $ref: './common.yaml#/components/schemas/DocumentMetadata' }
         checks: { $ref: '#/components/schemas/Checks' }
         score: { $ref: '#/components/schemas/ScoreResult' }
         triggered_rules:

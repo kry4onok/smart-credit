@@ -45,6 +45,7 @@ type Case struct {
 	ProductVersion int64
 	Company        Company
 	Application    SubmittedApplication
+	Documents      []DocumentMetadata
 	Checks         *Checks
 	Score          *ScoreResult
 	TriggeredRules []string
@@ -57,6 +58,15 @@ type Case struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Version        int64
+}
+
+type DocumentMetadata struct {
+	ID           uuid.UUID `json:"document_id"`
+	DocumentType string    `json:"document_type"`
+	FileName     string    `json:"file_name"`
+	SHA256       string    `json:"sha256"`
+	UploadedAt   time.Time `json:"uploaded_at"`
+	IsMock       bool      `json:"is_mock"`
 }
 
 type Company struct {

@@ -13,20 +13,21 @@ import (
 )
 
 type Config struct {
-	JWT              JWTConfig
-	HTTP             HTTPConfig
-	Database         DatabaseConfig
-	ScoringTarget    string        `env:"BANK_SCORING_GRPC_ADDR"`
-	BureauTarget     string        `env:"BANK_BUREAU_GRPC_ADDR"`
-	AssistantTarget  string        `env:"BANK_ASSISTANT_GRPC_ADDR"`
-	AssistantTimeout time.Duration `env:"BANK_ASSISTANT_TIMEOUT" env-default:"5s" validate:"gt=0"`
-	KafkaBrokers     string        `env:"BANK_KAFKA_BROKERS" env-default:"127.0.0.1:9092"`
-	KafkaGroup       string        `env:"BANK_KAFKA_CONSUMER_GROUP" env-default:"bank-service"`
-	ReadinessTimeout time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
-	ShutdownTimeout  time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
+	JWT                   JWTConfig
+	HTTP                  HTTPConfig
+	Database              DatabaseConfig
+	ScoringTarget         string        `env:"BANK_SCORING_GRPC_ADDR"`
+	BureauTarget          string        `env:"BANK_BUREAU_GRPC_ADDR"`
+	AssistantTarget       string        `env:"BANK_ASSISTANT_GRPC_ADDR"`
+	AssistantTimeout      time.Duration `env:"BANK_ASSISTANT_TIMEOUT" env-default:"5s" validate:"gt=0"`
+	ClientDocumentURL     string        `env:"BANK_CLIENT_DOCUMENT_URL" env-default:"http://127.0.0.1:8083" validate:"required,http_url"`
+	ClientDocumentTimeout time.Duration `env:"BANK_CLIENT_DOCUMENT_TIMEOUT" env-default:"5s" validate:"gt=0"`
+	KafkaBrokers          string        `env:"BANK_KAFKA_BROKERS" env-default:"127.0.0.1:9092"`
+	KafkaGroup            string        `env:"BANK_KAFKA_CONSUMER_GROUP" env-default:"bank-service"`
+	ReadinessTimeout      time.Duration `env:"BANK_READINESS_TIMEOUT" env-required:"true" validate:"gt=0,ltcsfield=HTTP.WriteTimeout"`
+	ShutdownTimeout       time.Duration `env:"BANK_SHUTDOWN_TIMEOUT" env-required:"true" validate:"gt=0"`
 }
 
-// JWTConfig must match the access token issuer and audience configured in auth.
 type JWTConfig struct {
 	JWKSURL  string        `env:"BANK_JWKS_URL" env-default:"http://127.0.0.1:8082/.well-known/jwks.json" validate:"required,http_url"`
 	Issuer   string        `env:"BANK_JWT_ISSUER" env-default:"smart-credit-auth" validate:"required"`
@@ -64,6 +65,9 @@ func Load() (Config, error) {
 	}
 	if cfg.AssistantTimeout >= cfg.HTTP.WriteTimeout {
 		return Config{}, fmt.Errorf("BANK_ASSISTANT_TIMEOUT must be less than BANK_HTTP_WRITE_TIMEOUT")
+	}
+	if cfg.ClientDocumentTimeout >= cfg.HTTP.WriteTimeout {
+		return Config{}, fmt.Errorf("BANK_CLIENT_DOCUMENT_TIMEOUT must be less than BANK_HTTP_WRITE_TIMEOUT")
 	}
 	if strings.TrimSpace(cfg.KafkaGroup) == "" {
 		return Config{}, fmt.Errorf("BANK_KAFKA_CONSUMER_GROUP is required")

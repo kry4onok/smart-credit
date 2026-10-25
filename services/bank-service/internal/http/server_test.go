@@ -2,17 +2,23 @@ package httpapi
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
+	documenthandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/document"
 	authmiddleware "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/middleware/auth"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/jwt"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
+	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	summarycase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/summary"
 	"github.com/google/uuid"
 )
@@ -30,6 +36,12 @@ type summaryUseCaseStub struct {
 type productRepositoryStub struct {
 	products []*commonpb.Product
 	calls    int
+}
+
+type documentCaseStub struct{ value model.Case }
+
+func (s documentCaseStub) Execute(context.Context, getcase.Input) (getcase.Output, error) {
+	return getcase.Output{Case: s.value}, nil
 }
 
 func (s *productRepositoryStub) ListActive(context.Context) ([]*commonpb.Product, error) {
@@ -54,7 +66,7 @@ func (p *pingerStub) Ping(context.Context) error {
 
 func TestHealth(t *testing.T) {
 	db := &pingerStub{err: errors.New("database is unavailable")}
-	handler := New(db, time.Second, nil, nil, nil, nil, nil, nil, nil)
+	handler := New(db, time.Second, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil))
@@ -80,7 +92,7 @@ func TestReady(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := &pingerStub{err: tt.pingError}
-			handler := New(db, time.Second, nil, nil, nil, nil, nil, nil, nil)
+			handler := New(db, time.Second, nil, nil, nil, nil, nil, nil, nil, nil)
 
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/readyz", nil))
@@ -96,7 +108,7 @@ func TestReady(t *testing.T) {
 }
 
 func TestSummaryRouteRequiresEmployee(t *testing.T) {
-	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, nil)
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/backoffice/applications/00000000-0000-0000-0000-000000000001/summary", nil))
@@ -108,7 +120,7 @@ func TestSummaryRouteRequiresEmployee(t *testing.T) {
 
 func TestSummaryRouteReturnsTextAndSource(t *testing.T) {
 	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil,
-		summaryUseCaseStub{output: summarycase.Output{Text: "Продукт: кредит.", Source: "template"}}, nil)
+		summaryUseCaseStub{output: summarycase.Output{Text: "Продукт: кредит.", Source: "template"}}, nil, nil)
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
 		"/backoffice/applications/10000000-0000-4000-8000-000000000001/summary", nil)
 	request = request.WithContext(authmiddleware.WithAnalystID(request.Context(), uuid.New()))
@@ -128,7 +140,7 @@ func TestSummaryRouteReturnsTextAndSource(t *testing.T) {
 
 func TestSummaryRouteReturnsNotFound(t *testing.T) {
 	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil,
-		summaryUseCaseStub{err: summarycase.ErrNotFound}, nil)
+		summaryUseCaseStub{err: summarycase.ErrNotFound}, nil, nil)
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
 		"/backoffice/applications/10000000-0000-4000-8000-000000000001/summary", nil)
 	request = request.WithContext(authmiddleware.WithAnalystID(request.Context(), uuid.New()))
@@ -140,7 +152,7 @@ func TestSummaryRouteReturnsNotFound(t *testing.T) {
 }
 
 func TestAuditRouteRequiresEmployee(t *testing.T) {
-	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, nil)
+	handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, nil, nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet,
 		"/backoffice/applications/10000000-0000-4000-8000-000000000001/audit", nil))
@@ -168,7 +180,7 @@ func TestTakeInvalidHeadersReturnProblemJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, nil)
+			handler := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, nil, nil)
 			request := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
 				"/backoffice/applications/10000000-0000-4000-8000-000000000001/take", nil)
 			request.Header.Set("Idempotency-Key", tt.idempotencyKey)
@@ -208,7 +220,7 @@ func TestProductsRouteReturnsActiveTermsOnlyToEmployees(t *testing.T) {
 		MaxAmount:             &commonpb.Money{AmountKopecks: 500000000, Currency: "RUB"},
 		MinTermMonths:         6, MaxTermMonths: 24, IndicativeRateBps: 1650,
 	}}}
-	api := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, repository)
+	api := New(&pingerStub{}, time.Second, nil, nil, nil, nil, nil, nil, repository, nil)
 	handler := authmiddleware.RequireEmployee(verifierStub(func(_ context.Context, token string) (jwt.Principal, error) {
 		return jwt.Principal{UserID: uuid.New(), Role: token}, nil
 	}), api)
@@ -249,5 +261,67 @@ func TestProductsRouteReturnsActiveTermsOnlyToEmployees(t *testing.T) {
 	}
 	if repository.calls != 2 {
 		t.Fatalf("repository calls = %d, want 2", repository.calls)
+	}
+}
+
+func TestCaseDocumentDownloadChecksRoleMembershipAndChecksum(t *testing.T) {
+	applicationID := uuid.New()
+	documentID := uuid.New()
+	content := []byte("demo statement")
+	checksum := sha256.Sum256(content)
+	var upstreamCalls int
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalls++
+		if r.URL.Path != "/internal/client/applications/"+applicationID.String()+"/documents/"+documentID.String()+"/content" ||
+			r.Header.Get("Authorization") != "Bearer ANALYST" {
+			t.Errorf("upstream request = %s, authorization = %q", r.URL.Path, r.Header.Get("Authorization"))
+		}
+		_, _ = w.Write(content)
+	}))
+	defer upstream.Close()
+	caseReader := documentCaseStub{value: model.Case{Documents: []model.DocumentMetadata{{
+		ID: documentID, FileName: "example.txt", SHA256: hex.EncodeToString(checksum[:]),
+	}}}}
+	api := New(&pingerStub{}, time.Second, nil, caseReader, nil, nil, nil, nil, nil,
+		documenthandler.New(caseReader, upstream.URL, time.Second))
+	handler := authmiddleware.RequireEmployee(verifierStub(func(_ context.Context, token string) (jwt.Principal, error) {
+		return jwt.Principal{UserID: uuid.New(), Role: token}, nil
+	}), api)
+	call := func(role string, id uuid.UUID) *httptest.ResponseRecorder {
+		t.Helper()
+		request := httptest.NewRequestWithContext(t.Context(), http.MethodGet,
+			"/backoffice/applications/"+applicationID.String()+"/documents/"+id.String()+"/content", nil)
+		request.Header.Set("Authorization", "Bearer "+role)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		return response
+	}
+	if got := call("CLIENT", documentID); got.Code != http.StatusForbidden {
+		t.Fatalf("client status = %d", got.Code)
+	}
+	if got := call("ANALYST", uuid.New()); got.Code != http.StatusNotFound {
+		t.Fatalf("unknown document status = %d", got.Code)
+	}
+	if upstreamCalls != 0 {
+		t.Fatalf("upstream calls before allowed document = %d", upstreamCalls)
+	}
+	response := call("ANALYST", documentID)
+	if response.Code != http.StatusOK || response.Body.String() != string(content) ||
+		response.Header().Get("Content-Disposition") != `attachment; filename=example.txt` {
+		t.Fatalf("download status = %d, headers = %v, body = %q", response.Code, response.Header(), response.Body.String())
+	}
+	caseReader.value.Documents[0].SHA256 = strings.Repeat("0", 64)
+	badAPI := New(&pingerStub{}, time.Second, nil, caseReader, nil, nil, nil, nil, nil,
+		documenthandler.New(caseReader, upstream.URL, time.Second))
+	badHandler := authmiddleware.RequireEmployee(verifierStub(func(_ context.Context, token string) (jwt.Principal, error) {
+		return jwt.Principal{UserID: uuid.New(), Role: token}, nil
+	}), badAPI)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet,
+		"/backoffice/applications/"+applicationID.String()+"/documents/"+documentID.String()+"/content", nil)
+	request.Header.Set("Authorization", "Bearer ANALYST")
+	badResponse := httptest.NewRecorder()
+	badHandler.ServeHTTP(badResponse, request)
+	if badResponse.Code != http.StatusBadGateway || badResponse.Body.String() == string(content) {
+		t.Fatalf("checksum mismatch status = %d, body = %q", badResponse.Code, badResponse.Body.String())
 	}
 }
