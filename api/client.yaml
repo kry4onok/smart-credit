@@ -3,7 +3,8 @@ info:
   title: Smart Credit Client API
   version: draft
   description: >-
-    Кабинет клиента. Все операции требуют роль CLIENT и ограничены org_id из JWT.
+    Кабинет клиента. Операции /client требуют роль CLIENT и ограничены org_id из JWT.
+    Внутреннее чтение содержимого документов доступно только ANALYST и ADMIN.
     Банковские статусы здесь являются проекцией событий bank.events.
 servers:
   - url: /api
@@ -13,7 +14,51 @@ tags:
   - name: Company
   - name: Products
   - name: Applications
+  - name: InternalDocuments
 paths:
+  /internal/client/applications/{application_id}/documents/{document_id}/content:
+    get:
+      tags: [InternalDocuments]
+      operationId: getInternalApplicationDocumentContent
+      summary: Скачать оригинал документа отправленной заявки
+      servers: [{ url: / }]
+      description: >-
+        Требует Bearer JWT с ролью ANALYST или ADMIN. Документ должен принадлежать
+        указанной заявке; заявка должна иметь submitted_at и не быть DRAFT.
+        Возвращает исходные байты с Content-Type формата файла, без storage_key.
+        Отсутствующий документ, несовпадающая заявка, черновик или отсутствующий
+        файл в хранилище возвращают 404 DOCUMENT_NOT_FOUND.
+      parameters:
+        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+        - name: document_id
+          in: path
+          required: true
+          schema: { $ref: './common.yaml#/components/schemas/Id' }
+      responses:
+        '200':
+          description: >-
+            Исходное содержимое файла. Content-Type соответствует формату
+            (PDF, изображение, Office, CSV или TXT); для неизвестного формата —
+            application/octet-stream. Ответ не кешируется.
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+            Cache-Control:
+              schema: { type: string }
+            X-Content-Type-Options:
+              schema: { type: string }
+          content:
+            '*/*':
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500':
+          description: Не удалось прочитать файл из хранилища.
+          content:
+            application/problem+json:
+              schema: { $ref: './common.yaml#/components/schemas/Problem' }
   /healthz:
     get:
       operationId: clientHealth

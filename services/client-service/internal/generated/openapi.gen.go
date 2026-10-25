@@ -371,6 +371,9 @@ type ServerInterface interface {
 	// ClientHealth Liveness процесса
 	// (GET /healthz)
 	ClientHealth(w http.ResponseWriter, r *http.Request)
+	// GetInternalApplicationDocumentContent Скачать оригинал документа отправленной заявки
+	// (GET /internal/client/applications/{application_id}/documents/{document_id}/content)
+	GetInternalApplicationDocumentContent(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, documentId externalRef0.Id)
 	// ClientReady Готовность обслуживать запросы, включая client_db
 	// (GET /readyz)
 	ClientReady(w http.ResponseWriter, r *http.Request)
@@ -479,6 +482,12 @@ func (_ Unimplemented) GetClientProduct(w http.ResponseWriter, r *http.Request, 
 // ClientHealth Liveness процесса
 // (GET /healthz)
 func (_ Unimplemented) ClientHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetInternalApplicationDocumentContent Скачать оригинал документа отправленной заявки
+// (GET /internal/client/applications/{application_id}/documents/{document_id}/content)
+func (_ Unimplemented) GetInternalApplicationDocumentContent(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, documentId externalRef0.Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1213,6 +1222,41 @@ func (siw *ServerInterfaceWrapper) ClientHealth(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetInternalApplicationDocumentContent operation middleware
+func (siw *ServerInterfaceWrapper) GetInternalApplicationDocumentContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "application_id" -------------
+	var applicationId externalRef0.ApplicationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "application_id", chi.URLParam(r, "application_id"), &applicationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId externalRef0.Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", chi.URLParam(r, "document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInternalApplicationDocumentContent(w, r, applicationId, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClientReady operation middleware
 func (siw *ServerInterfaceWrapper) ClientReady(w http.ResponseWriter, r *http.Request) {
 
@@ -1340,6 +1384,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/internal/client/applications/{application_id}/documents/{document_id}/content", wrapper.GetInternalApplicationDocumentContent)
+	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/healthz", wrapper.ClientHealth)
 	})
@@ -2580,6 +2627,130 @@ func (response ClientHealth204Response) VisitClientHealthResponse(w http.Respons
 	return nil
 }
 
+type GetInternalApplicationDocumentContentRequestObject struct {
+	ApplicationId externalRef0.ApplicationId `json:"application_id"`
+	DocumentId    externalRef0.Id            `json:"document_id"`
+}
+
+type GetInternalApplicationDocumentContentResponseObject interface {
+	VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error
+}
+
+type GetInternalApplicationDocumentContent200ResponseHeaders struct {
+	CacheControl        *string
+	ContentDisposition  *string
+	XContentTypeOptions *string
+}
+
+type GetInternalApplicationDocumentContent200AsteriskResponse struct {
+	Body          io.Reader
+	Headers       GetInternalApplicationDocumentContent200ResponseHeaders
+	ContentType   string
+	ContentLength int64
+}
+
+func (response GetInternalApplicationDocumentContent200AsteriskResponse) VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", response.ContentType)
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	if response.Headers.XContentTypeOptions != nil {
+		w.Header().Set("X-Content-Type-Options", fmt.Sprint(*response.Headers.XContentTypeOptions))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetInternalApplicationDocumentContent400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response GetInternalApplicationDocumentContent400ApplicationProblemPlusJSONResponse) VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInternalApplicationDocumentContent401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetInternalApplicationDocumentContent401ApplicationProblemPlusJSONResponse) VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInternalApplicationDocumentContent403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response GetInternalApplicationDocumentContent403ApplicationProblemPlusJSONResponse) VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInternalApplicationDocumentContent404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetInternalApplicationDocumentContent404ApplicationProblemPlusJSONResponse) VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInternalApplicationDocumentContent500ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetInternalApplicationDocumentContent500ApplicationProblemPlusJSONResponse) VisitGetInternalApplicationDocumentContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ClientReadyRequestObject struct {
 }
 
@@ -2656,6 +2827,9 @@ type StrictServerInterface interface {
 	// ClientHealth Liveness процесса
 	// (GET /healthz)
 	ClientHealth(ctx context.Context, request ClientHealthRequestObject) (ClientHealthResponseObject, error)
+	// GetInternalApplicationDocumentContent Скачать оригинал документа отправленной заявки
+	// (GET /internal/client/applications/{application_id}/documents/{document_id}/content)
+	GetInternalApplicationDocumentContent(ctx context.Context, request GetInternalApplicationDocumentContentRequestObject) (GetInternalApplicationDocumentContentResponseObject, error)
 	// ClientReady Готовность обслуживать запросы, включая client_db
 	// (GET /readyz)
 	ClientReady(ctx context.Context, request ClientReadyRequestObject) (ClientReadyResponseObject, error)
@@ -3205,6 +3379,33 @@ func (sh *strictHandler) ClientHealth(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ClientHealthResponseObject); ok {
 		if err := validResponse.VisitClientHealthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInternalApplicationDocumentContent operation middleware
+func (sh *strictHandler) GetInternalApplicationDocumentContent(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, documentId externalRef0.Id) {
+	var request GetInternalApplicationDocumentContentRequestObject
+
+	request.ApplicationId = applicationId
+	request.DocumentId = documentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInternalApplicationDocumentContent(ctx, request.(GetInternalApplicationDocumentContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInternalApplicationDocumentContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInternalApplicationDocumentContentResponseObject); ok {
+		if err := validResponse.VisitGetInternalApplicationDocumentContentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

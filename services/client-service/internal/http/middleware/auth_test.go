@@ -46,3 +46,34 @@ func TestRequireClient(t *testing.T) {
 		})
 	}
 }
+
+func TestRequireStaffContextAndMissingVerifier(t *testing.T) {
+	for _, role := range []string{"ANALYST", "ADMIN"} {
+		principal := model.Principal{UserID: uuid.New(), Role: role}
+		handler := RequireStaff(verifierMock{principal: principal}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, ok := Staff(r.Context()); !ok || got != principal {
+				t.Fatal("verified staff principal missing from context")
+			}
+			if _, ok := Client(r.Context()); ok {
+				t.Fatal("staff principal accepted as client")
+			}
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		request := httptest.NewRequest(http.MethodGet, "/internal/client/applications", nil)
+		request.Header.Set("Authorization", "Bearer test")
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusNoContent {
+			t.Fatalf("staff status=%d", recorder.Code)
+		}
+	}
+	request := httptest.NewRequest(http.MethodGet, "/internal/client/applications", nil)
+	request.Header.Set("Authorization", "Bearer test")
+	recorder := httptest.NewRecorder()
+	RequireStaff(nil, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Fatal("missing verifier allowed access")
+	})).ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("missing verifier status=%d", recorder.Code)
+	}
+}

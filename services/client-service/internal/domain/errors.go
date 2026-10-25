@@ -16,6 +16,7 @@ var (
 	ErrApplicationDocumentState   = errors.New("application does not accept documents")
 	ErrApplicationDocumentType    = errors.New("document type is not allowed")
 	ErrInvalidDocumentUpload      = errors.New("invalid document upload")
+	ErrDocumentNotFound           = errors.New("document not found")
 	ErrIdempotencyConflict        = errors.New("idempotency conflict")
 	ErrInvalidApplication         = errors.New("invalid application")
 	ErrApplicationInfoConflict    = errors.New("application info response conflicts with current state")

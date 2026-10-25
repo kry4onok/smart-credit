@@ -3,12 +3,14 @@ package httpapi
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
+	documentcontent "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document/content"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
 	applicationlist "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/list"
@@ -34,6 +36,7 @@ type server struct {
 	application             *applicationcreate.Handler
 	applicationCancel       *applicationcancel.Handler
 	applicationDocument     *applicationdocument.Handler
+	documentContent         *documentcontent.Handler
 	applicationGet          *applicationget.Handler
 	applicationList         *applicationlist.Handler
 	applicationTimeline     *applicationtimeline.Handler
@@ -58,6 +61,7 @@ type Params struct {
 	ApplicationCreate       *applicationcreate.Handler
 	ApplicationCancel       *applicationcancel.Handler
 	ApplicationDocument     *applicationdocument.Handler
+	DocumentContent         *documentcontent.Handler
 	ApplicationGet          *applicationget.Handler
 	ApplicationList         *applicationlist.Handler
 	ApplicationTimeline     *applicationtimeline.Handler
@@ -79,6 +83,7 @@ func New(params Params) http.Handler {
 		application:             params.ApplicationCreate,
 		applicationCancel:       params.ApplicationCancel,
 		applicationDocument:     params.ApplicationDocument,
+		documentContent:         params.DocumentContent,
 		applicationGet:          params.ApplicationGet,
 		applicationList:         params.ApplicationList,
 		applicationTimeline:     params.ApplicationTimeline,
@@ -92,15 +97,18 @@ func New(params Params) http.Handler {
 		products:                params.ProductList,
 	}, nil, generated.StrictHTTPServerOptions{
 		ResponseErrorHandlerFunc: responseErrorHandler,
-		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, _ error) {
-			domainerror.Write(w, domainerror.Problem(r.Context(), http.StatusBadRequest, "BAD_REQUEST", "Некорректный запрос."))
-		},
+		RequestErrorHandlerFunc:  requestErrorHandler,
 	})
-	handler := generated.Handler(strictHandler)
+	handler := generated.HandlerWithOptions(strictHandler, generated.ChiServerOptions{ErrorHandlerFunc: requestErrorHandler})
 	protected := middleware.RequireClient(params.Verifier, handler)
+	staffOnly := middleware.RequireStaff(params.Verifier, handler)
 	return domainerror.Trace(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
 			handler.ServeHTTP(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/internal/client/") {
+			staffOnly.ServeHTTP(w, r)
 			return
 		}
 		protected.ServeHTTP(w, r)
@@ -119,6 +127,10 @@ func responseErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	domainerror.Write(w, domainerror.Map(r.Context(), err))
 }
 
+func requestErrorHandler(w http.ResponseWriter, r *http.Request, _ error) {
+	domainerror.Write(w, domainerror.Problem(r.Context(), http.StatusBadRequest, "BAD_REQUEST", "Некорректный запрос."))
+}
+
 func (s *server) GetCompany(ctx context.Context, request generated.GetCompanyRequestObject) (generated.GetCompanyResponseObject, error) {
 	return s.company.Handle(ctx, request)
 }
@@ -133,6 +145,10 @@ func (s *server) CreateApplication(ctx context.Context, request generated.Create
 
 func (s *server) AddApplicationDocument(ctx context.Context, request generated.AddApplicationDocumentRequestObject) (generated.AddApplicationDocumentResponseObject, error) {
 	return s.applicationDocument.Handle(ctx, request)
+}
+
+func (s *server) GetInternalApplicationDocumentContent(ctx context.Context, request generated.GetInternalApplicationDocumentContentRequestObject) (generated.GetInternalApplicationDocumentContentResponseObject, error) {
+	return s.documentContent.Handle(ctx, request)
 }
 
 func (s *server) GetApplication(ctx context.Context, request generated.GetApplicationRequestObject) (generated.GetApplicationResponseObject, error) {
