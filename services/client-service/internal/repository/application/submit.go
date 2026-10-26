@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
@@ -123,13 +126,14 @@ func (r *Repository) Submit(ctx context.Context, params model.SubmitApplicationP
 		OccurredAt:       timestamppb.New(application.UpdatedAt),
 		CorrelationId:    eventID.String(),
 		Payload: &eventspb.Event_ApplicationSubmitted{ApplicationSubmitted: &eventspb.ApplicationSubmitted{
-			OrgId:          params.OrgID.String(),
-			ClientUserId:   params.UserID.String(),
-			ProductId:      snapshot.application.ProductID.String(),
-			ProductVersion: snapshot.application.ProductVersion,
-			Company:        companyProto(snapshot.company),
-			Form:           formProto(*snapshot.application.Form),
-			Documents:      documentMetadataProto(snapshot.documents),
+			RequirementsReferenceDate: referenceDateString(snapshot.application.RequirementsReferenceDate),
+			OrgId:                     params.OrgID.String(),
+			ClientUserId:              params.UserID.String(),
+			ProductId:                 snapshot.application.ProductID.String(),
+			ProductVersion:            snapshot.application.ProductVersion,
+			Company:                   companyProto(snapshot.company),
+			Form:                      formProto(*snapshot.application.Form),
+			Documents:                 documentMetadataProto(snapshot.documents),
 		}},
 	}
 	payload, err := proto.Marshal(event)
@@ -180,14 +184,14 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 		SELECT id, client_user_id, product_id, product_version,
 		       company_snapshot, product_snapshot, requested_amount_kopecks,
 		       requested_term_months, purpose_tag, status, version,
-		       client_event_version, created_at, updated_at
+		       client_event_version, created_at, updated_at, requirements_reference_date
 		FROM applications
 		WHERE id = $1 AND org_id = $2
 		FOR UPDATE`, params.ApplicationID, params.OrgID).Scan(
 		&result.application.ID, &clientUserID, &result.application.ProductID,
 		&result.application.ProductVersion, &companyRaw, &productRaw, &amount,
 		&term, &purpose, &result.application.Status, &result.application.Version,
-		&result.clientEventVersion, &result.application.CreatedAt, &result.application.UpdatedAt)
+		&result.clientEventVersion, &result.application.CreatedAt, &result.application.UpdatedAt, &result.application.RequirementsReferenceDate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return submitSnapshot{}, domain.ErrApplicationNotFound
 	}
@@ -198,22 +202,14 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 	if err := json.Unmarshal(companyRaw, &result.company); err != nil {
 		return submitSnapshot{}, fmt.Errorf("decode company snapshot for submission: %w", err)
 	}
-	registeredAt, err := time.Parse("2006-01-02", result.company.RegisteredAt)
-	if err != nil {
-		return submitSnapshot{}, fmt.Errorf("parse company snapshot for submission: %w", err)
-	}
-	result.application.Company = model.Company{
-		INN: result.company.INN, Name: result.company.Name, OKVED: result.company.OKVED,
-		RegisteredAt: registeredAt, Revenue12mKopecks: result.company.Revenue12m.AmountKopecks,
-		Profit12mKopecks: result.company.Profit12m.AmountKopecks, ObligationsKopecks: result.company.Obligations.AmountKopecks,
-	}
+	result.application.Company = snapshotCompany(result.company)
 	if err := json.Unmarshal(productRaw, &result.product); err != nil {
 		return submitSnapshot{}, fmt.Errorf("decode product snapshot for submission: %w", err)
 	}
 	// Preserve the fields that are present so validation can name only what is missing.
 	result.application.Form = &model.ApplicationForm{AmountKopecks: valueOrZero(amount), TermMonths: valueOrZero(term), Purpose: valueOrEmpty(purpose)}
 	rows, err := tx.Query(ctx, `
-		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at
+		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at, requirement_id, coverage_from, coverage_to
 		FROM application_documents
 		WHERE application_id = $1
 		ORDER BY uploaded_at, id`, params.ApplicationID)
@@ -224,7 +220,7 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 	for rows.Next() {
 		var document model.ApplicationDocument
 		if err := rows.Scan(&document.ID, &document.DocumentType, &document.FileName,
-			&document.Sha256, &document.IsMock, &document.UploadedAt); err != nil {
+			&document.Sha256, &document.IsMock, &document.UploadedAt, &document.RequirementID, &document.CoverageFrom, &document.CoverageTo); err != nil {
 			return submitSnapshot{}, fmt.Errorf("scan application document for submission: %w", err)
 		}
 		result.documents = append(result.documents, document)
@@ -236,6 +232,16 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 }
 
 func validateSubmitSnapshot(snapshot submitSnapshot) error {
+	if snapshot.product.RequirementsPolicyVersion != nil {
+		p, err := buildPlan(snapshotCompany(snapshot.company), snapshot.product, snapshot.application.Form, snapshot.documents, snapshot.application.RequirementsReferenceDate)
+		if err != nil {
+			return err
+		}
+		if !p.GetCanSubmit() {
+			return &requirements.RuleError{Code: requirements.RequirementsNotMet}
+		}
+		return nil
+	}
 	var issues []string
 	form := model.ApplicationForm{}
 	if snapshot.application.Form != nil {
@@ -292,12 +298,8 @@ func validPurpose(value string) bool {
 	}
 }
 
-func companyProto(value companySnapshotJSON) *commonpb.CompanySnapshot {
-	return &commonpb.CompanySnapshot{
-		Inn: value.INN, Name: value.Name, Okved: value.OKVED, RegisteredAt: value.RegisteredAt,
-		Revenue_12M: moneyProto(value.Revenue12m), Profit_12M: moneyProto(value.Profit12m),
-		Obligations: moneyProto(value.Obligations),
-	}
+func companyProto(v companySnapshotJSON) *commonpb.CompanySnapshot {
+	return profile.ToProto(snapshotCompany(v))
 }
 
 func moneyProto(value moneySnapshot) *commonpb.Money {
@@ -316,7 +318,7 @@ func documentMetadataProto(values []model.ApplicationDocument) []*commonpb.Docum
 	for _, value := range values {
 		result = append(result, &commonpb.DocumentMetadata{
 			DocumentId: value.ID.String(), DocumentType: commonpb.DocumentType(commonpb.DocumentType_value["DOCUMENT_TYPE_"+value.DocumentType]),
-			FileName: value.FileName, Sha256: value.Sha256, UploadedAt: timestamppb.New(value.UploadedAt), IsMock: value.IsMock,
+			FileName: value.FileName, Sha256: value.Sha256, UploadedAt: timestamppb.New(value.UploadedAt), IsMock: value.IsMock, RequirementId: valueOrEmpty(value.RequirementID), CoveragePeriod: coverageProto(value.CoverageFrom, value.CoverageTo),
 		})
 	}
 	return result

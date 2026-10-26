@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
@@ -36,7 +39,7 @@ func (h *Handler) Handle(ctx context.Context, request generated.AddApplicationDo
 	document, err := h.usecase.Execute(ctx, model.AddApplicationDocumentParams{
 		OrgID: client.OrgID, UserID: client.UserID, ApplicationID: request.ApplicationId,
 		IdempotencyKey: request.Params.IdempotencyKey, DocumentType: upload.DocumentType,
-		FileName: upload.FileName, Content: upload.Content,
+		FileName: upload.FileName, Content: upload.Content, RequirementID: upload.RequirementID, CoverageFrom: upload.CoverageFrom, CoverageTo: upload.CoverageTo,
 	})
 	if err != nil {
 		return problemResponse{domainerror.Map(ctx, err)}, nil
@@ -44,18 +47,22 @@ func (h *Handler) Handle(ctx context.Context, request generated.AddApplicationDo
 	return generated.AddApplicationDocument201JSONResponse{
 		Id: common.Id(document.ID), DocumentType: common.DocumentType(document.DocumentType),
 		FileName: document.FileName, Sha256: document.Sha256, IsMock: document.IsMock,
-		UploadedAt: document.UploadedAt,
+		UploadedAt: document.UploadedAt, RequirementId: document.RequirementID, CoveragePeriod: profile.CoverageHTTP(document.CoverageFrom, document.CoverageTo),
 	}, nil
 }
 
 type upload struct {
-	DocumentType string
-	FileName     string
-	Content      []byte
+	RequirementID *string
+	CoverageFrom  *time.Time
+	CoverageTo    *time.Time
+	DocumentType  string
+	FileName      string
+	Content       []byte
 }
 
 func parseMultipart(reader *multipart.Reader) (upload, error) {
 	var result upload
+	seen := map[string]bool{}
 	var documentTypeSeen, fileSeen bool
 	for {
 		part, err := reader.NextPart()
@@ -66,7 +73,30 @@ func parseMultipart(reader *multipart.Reader) (upload, error) {
 			return upload{}, errors.New("не удалось прочитать multipart-файл")
 		}
 		fieldName := part.FormName()
+		if seen[fieldName] {
+			return upload{}, errors.New("multipart содержит повторное поле")
+		}
+		seen[fieldName] = true
 		switch fieldName {
+		case "requirement_id", "coverage_from", "coverage_to":
+			value, err := io.ReadAll(io.LimitReader(part, 513))
+			if err != nil || len(value) == 0 || len(value) > 512 {
+				return upload{}, errors.New("неверные метаданные документа")
+			}
+			if fieldName == "requirement_id" {
+				v := string(value)
+				result.RequirementID = &v
+			} else {
+				d, err := time.Parse(time.DateOnly, string(value))
+				if err != nil {
+					return upload{}, errors.New("период документа должен содержать даты YYYY-MM-DD")
+				}
+				if fieldName == "coverage_from" {
+					result.CoverageFrom = &d
+				} else {
+					result.CoverageTo = &d
+				}
+			}
 		case "document_type":
 			if documentTypeSeen {
 				return upload{}, errors.New("поле document_type передано несколько раз")

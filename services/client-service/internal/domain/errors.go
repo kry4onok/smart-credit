@@ -28,3 +28,6 @@ var (
 	ErrApplicationCancelConflict  = errors.New("application cancellation conflicts with current state")
 	ErrInvalidCancelAction        = errors.New("invalid application cancellation")
 )
+
+var ErrProfileIdentityImmutable = errors.New("profile identity is immutable")
+var ErrStaleInfoRequest = errors.New("stale info request")

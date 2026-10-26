@@ -7,18 +7,19 @@ import (
 
 func ToAPI(value model.Product) common.Product {
 	return common.Product{
-		Id:                    common.Id(value.ID),
-		Version:               value.Version,
-		Code:                  value.Code,
-		Name:                  value.Name,
-		Description:           value.Description,
-		PurposeTags:           purposeTags(value.PurposeTags),
-		MinAmount:             common.Money{AmountKopecks: value.MinAmountKopecks, Currency: common.MoneyCurrencyRUB},
-		MaxAmount:             common.Money{AmountKopecks: value.MaxAmountKopecks, Currency: common.MoneyCurrencyRUB},
-		MinTermMonths:         value.MinTermMonths,
-		MaxTermMonths:         value.MaxTermMonths,
-		IndicativeRateBps:     value.IndicativeRateBps,
-		RequiredDocumentTypes: documentTypes(value.RequiredDocumentTypes),
+		RequirementsPolicyVersion: policyVersion(value.RequirementsPolicyVersion),
+		Id:                        common.Id(value.ID),
+		Version:                   value.Version,
+		Code:                      value.Code,
+		Name:                      value.Name,
+		Description:               value.Description,
+		PurposeTags:               purposeTags(value.PurposeTags),
+		MinAmount:                 common.Money{AmountKopecks: value.MinAmountKopecks, Currency: common.MoneyCurrencyRUB},
+		MaxAmount:                 common.Money{AmountKopecks: value.MaxAmountKopecks, Currency: common.MoneyCurrencyRUB},
+		MinTermMonths:             value.MinTermMonths,
+		MaxTermMonths:             value.MaxTermMonths,
+		IndicativeRateBps:         value.IndicativeRateBps,
+		RequiredDocumentTypes:     documentTypes(value.RequiredDocumentTypes),
 	}
 }
 
@@ -36,4 +37,12 @@ func documentTypes(values []string) []common.DocumentType {
 		result[i] = common.DocumentType(value)
 	}
 	return result
+}
+
+func policyVersion(v *string) *common.ProductRequirementsPolicyVersion {
+	if v == nil {
+		return nil
+	}
+	r := common.ProductRequirementsPolicyVersion(*v)
+	return &r
 }

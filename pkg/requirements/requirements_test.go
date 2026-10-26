@@ -2,6 +2,7 @@ package requirements
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
 	"sort"
@@ -112,8 +113,8 @@ func TestProfileRequirementsMatrix(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			if tc.Expected.ValidationError != nil {
-				re, ok := err.(*RuleError)
-				if !ok || re.Code != *tc.Expected.ValidationError {
+				var re *RuleError
+				if !errors.As(err, &re) || re.Code != *tc.Expected.ValidationError {
 					t.Fatalf("error %v, want %s", err, *tc.Expected.ValidationError)
 				}
 			}

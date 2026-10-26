@@ -100,7 +100,7 @@ func New(params Params) http.Handler {
 		RequestErrorHandlerFunc:  requestErrorHandler,
 	})
 	handler := generated.HandlerWithOptions(strictHandler, generated.ChiServerOptions{ErrorHandlerFunc: requestErrorHandler})
-	protected := middleware.RequireClient(params.Verifier, handler)
+	protected := middleware.RequireClient(params.Verifier, middleware.ProfileJSON(handler))
 	staffOnly := middleware.RequireStaff(params.Verifier, handler)
 	return domainerror.Trace(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {

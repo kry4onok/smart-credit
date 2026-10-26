@@ -127,3 +127,40 @@ type verifierMock struct{ principal model.Principal }
 func (m verifierMock) Verify(context.Context, string) (model.Principal, error) {
 	return m.principal, nil
 }
+
+func TestMultipartRequirementMetadata(t *testing.T) {
+	for _, duplicate := range []bool{false, true} {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		for name, value := range map[string]string{"document_type": "PATENT", "requirement_id": "patent_right:2026-10-26:2026-10-26:psn", "coverage_from": "2026-01-01", "coverage_to": "2026-12-31"} {
+			if err := writer.WriteField(name, value); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if duplicate {
+			if err := writer.WriteField("coverage_from", "2026-02-01"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		part, err := writer.CreateFormFile("file", "patent.pdf")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := part.Write([]byte("content")); err != nil {
+			t.Fatal(err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		result, err := parseMultipart(multipart.NewReader(&body, writer.Boundary()))
+		if duplicate {
+			if err == nil {
+				t.Fatal("duplicate metadata accepted")
+			}
+			continue
+		}
+		if err != nil || result.RequirementID == nil || result.CoverageFrom == nil || result.CoverageTo == nil || result.CoverageFrom.Format(time.DateOnly) != "2026-01-01" {
+			t.Fatalf("upload=%+v err=%v", result, err)
+		}
+	}
+}

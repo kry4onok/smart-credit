@@ -85,18 +85,25 @@ func serve(t *testing.T, handler *Handler, request generated.UpdateCompanyReques
 }
 
 func TestHandleRejectsMissingFinancialsAndV2WithoutPanic(t *testing.T) {
-	version := common.N2
 	for _, tc := range []struct {
 		body common.CompanyProfile
 		code string
 	}{
 		{common.CompanyProfile{}, "INVALID_COMPANY_PROFILE"},
-		{common.CompanyProfile{ProfileSchemaVersion: &version}, "PROFILE_V2_NOT_ENABLED"},
 	} {
 		recorder := serve(t, New(&usecaseMock{}), generated.UpdateCompanyRequestObject{Body: &tc.body})
 		var problem common.Problem
 		if json.Unmarshal(recorder.Body.Bytes(), &problem) != nil || recorder.Code != http.StatusUnprocessableEntity || problem.Code != tc.code {
 			t.Fatalf("response=%d %s", recorder.Code, recorder.Body.String())
 		}
+	}
+}
+
+func TestHandleAcceptsIncompleteV2Profile(t *testing.T) {
+	version := common.N2
+	body := common.CompanyProfile{Inn: "990000000115", Name: "ИП Демо", Okved: "47.11", RegisteredAt: openapi_types.Date{Time: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, ProfileSchemaVersion: &version}
+	recorder := serve(t, New(&usecaseMock{}), generated.UpdateCompanyRequestObject{Body: &body})
+	if recorder.Code != 200 {
+		t.Fatalf("v2 response %d %s", recorder.Code, recorder.Body.String())
 	}
 }

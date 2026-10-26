@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/google/uuid"
@@ -32,6 +34,21 @@ func Problem(ctx context.Context, status int, code, detail string) common.Proble
 }
 
 func Map(ctx context.Context, err error) common.Problem {
+	var rule *requirements.RuleError
+	if errors.As(err, &rule) {
+		switch rule.Code {
+		case requirements.InvalidProfile, requirements.LegalFormINNMismatch, requirements.InvalidTaxPeriod, requirements.UnsupportedTaxCombination, requirements.RequirementsNotMet, requirements.InvalidDocumentCoverage, requirements.UnknownRequirement:
+			return Problem(ctx, http.StatusUnprocessableEntity, rule.Code, rule.Error())
+		default:
+			return Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
+		}
+	}
+	if errors.Is(err, domain.ErrProfileIdentityImmutable) {
+		return Problem(ctx, 409, "PROFILE_IDENTITY_IMMUTABLE", "ИНН профиля нельзя изменить.")
+	}
+	if errors.Is(err, domain.ErrStaleInfoRequest) {
+		return Problem(ctx, 409, "STALE_INFO_REQUEST", "Запрос банка изменился; обновите заявку.")
+	}
 	var validation *domain.ValidationError
 	if errors.As(err, &validation) {
 		code := "INVALID_APPLICATION"

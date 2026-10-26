@@ -3,27 +3,31 @@ package model
 import (
 	"time"
 
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
+
 	"github.com/google/uuid"
 )
 
 type Application struct {
-	ID             uuid.UUID               `json:"id"`
-	ProductID      uuid.UUID               `json:"product_id"`
-	ProductVersion int64                   `json:"product_version"`
-	Company        Company                 `json:"company"`
-	Form           *ApplicationForm        `json:"form,omitempty"`
-	Status         string                  `json:"status"`
-	StageLabel     string                  `json:"stage_label"`
-	NextAction     string                  `json:"next_action"`
-	AllowedActions []string                `json:"allowed_actions"`
-	PendingAction  *string                 `json:"pending_action,omitempty"`
-	Documents      []ApplicationDocument   `json:"documents"`
-	InfoRequest    *ApplicationInfoRequest `json:"info_request,omitempty"`
-	Offer          *ApplicationOffer       `json:"offer,omitempty"`
-	PublicReason   *string                 `json:"public_reason,omitempty"`
-	CreatedAt      time.Time               `json:"created_at"`
-	UpdatedAt      time.Time               `json:"updated_at"`
-	Version        int64                   `json:"version"`
+	RequirementsReferenceDate *time.Time                 `json:"requirements_reference_date,omitempty"`
+	RequirementsPlan          *commonpb.RequirementsPlan `json:"requirements_plan,omitempty"`
+	ID                        uuid.UUID                  `json:"id"`
+	ProductID                 uuid.UUID                  `json:"product_id"`
+	ProductVersion            int64                      `json:"product_version"`
+	Company                   Company                    `json:"company"`
+	Form                      *ApplicationForm           `json:"form,omitempty"`
+	Status                    string                     `json:"status"`
+	StageLabel                string                     `json:"stage_label"`
+	NextAction                string                     `json:"next_action"`
+	AllowedActions            []string                   `json:"allowed_actions"`
+	PendingAction             *string                    `json:"pending_action,omitempty"`
+	Documents                 []ApplicationDocument      `json:"documents"`
+	InfoRequest               *ApplicationInfoRequest    `json:"info_request,omitempty"`
+	Offer                     *ApplicationOffer          `json:"offer,omitempty"`
+	PublicReason              *string                    `json:"public_reason,omitempty"`
+	CreatedAt                 time.Time                  `json:"created_at"`
+	UpdatedAt                 time.Time                  `json:"updated_at"`
+	Version                   int64                      `json:"version"`
 }
 
 type ApplicationListItem struct {
@@ -42,22 +46,26 @@ type ApplicationForm struct {
 }
 
 type ApplicationDocument struct {
-	ID           uuid.UUID `json:"id"`
-	DocumentType string    `json:"document_type"`
-	FileName     string    `json:"file_name"`
-	Sha256       string    `json:"sha256"`
-	IsMock       bool      `json:"is_mock"`
-	UploadedAt   time.Time `json:"uploaded_at"`
-	StorageKey   string    `json:"-"`
-	SizeBytes    int64     `json:"-"`
+	RequirementID *string    `json:"requirement_id,omitempty"`
+	CoverageFrom  *time.Time `json:"coverage_from,omitempty"`
+	CoverageTo    *time.Time `json:"coverage_to,omitempty"`
+	ID            uuid.UUID  `json:"id"`
+	DocumentType  string     `json:"document_type"`
+	FileName      string     `json:"file_name"`
+	Sha256        string     `json:"sha256"`
+	IsMock        bool       `json:"is_mock"`
+	UploadedAt    time.Time  `json:"uploaded_at"`
+	StorageKey    string     `json:"-"`
+	SizeBytes     int64      `json:"-"`
 }
 
 type ApplicationInfoRequest struct {
-	ID                    uuid.UUID `json:"id"`
-	Message               string    `json:"message"`
-	RequiredFields        []string  `json:"required_fields"`
-	RequiredDocumentTypes []string  `json:"required_document_types"`
-	CreatedAt             time.Time `json:"created_at"`
+	Requirements          []*commonpb.Requirement `json:"requirements,omitempty"`
+	ID                    uuid.UUID               `json:"id"`
+	Message               string                  `json:"message"`
+	RequiredFields        []string                `json:"required_fields"`
+	RequiredDocumentTypes []string                `json:"required_document_types"`
+	CreatedAt             time.Time               `json:"created_at"`
 }
 
 type ApplicationOffer struct {
@@ -81,6 +89,7 @@ type CreateApplicationParams struct {
 }
 
 type ApplicationPatch struct {
+	Company        *Company
 	AmountKopecks  *int64
 	AmountCurrency string
 	TermMonths     *int
@@ -95,6 +104,9 @@ type UpdateApplicationParams struct {
 }
 
 type AddApplicationDocumentParams struct {
+	RequirementID  *string
+	CoverageFrom   *time.Time
+	CoverageTo     *time.Time
 	OrgID          uuid.UUID
 	UserID         uuid.UUID
 	ApplicationID  uuid.UUID

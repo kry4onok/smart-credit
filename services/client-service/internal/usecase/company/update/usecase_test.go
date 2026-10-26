@@ -26,7 +26,7 @@ func (r *repositoryMock) Update(context.Context, uuid.UUID, model.Company, int64
 }
 
 func validCompany() model.Company {
-	return model.Company{INN: "7707083893", Name: "Демо", OKVED: "62.01", RegisteredAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)}
+	return model.Company{Revenue12mKopecks: ptr(0), Profit12mKopecks: ptr(0), ObligationsKopecks: ptr(0), INN: "7707083893", Name: "Демо", OKVED: "62.01", RegisteredAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)}
 }
 
 func TestExecuteChoosesCreateOrUpdate(t *testing.T) {

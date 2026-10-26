@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	profileconv "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
@@ -22,7 +24,7 @@ func TestCompanyUsesAuthenticatedOrganization(t *testing.T) {
 	orgID, otherID := uuid.New(), uuid.New()
 	company := model.Company{INN: "7707083893", Name: "Демо", OKVED: "62.01",
 		RegisteredAt:      time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
-		Revenue12mKopecks: 9007199254740991, Profit12mKopecks: -12345, ObligationsKopecks: 500, Version: 7}
+		Revenue12mKopecks: profileconv.Ptr(int64(9007199254740991)), Profit12mKopecks: profileconv.Ptr(int64(-12345)), ObligationsKopecks: profileconv.Ptr(int64(500)), Version: 7}
 	calls := 0
 	h := New(usecaseMock{execute: func(_ context.Context, id uuid.UUID) (model.Company, error) {
 		calls++
@@ -59,7 +61,7 @@ func TestCompanyUsesAuthenticatedOrganization(t *testing.T) {
 		t.Fatal(err)
 	}
 	if body.Version != 7 || body.Profile.Inn != company.INN || body.Profile.RegisteredAt.String() != "2020-01-02" ||
-		body.Profile.Revenue12m.AmountKopecks != company.Revenue12mKopecks || body.Profile.Profit12m.AmountKopecks != -12345 ||
+		body.Profile.Revenue12m.AmountKopecks != *company.Revenue12mKopecks || body.Profile.Profit12m.AmountKopecks != -12345 ||
 		body.Profile.Obligations.Currency != common.MoneyCurrencyRUB {
 		t.Fatalf("unexpected profile: %+v", body)
 	}

@@ -2,9 +2,12 @@ package bankevents
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
@@ -126,6 +129,16 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 		return err
 	}
 	applicationID, _ := uuid.Parse(event.GetAggregateId())
+	var planJSON []byte
+	if plan := state.GetRequirementsPlan(); plan != nil {
+		if err := validateRequirements(plan.GetItems()); err != nil {
+			return err
+		}
+		planJSON, err = protojson.Marshal(plan)
+		if err != nil {
+			return err
+		}
+	}
 	var publicReason any
 	if state.GetPublicReason() != "" {
 		publicReason = state.GetPublicReason()
@@ -134,9 +147,9 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 		UPDATE applications
 		SET status = $2, stage_label = $3, next_action = $4, public_reason = $5,
 		    pending_action = NULL, pending_since = NULL,
-		    bank_event_version = $6, version = version + 1, updated_at = now()
+		    bank_event_version = $6, bank_requirements_plan=$7, version = version + 1, updated_at = now()
 		WHERE id = $1 AND bank_event_version < $6`,
-		applicationID, status, state.GetStageLabel(), state.GetNextAction(), publicReason, event.GetAggregateVersion())
+		applicationID, status, state.GetStageLabel(), state.GetNextAction(), publicReason, event.GetAggregateVersion(), planJSON)
 	if err != nil {
 		return fmt.Errorf("update application public state: %w", err)
 	}
@@ -229,7 +242,8 @@ func insertProduct(ctx context.Context, tx Tx, product *commonpb.Product) error 
 	documents := make([]string, 0, len(product.GetRequiredDocumentTypes()))
 	for _, documentType := range product.GetRequiredDocumentTypes() {
 		switch documentType {
-		case commonpb.DocumentType_DOCUMENT_TYPE_BANK_STATEMENT, commonpb.DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN:
+		case commonpb.DocumentType_DOCUMENT_TYPE_BANK_STATEMENT, commonpb.DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN,
+			commonpb.DocumentType_DOCUMENT_TYPE_ACCOUNTING_REPORT, commonpb.DocumentType_DOCUMENT_TYPE_MANAGEMENT_REPORT, commonpb.DocumentType_DOCUMENT_TYPE_TAX_DECLARATION_USN, commonpb.DocumentType_DOCUMENT_TYPE_TAX_DECLARATION_3NDFL, commonpb.DocumentType_DOCUMENT_TYPE_INCOME_LEDGER, commonpb.DocumentType_DOCUMENT_TYPE_PATENT, commonpb.DocumentType_DOCUMENT_TYPE_RECEIVABLES_PAYABLES:
 			documents = append(documents, strings.TrimPrefix(documentType.String(), "DOCUMENT_TYPE_"))
 		default:
 			return errors.New("invalid catalog document type")
@@ -243,11 +257,11 @@ func insertProduct(ctx context.Context, tx Tx, product *commonpb.Product) error 
 		INSERT INTO products (
 			id, version, code, name, description, purpose_tags,
 			min_amount_kopecks, max_amount_kopecks, min_term_months,
-			max_term_months, indicative_rate_bps, required_document_types
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+			max_term_months, indicative_rate_bps, required_document_types, requirements_policy_version
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		id, product.GetVersion(), product.GetCode(), product.GetName(), product.GetDescription(), tags,
 		product.GetMinAmount().GetAmountKopecks(), product.GetMaxAmount().GetAmountKopecks(),
-		product.GetMinTermMonths(), product.GetMaxTermMonths(), indicativeRate, documents); err != nil {
+		product.GetMinTermMonths(), product.GetMaxTermMonths(), indicativeRate, documents, optionalString(product.GetRequirementsPolicyVersion())); err != nil {
 		return fmt.Errorf("save catalog product: %w", err)
 	}
 	return nil
@@ -268,24 +282,39 @@ func insertInfoRequest(ctx context.Context, tx Tx, applicationID uuid.UUID, requ
 	documents := make([]string, 0, len(request.GetRequiredDocumentTypes()))
 	for _, documentType := range request.GetRequiredDocumentTypes() {
 		switch documentType {
-		case commonpb.DocumentType_DOCUMENT_TYPE_BANK_STATEMENT, commonpb.DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN:
+		case commonpb.DocumentType_DOCUMENT_TYPE_BANK_STATEMENT, commonpb.DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN,
+			commonpb.DocumentType_DOCUMENT_TYPE_ACCOUNTING_REPORT, commonpb.DocumentType_DOCUMENT_TYPE_MANAGEMENT_REPORT, commonpb.DocumentType_DOCUMENT_TYPE_TAX_DECLARATION_USN, commonpb.DocumentType_DOCUMENT_TYPE_TAX_DECLARATION_3NDFL, commonpb.DocumentType_DOCUMENT_TYPE_INCOME_LEDGER, commonpb.DocumentType_DOCUMENT_TYPE_PATENT, commonpb.DocumentType_DOCUMENT_TYPE_RECEIVABLES_PAYABLES:
 			documents = append(documents, strings.TrimPrefix(documentType.String(), "DOCUMENT_TYPE_"))
 		default:
 			return errors.New("invalid bank info document type")
 		}
 	}
-	if len(fields) == 0 && len(documents) == 0 {
+	if err := validateRequirements(request.GetRequirements()); err != nil {
+		return err
+	}
+	if len(request.GetRequirements()) > 0 && (len(fields) > 0 || len(documents) > 0) {
+		return errors.New("mixed legacy and v2 requirements")
+	}
+	if len(fields) == 0 && len(documents) == 0 && len(request.GetRequirements()) == 0 {
 		return errors.New("bank info request is empty")
 	}
+	reqs := request.GetRequirements()
+	if reqs == nil {
+		reqs = []*commonpb.Requirement{}
+	}
+	reqJSON, err := json.Marshal(reqs)
+	if err != nil {
+		return err
+	}
 	result, err := tx.Exec(ctx, `
-		INSERT INTO info_requests (id, application_id, message, required_fields, required_document_types, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+ INSERT INTO info_requests (id, application_id, message, required_fields, required_document_types, created_at, requirements)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (id) DO UPDATE
 		SET message = EXCLUDED.message, required_fields = EXCLUDED.required_fields,
-		    required_document_types = EXCLUDED.required_document_types,
+		    required_document_types = EXCLUDED.required_document_types, requirements=EXCLUDED.requirements,
 		    created_at = EXCLUDED.created_at, is_active = true, responded_at = NULL
 		WHERE info_requests.application_id = EXCLUDED.application_id`,
-		requestID, applicationID, request.GetMessage(), fields, documents, request.GetCreatedAt().AsTime())
+		requestID, applicationID, request.GetMessage(), fields, documents, request.GetCreatedAt().AsTime(), reqJSON)
 	if err != nil {
 		return fmt.Errorf("save bank info request: %w", err)
 	}
@@ -370,4 +399,29 @@ func clientStatus(value eventspb.ClientStatus) (string, error) {
 	default:
 		return "", errors.New("invalid client status in bank event")
 	}
+}
+
+func optionalString(v string) *string {
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+func validateRequirements(items []*commonpb.Requirement) error {
+	seen := map[string]bool{}
+	for _, r := range items {
+		if r == nil || r.GetId() == "" || seen[r.GetId()] {
+			return errors.New("invalid requirement id")
+		}
+		seen[r.GetId()] = true
+		if r.GetKind() != commonpb.RequirementKind_REQUIREMENT_KIND_FIELD && r.GetKind() != commonpb.RequirementKind_REQUIREMENT_KIND_DOCUMENT {
+			return errors.New("invalid requirement kind")
+		}
+		for _, id := range r.GetDocumentIds() {
+			if parsed, err := uuid.Parse(id); err != nil || parsed == uuid.Nil {
+				return errors.New("invalid requirement document id")
+			}
+		}
+	}
+	return nil
 }

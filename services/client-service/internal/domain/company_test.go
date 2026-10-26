@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	profileconv "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 )
 
@@ -14,9 +16,9 @@ func TestValidateCompany(t *testing.T) {
 		Name:               "Демо",
 		OKVED:              "62.01",
 		RegisteredAt:       time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
-		Revenue12mKopecks:  100,
-		Profit12mKopecks:   -10,
-		ObligationsKopecks: 20,
+		Revenue12mKopecks:  profileconv.Ptr(int64(100)),
+		Profit12mKopecks:   profileconv.Ptr(int64(-10)),
+		ObligationsKopecks: profileconv.Ptr(int64(20)),
 	}
 	if err := ValidateCompany(base); err != nil {
 		t.Fatalf("valid 10-digit INN rejected: %v", err)
@@ -29,8 +31,8 @@ func TestValidateCompany(t *testing.T) {
 		func(c *model.Company) { c.INN = "7707083894" },
 		func(c *model.Company) { c.Name = "  " },
 		func(c *model.Company) { c.RegisteredAt = time.Time{} },
-		func(c *model.Company) { c.Revenue12mKopecks = -1 },
-		func(c *model.Company) { c.Profit12mKopecks = maxSafeInteger + 1 },
+		func(c *model.Company) { c.Revenue12mKopecks = profileconv.Ptr(int64(-1)) },
+		func(c *model.Company) { c.Profit12mKopecks = profileconv.Ptr(int64(maxSafeInteger + 1)) },
 	} {
 		invalid := base
 		mutate(&invalid)

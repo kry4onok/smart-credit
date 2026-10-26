@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "profiles_source": "requirements-cases.json",
+  "bureau_source": "../personas.yaml",
+  "personas": [
+    {
+      "scenario_id": "llc_usn",
+      "bureau_inn": "9900000017",
+      "legal_form": "LLC",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "ip_usn",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "ip_psn",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "ip_usn_psn",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "unknown",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "missing_profit",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "zero_profit",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "loss",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "llc_psn_invalid",
+      "bureau_inn": "9900000017",
+      "legal_form": "LLC",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "ausn_manual",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "tax_history_gap",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "regime_changed",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "overlap_invalid",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "tax_basis_manual",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "young_business_manual",
+      "bureau_inn": "9900000017",
+      "legal_form": "LLC",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    },
+    {
+      "scenario_id": "stale_debt_date",
+      "bureau_inn": "990000000115",
+      "legal_form": "IP",
+      "profile_source": "CLIENT_DECLARED",
+      "mock_mode": "LOCAL_ONLY"
+    }
+  ]
+}
