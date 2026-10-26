@@ -41,7 +41,3 @@ VALUES ($1, $2, $3, $4::jsonb)`
 const insertAuditQuery = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, details)
 VALUES ($1, $2, $3, 'VALIDATION_COMPLETED', 'SYSTEM', $4, $5::jsonb)`
-
-const insertOutboxQuery = `
-INSERT INTO outbox (event_id, aggregate_id, aggregate_version, event_type, payload)
-VALUES ($1, $2, $3, 'ApplicationPublicStatePublished', $4)`

@@ -161,6 +161,7 @@ services:
       CLIENT_HTTP_ADDR: ":8080"
       CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
       CLIENT_DOCUMENT_STORAGE_PATH: /var/lib/smart-credit/documents
+      CLIENT_ASSISTANT_TARGET: assistant:50052
       CLIENT_KAFKA_BROKERS: kafka:19092
       CLIENT_KAFKA_CONSUMER_GROUP: client-service
       CLIENT_JWKS_URL: http://auth:8080/.well-known/jwks.json

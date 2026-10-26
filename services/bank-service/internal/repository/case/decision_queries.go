@@ -49,29 +49,6 @@ WHERE p.id=$1 AND p.is_active
 ORDER BY p.version DESC 
 LIMIT 1`
 
-const latestDecisionOverdue = `
-SELECT CASE WHEN outcome='SUCCESS' 
-    THEN (result->>'max_overdue_days')::integer END 
-FROM enrichment_results 
-WHERE case_id=$1 AND source='CREDIT_HISTORY' 
-ORDER BY created_at DESC,id DESC 
-LIMIT 1`
-
-const latestDecisionCompanyStatus = `
-SELECT CASE WHEN outcome='SUCCESS' THEN result->>'status' END 
-FROM enrichment_results 
-WHERE case_id=$1 AND source='COMPANY' 
-ORDER BY created_at DESC,id DESC 
-LIMIT 1`
-
-const latestDecisionGrade = `
-SELECT s.grade 
-FROM cases c JOIN score_results s 
-    ON s.case_id=c.id AND ((c.current_scoring_attempt_id IS NOT NULL AND s.attempt_id=c.current_scoring_attempt_id) OR (c.current_scoring_attempt_id IS NULL AND c.scoring_input_revision=1 AND s.attempt_id IS NULL))
-WHERE c.id=$1 
-ORDER BY s.created_at DESC,s.id DESC 
-LIMIT 1`
-
 const updateDecisionCase = `
 UPDATE cases SET status=$2,recommendation=$3,public_reason=$4,triggered_rules='{}',version=version+1,audit_version=audit_version+1,next_run_at=NULL,lease_until=NULL,updated_at=now() 
 WHERE id=$1`
@@ -95,7 +72,3 @@ VALUES ($1,$2,$3,$4,$5::jsonb)`
 const insertDecisionAudit = `
 INSERT INTO audit_log (id,case_id,case_version,action,actor_type,actor_id,reason,details) 
 VALUES ($1,$2,$3,'DECISION','ANALYST',$4,$5,$6)`
-
-const insertDecisionOutbox = `
-INSERT INTO outbox (event_id,aggregate_id,aggregate_version,event_type,payload) 
-VALUES ($1,$2,$3,'ApplicationPublicStatePublished',$4)`

@@ -34,6 +34,11 @@ class BureauServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.GetAssessmentSources = channel.unary_unary(
+                '/smartcredit.bureau.BureauService/GetAssessmentSources',
+                request_serializer=proto_dot_bureau_dot_bureau__pb2.AssessmentSourcesRequest.SerializeToString,
+                response_deserializer=proto_dot_bureau_dot_bureau__pb2.AssessmentSourcesResponse.FromString,
+                _registered_method=True)
         self.GetCompanyProfile = channel.unary_unary(
                 '/smartcredit.bureau.BureauService/GetCompanyProfile',
                 request_serializer=proto_dot_bureau_dot_bureau__pb2.CompanyProfileRequest.SerializeToString,
@@ -48,6 +53,12 @@ class BureauServiceStub(object):
 
 class BureauServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def GetAssessmentSources(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetCompanyProfile(self, request, context):
         """Упрощённые ЕГРЮЛ/ЕГРИП и ФНС «Прозрачный бизнес».
@@ -66,6 +77,11 @@ class BureauServiceServicer(object):
 
 def add_BureauServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'GetAssessmentSources': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAssessmentSources,
+                    request_deserializer=proto_dot_bureau_dot_bureau__pb2.AssessmentSourcesRequest.FromString,
+                    response_serializer=proto_dot_bureau_dot_bureau__pb2.AssessmentSourcesResponse.SerializeToString,
+            ),
             'GetCompanyProfile': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCompanyProfile,
                     request_deserializer=proto_dot_bureau_dot_bureau__pb2.CompanyProfileRequest.FromString,
@@ -86,6 +102,33 @@ def add_BureauServiceServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class BureauService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def GetAssessmentSources(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/smartcredit.bureau.BureauService/GetAssessmentSources',
+            proto_dot_bureau_dot_bureau__pb2.AssessmentSourcesRequest.SerializeToString,
+            proto_dot_bureau_dot_bureau__pb2.AssessmentSourcesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def GetCompanyProfile(request,

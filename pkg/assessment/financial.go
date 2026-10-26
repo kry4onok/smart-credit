@@ -51,6 +51,10 @@ func comparable(f *FinancialInput) *FinancialInput {
 		b.Provenance = Provenance{}
 		v.BalanceSheet = &b
 	}
+	v.DebtPayments = append([]DebtPayment(nil), f.DebtPayments...)
+	sort.Slice(v.DebtPayments, func(i, j int) bool {
+		return v.DebtPayments[i].ObligationID+v.DebtPayments[i].Period < v.DebtPayments[j].ObligationID+v.DebtPayments[j].Period
+	})
 	return &v
 }
 
@@ -131,7 +135,7 @@ func Normalize(in Input) (FinancialSnapshot, []Issue) {
 	}
 	if b := f.BalanceSheet; b != nil {
 		date, e := time.Parse(time.DateOnly, b.AsOf)
-		if in.LegalForm != "LLC" || e != nil || date.After(in.AsOf) || b.AssetsKopecks < 0 || b.LiabilitiesKopecks < 0 || b.AssetsKopecks > maxComponent || b.LiabilitiesKopecks > maxComponent || b.EquityKopecks != b.AssetsKopecks-b.LiabilitiesKopecks || !validProvenance(b.Provenance, in.AsOf) {
+		if in.LegalForm != "LLC" || e != nil || date.After(in.AsOf) || b.AssetsKopecks < 0 || b.LiabilitiesKopecks < 0 || b.AssetsKopecks > maxComponent || b.LiabilitiesKopecks > maxComponent || b.ReceivablesKopecks < 0 || b.PayablesKopecks < 0 || b.ReceivablesKopecks > b.AssetsKopecks || b.PayablesKopecks > b.LiabilitiesKopecks || b.EquityKopecks != b.AssetsKopecks-b.LiabilitiesKopecks || !validProvenance(b.Provenance, in.AsOf) {
 			issues = append(issues, issue("INVALID_BALANCE", "financials.balance_sheet", "Баланс не согласован по дате, форме или арифметике"))
 		}
 	}
@@ -156,6 +160,7 @@ func Normalize(in Input) (FinancialSnapshot, []Issue) {
 		return FinancialSnapshot{}, []Issue{issue("ZERO_OPERATING_RECEIPTS", "financials.months", "Нет операционных поступлений для оценки устойчивого денежного потока")}
 	}
 	s.MarginBPS = ratio(total, receipts)
+	var delayed int64
 	for i := 1; i <= horizon; i++ {
 		future := month.AddDate(0, i, 0)
 		var m Month
@@ -167,13 +172,18 @@ func Normalize(in Input) (FinancialSnapshot, []Issue) {
 			}
 		}
 		base := *m.Receipts - *m.VariableCosts - *m.FixedCosts - *m.Taxes - *m.Maintenance - *m.OwnerDrawings
-		// Stress: receipts -20%, variable costs -10%, fixed outflows unchanged.
-		stress := scale(*m.Receipts, 8000) - scale(*m.VariableCosts, 9000) - *m.FixedCosts - *m.Taxes - *m.Maintenance - *m.OwnerDrawings
+		// Stress: receipts -20%, variable costs -10%; 20% of stressed
+		// receipts arrive one month late. No opening delayed receivables assumed.
+		gross := scale(*m.Receipts, 8000)
+		nextDelayed := scale(gross, 2000)
+		stressedReceipts := gross - nextDelayed + delayed
+		delayed = nextDelayed
+		stress := stressedReceipts - scale(*m.VariableCosts, 9000) - *m.FixedCosts - *m.Taxes - *m.Maintenance - *m.OwnerDrawings
 		period := future.Format("2006-01")
 		row := CashMonth{Period: period, CFADSKopecks: base, ReceiptsKopecks: *m.Receipts, ExistingDebtKopecks: debts[period], Quality: "PROJECTED", EvidenceRefs: []string{m.Provenance.SourceRef, f.Provenance.SourceRef}}
 		s.Base = append(s.Base, row)
 		row.CFADSKopecks = stress
-		row.ReceiptsKopecks = scale(*m.Receipts, 8000)
+		row.ReceiptsKopecks = stressedReceipts
 		s.Stress = append(s.Stress, row)
 	}
 	s.ID = hash(s)

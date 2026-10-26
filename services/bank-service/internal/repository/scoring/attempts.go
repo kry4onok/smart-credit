@@ -26,6 +26,7 @@ type Attempt struct {
 	ID            uuid.UUID
 	CaseID        uuid.UUID
 	InputRevision int64
+	Generation    int64
 	AsOfDate      time.Time
 	Request       *scoringpb.ScoreRequest
 }
@@ -50,13 +51,13 @@ func (r *Repository) Start(ctx context.Context, attempt Attempt) error {
 
 	return r.transactions.WithinTransaction(ctx, func(ctx context.Context) error {
 		queryer := transaction.QueryerFromContext(ctx, r.db)
-		if err := lockCurrentRevision(ctx, queryer, attempt.CaseID, attempt.InputRevision); err != nil {
+		if err := lockCurrentRevision(ctx, queryer, attempt.CaseID, attempt.InputRevision, attempt.Generation); err != nil {
 			return err
 		}
 
 		_, err := queryer.Exec(ctx, insertAttemptQuery,
 			attempt.ID, attempt.CaseID, attempt.InputRevision,
-			attempt.AsOfDate.UTC().Format(time.DateOnly), string(requestJSON))
+			attempt.AsOfDate.UTC().Format(time.DateOnly), string(requestJSON), max(int64(1), attempt.Generation))
 		if err != nil {
 			return fmt.Errorf("insert scoring attempt: %w", err)
 		}
@@ -79,17 +80,17 @@ func validateAttempt(attempt Attempt) error {
 	return nil
 }
 
-func lockCurrentRevision(ctx context.Context, queryer transaction.Queryer, caseID uuid.UUID, expected int64) error {
-	var revision int64
+func lockCurrentRevision(ctx context.Context, queryer transaction.Queryer, caseID uuid.UUID, expected int64, expectedGeneration int64) error {
+	var revision, generation int64
 	var status *string
-	err := queryer.QueryRow(ctx, lockCaseRevisionQuery, caseID).Scan(&revision, &status)
+	err := queryer.QueryRow(ctx, lockCaseRevisionQuery, caseID).Scan(&revision, &status, &generation)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrCaseNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("lock case for scoring: %w", err)
 	}
-	if revision != expected {
+	if revision != expected || generation != max(int64(1), expectedGeneration) {
 		return ErrStaleInput
 	}
 	if status != nil && *status != "TECHNICAL_ERROR" {

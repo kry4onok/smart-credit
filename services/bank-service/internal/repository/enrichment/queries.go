@@ -14,13 +14,13 @@ UPDATE cases AS c
 SET lease_until = now() + interval '30 seconds'
 FROM candidate
 WHERE c.id = candidate.id
-RETURNING c.id, c.company_inn, c.version, c.scoring_input_revision, c.lease_until`
+RETURNING c.id, c.company_inn, c.version, c.scoring_input_revision, c.lease_until, c.assessment_generation, c.assessment_as_of`
 
 const finishCaseQuery = `
 UPDATE cases
 SET status = $5,
     recommendation = $6,
-    scoring_input_revision = scoring_input_revision + 1,
+    assessment_sources = $8::jsonb,
     current_scoring_attempt_id = NULL,
     triggered_rules = '{}',
     public_reason = NULL,
@@ -30,12 +30,12 @@ SET status = $5,
     audit_version = audit_version + 1,
     updated_at = now()
 WHERE id = $1 AND lease_until = $2 AND version = $3
-  AND scoring_input_revision = $4 AND status = 'ENRICHMENT'
+  AND scoring_input_revision = $4 AND assessment_generation=$7 AND status = 'ENRICHMENT'
 RETURNING version`
 
 const insertResultQuery = `
-INSERT INTO enrichment_results (case_id, source, outcome, result, error_code)
-VALUES ($1, $2, $3, $4::jsonb, $5)`
+INSERT INTO enrichment_results (case_id, source, outcome, result, error_code, assessment_generation)
+VALUES ($1, $2, $3, $4::jsonb, $5, $6)`
 
 const insertAuditQuery = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, details)

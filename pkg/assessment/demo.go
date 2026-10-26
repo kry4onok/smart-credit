@@ -14,6 +14,15 @@ func DemoSources(inn, registered, status string, credit CreditHistory, asOf time
 		source.SourceRef = "demo:" + kind + ":" + inn
 		s.Checks = append(s.Checks, Source{ID: kind, Kind: kind, SubjectID: inn, Role: "BORROWER", Match: "EXACT", Status: "SUCCESS", Conclusion: "CLEAR", ValidUntil: asOf.Add(24 * time.Hour), Provenance: source})
 	}
+	if len(inn) == 10 {
+		for _, role := range []string{"DIRECTOR", "OWNER"} {
+			for _, kind := range []string{"BANKRUPTCY", "ENFORCEMENT"} {
+				provenance := p
+				provenance.SourceRef = "demo-related:" + role + ":" + kind + ":" + inn
+				s.Checks = append(s.Checks, Source{ID: role + ":" + kind, Kind: kind, SubjectID: "demo-person:" + role + ":" + inn, Role: role, Match: "EXACT", Status: "NOT_FOUND", Conclusion: "CLEAR", ValidUntil: asOf.Add(24 * time.Hour), Provenance: provenance})
+			}
+		}
+	}
 	f := &FinancialInput{Currency: "RUB", InitialCashKopecks: ptr(int64(50_000_000)), LargestCustomerShareBPS: ptr(1500), DebtScheduleKnown: ptr(true), DebtScheduleThrough: asOf.AddDate(0, 120, 0).Format("2006-01"), Months: []Month{}, DebtPayments: []DebtPayment{}, Provenance: p}
 	start := periodStart(asOf)
 	for i := range 12 {

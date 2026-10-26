@@ -2,7 +2,11 @@ package grpcserver
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
 
 	bureaupb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bureau-mocks/internal/persona"
@@ -71,4 +75,57 @@ func wait(ctx context.Context, delay time.Duration) error {
 	case <-timer.C:
 		return nil
 	}
+}
+
+func (s *Service) GetAssessmentSources(ctx context.Context, req *bureaupb.AssessmentSourcesRequest) (*bureaupb.AssessmentSourcesResponse, error) {
+	if req == nil || !persona.ValidINN(req.Inn) {
+		return nil, status.Error(codes.InvalidArgument, "valid INN required")
+	}
+	now, err := time.Parse(time.RFC3339Nano, req.AsOf)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "as_of required")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
+	}
+	item, ok := s.catalog.Lookup(req.Inn)
+	if !ok {
+		return nil, status.Error(codes.NotFound, "persona not found")
+	}
+	profile, credit := item.Profile, item.Credit
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(-1, 0, 0)
+	current := 0
+	history := assessment.CreditHistory{CurrentDPD: &current, PeriodFrom: start.Format(time.DateOnly), PeriodTo: start.AddDate(1, 0, -1).Format(time.DateOnly)}
+	if credit.MaxOverdueDays != nil {
+		v := int(*credit.MaxOverdueDays)
+		history.HistoricalMaxDPD = &v
+	}
+	if credit.OverdueCount_12M != nil {
+		v := int(*credit.OverdueCount_12M)
+		history.OverdueEpisodes = &v
+	}
+	if credit.TotalDebt != nil {
+		v := credit.TotalDebt.AmountKopecks
+		history.TotalDebtKopecks = &v
+	}
+	sources := assessment.DemoSources(req.Inn, profile.RegisteredAt, strings.TrimPrefix(profile.Status.String(), "COMPANY_STATUS_"), history, now)
+	for i := range sources.Checks {
+		source := &sources.Checks[i]
+		if source.Kind == "REGISTRY" && (item.ProfileError || item.ProfileDelay >= 2*time.Second) {
+			source.Status = "UNAVAILABLE"
+			source.Conclusion = "REVIEW"
+			sources.RegisteredAt = ""
+			sources.CompanyStatus = ""
+		}
+		if source.Kind == "CREDIT_HISTORY" && (item.CreditError || item.CreditDelay >= 2*time.Second) {
+			source.Status = "UNAVAILABLE"
+			source.Conclusion = "REVIEW"
+			sources.Credit = assessment.CreditHistory{}
+		}
+	}
+	data, err := json.Marshal(sources)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "encode sources")
+	}
+	return &bureaupb.AssessmentSourcesResponse{SourcesJson: data}, nil
 }

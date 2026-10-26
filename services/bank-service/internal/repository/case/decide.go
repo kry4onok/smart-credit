@@ -7,10 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
+	assessmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/assessment"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 
@@ -254,7 +255,7 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 			return model.Case{}, fmt.Errorf("add decision requirements: %w", err)
 		}
 	}
-	_, err = q.Exec(ctx, insertDecisionOutbox, eventID, in.CaseID.String(), version+1, payload)
+	_, err = publicstate.Publish(ctx, q, eventID, in.CaseID.String(), version+1, payload)
 	if err != nil {
 		return model.Case{}, fmt.Errorf("write decision outbox: %w", err)
 	}
@@ -283,92 +284,14 @@ func nullableReason(reason string) any {
 	return reason
 }
 
-func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input, company, documents []byte, purpose string, dossier decisionDossier, now time.Time) (decisionProduct, error) {
+func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input, _, _ []byte, _ string, _ decisionDossier, now time.Time) (decisionProduct, error) {
 	q := transaction.QueryerFromContext(ctx, r.db)
+	if err := assessmentrepository.CheckCurrentOffer(ctx, q, in.CaseID, in.Offer.ProductID, creditcalc.Terms{AmountKopecks: in.Offer.AmountKopecks, TermMonths: in.Offer.TermMonths, RateBPS: in.Offer.RateBPS}, now); err != nil {
+		return decisionProduct{}, fmt.Errorf("%w: %w", decide.ErrValidation, err)
+	}
 	var p decisionProduct
 	err := q.QueryRow(ctx, loadDecisionProduct, in.Offer.ProductID).Scan(&p.version, &p.name, &p.purposes, &p.documents, &p.minAmount, &p.maxAmount, &p.minTerm, &p.maxTerm, &p.gradeARate, &p.gradeBRate, &p.minAge, &p.ratio, &p.maxOverdue, &p.ttl, &p.policy)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return p, fmt.Errorf("%w: offer product is inactive or has no rules", decide.ErrValidation)
-	}
-	if err != nil {
-		return p, fmt.Errorf("load offer product: %w", err)
-	}
-	if in.Offer.AmountKopecks < p.minAmount || in.Offer.AmountKopecks > p.maxAmount || in.Offer.TermMonths < p.minTerm || in.Offer.TermMonths > p.maxTerm {
-		return p, fmt.Errorf("%w: offer outside product amount or term range", decide.ErrValidation)
-	}
-	var grade string
-	gradeErr := q.QueryRow(ctx, latestDecisionGrade, in.CaseID).Scan(&grade)
-	if gradeErr != nil && !errors.Is(gradeErr, pgx.ErrNoRows) {
-		return p, fmt.Errorf("load latest score grade: %w", gradeErr)
-	}
-	if grade == "A" && in.Offer.RateBPS < p.gradeARate || grade == "B" && in.Offer.RateBPS < p.gradeBRate {
-		return p, fmt.Errorf("%w: offer rate below grade rule", decide.ErrValidation)
-	}
-
-	var companyStatus *string
-	statusErr := q.QueryRow(ctx, latestDecisionCompanyStatus, in.CaseID).Scan(&companyStatus)
-	if statusErr != nil && !errors.Is(statusErr, pgx.ErrNoRows) {
-		return p, fmt.Errorf("load company status: %w", statusErr)
-	}
-	if errors.Is(statusErr, pgx.ErrNoRows) || companyStatus == nil {
-		return p, fmt.Errorf("%w: successful company check is required", decide.ErrValidation)
-	}
-	if companyStatus != nil && (*companyStatus == "COMPANY_STATUS_LIQUIDATING" || *companyStatus == "COMPANY_STATUS_LIQUIDATED" || *companyStatus == "LIQUIDATING" || *companyStatus == "LIQUIDATED") {
-		return p, fmt.Errorf("%w: company status forbids an offer", decide.ErrValidation)
-	}
-
-	if dossier.policy != p.policy {
-		return p, fmt.Errorf("%w: counter product policy differs from requested product", decide.ErrValidation)
-	}
-	outcome := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, ReferenceDate: dossier.referenceDate, AmountKopecks: in.Offer.AmountKopecks, TermMonths: int32(in.Offer.TermMonths), PurposeTag: purpose}, validation.Product{Found: true, PolicyVersion: p.policy, PurposeTags: p.purposes, RequiredDocumentTypes: p.documents, MinAmountKopecks: p.minAmount, MaxAmountKopecks: p.maxAmount, MinTermMonths: int32(p.minTerm), MaxTermMonths: int32(p.maxTerm)})
-	if outcome.Status != model.CaseStatusEnrichment {
-		return p, fmt.Errorf("%w: offer requires fields %v and documents %v (%s)", decide.ErrValidation, outcome.RequiredFields, outcome.RequiredDocumentTypes, outcome.Reason)
-	}
-
-	var snapshot struct {
-		RegisteredAt string `json:"registered_at"`
-		Revenue      *struct {
-			Amount json.RawMessage `json:"amount_kopecks"`
-		} `json:"revenue_12m"`
-	}
-
-	if err = json.Unmarshal(company, &snapshot); err != nil {
-		return p, fmt.Errorf("%w: invalid company snapshot", decide.ErrValidation)
-	}
-	registered, err := time.Parse("2006-01-02", snapshot.RegisteredAt)
-	if err != nil {
-		return p, fmt.Errorf("%w: invalid company registration date", decide.ErrValidation)
-	}
-	if registered.AddDate(0, p.minAge, 0).After(now) {
-		return p, fmt.Errorf("%w: company age below product minimum", decide.ErrValidation)
-	}
-	if snapshot.Revenue == nil || len(snapshot.Revenue.Amount) == 0 {
-		return p, fmt.Errorf("%w: revenue is required", decide.ErrValidation)
-	}
-	revenue, err := strconv.ParseInt(strings.Trim(string(snapshot.Revenue.Amount), `"`), 10, 64)
-	if err != nil || revenue <= 0 {
-		return p, fmt.Errorf("%w: revenue must be positive", decide.ErrValidation)
-	}
-
-	amount := new(big.Int).Mul(big.NewInt(in.Offer.AmountKopecks), big.NewInt(10000))
-	limit := new(big.Int).Mul(big.NewInt(revenue), big.NewInt(int64(p.ratio)))
-	if amount.Cmp(limit) > 0 {
-		return p, fmt.Errorf("%w: amount exceeds revenue limit", decide.ErrValidation)
-	}
-	var overdue *int
-
-	err = q.QueryRow(ctx, latestDecisionOverdue, in.CaseID).Scan(&overdue)
-	if errors.Is(err, pgx.ErrNoRows) || overdue == nil {
-		return p, fmt.Errorf("%w: successful credit history check is required", decide.ErrValidation)
-	}
-	if err == nil && *overdue > p.maxOverdue {
-		return p, fmt.Errorf("%w: overdue days exceed product limit", decide.ErrValidation)
-	}
-
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return p, fmt.Errorf("load credit history: %w", err)
-	}
-	return p, nil
+	return p, err
 }
 
 func encodeDecisionRequirements(items []*commonpb.Requirement) ([]byte, error) {

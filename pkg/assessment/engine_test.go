@@ -2,10 +2,11 @@ package assessment
 
 import (
 	"encoding/json"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 )
 
 func demoInput() Input {

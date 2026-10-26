@@ -21,7 +21,3 @@ INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, de
 VALUES ($1, $2, $3, 'DEMO_DISBURSED', 'SYSTEM', 'Демо-выдача после подписания договора',
     jsonb_build_object('from_status', 'SIGNING', 'to_status', 'DISBURSED',
                        'reason', 'DEMO_DISBURSEMENT'), $4)`
-
-const insertDisbursementOutboxQuery = `
-INSERT INTO outbox (event_id, aggregate_id, aggregate_version, event_type, payload)
-VALUES ($1, $2, $3, 'ApplicationPublicStatePublished', $4)`

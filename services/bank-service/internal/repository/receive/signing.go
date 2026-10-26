@@ -89,7 +89,7 @@ func (r *Repository) applyContractSigned(ctx context.Context, q transaction.Quer
 	if err != nil {
 		return false, fmt.Errorf("encode signing state: %w", err)
 	}
-	if _, err := q.Exec(ctx, insertOfferResponseOutboxQuery, eventID,
+	if _, err := publicstate.Publish(ctx, q, eventID,
 		input.ApplicationID.String(), newVersion, payload); err != nil {
 		return false, fmt.Errorf("write signing outbox: %w", err)
 	}

@@ -25,7 +25,3 @@ const insertExpiryAuditQuery = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, details, occurred_at)
 VALUES ($1, $2, $3, 'OFFER_EXPIRED', 'SYSTEM', 'OFFER_TTL_EXPIRED',
     jsonb_build_object('offer_id', $4::text, 'to_status', 'EXPIRED'), $5)`
-
-const insertExpiryOutboxQuery = `
-INSERT INTO outbox (event_id, aggregate_id, aggregate_version, event_type, payload)
-VALUES ($1, $2, $3, 'ApplicationPublicStatePublished', $4)`

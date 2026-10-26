@@ -68,7 +68,7 @@ func (r *Repository) Create(ctx context.Context, params model.CreateApplicationP
 	if err != nil {
 		return model.Application{}, err
 	}
-	if product.RequirementsPolicyVersion != nil && (*product.RequirementsPolicyVersion != "sme-profile-v1" || company.ProfileSchemaVersion == nil || *company.ProfileSchemaVersion != 2) {
+	if product.RequirementsPolicyVersion != nil && (!requirements.SupportedPolicy(*product.RequirementsPolicyVersion) || company.ProfileSchemaVersion == nil || *company.ProfileSchemaVersion != 2) {
 		return model.Application{}, &requirements.RuleError{Code: requirements.InvalidProfile, Issues: []requirements.Issue{{Path: "company.profile_schema_version", Code: requirements.InvalidProfile, Message: "Продукт требует профиль v2 и поддержанную политику"}}}
 	}
 	companySnapshot, err := json.Marshal(companySnapshot(company))

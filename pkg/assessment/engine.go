@@ -2,9 +2,12 @@ package assessment
 
 import (
 	"errors"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
+	"reflect"
 	"slices"
+	"strings"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 )
 
 func ValidateSubmission(s Submission, amount int64) error {
@@ -101,26 +104,47 @@ func Evaluate(in Input) Result {
 }
 
 func Public(r Result) PublicResult {
-	// Do not publish source check codes or internal risk factors in client JSON.
-	return PublicResult{SchemaVersion: r.SchemaVersion, ID: r.ID, InputRevision: r.InputRevision, Generation: r.Generation, AsOf: r.AsOf, ValidUntil: r.ValidUntil, PolicyVersion: r.PolicyVersion, Status: r.Status, Financial: r.Financial, Candidates: r.Candidates, Issues: r.Issues, Changes: []Change{}}
+	changes := []Change{}
+	for _, c := range r.Changes {
+		if !strings.HasPrefix(c.Path, "risk.") {
+			changes = append(changes, c)
+		}
+	}
+	return PublicResult{SchemaVersion: r.SchemaVersion, ID: r.ID, InputRevision: r.InputRevision, Generation: r.Generation, AsOf: r.AsOf, ValidUntil: r.ValidUntil, PolicyVersion: r.PolicyVersion, Status: r.Status, Financial: r.Financial, Candidates: r.Candidates, Issues: r.Issues, Changes: changes}
 }
 
 func Diff(previous, current Result) []Change {
 	out := []Change{}
-	if previous.PolicyVersion != current.PolicyVersion {
-		out = append(out, Change{"policy_version", previous.PolicyVersion, current.PolicyVersion, "VERSION"})
+	add := func(path string, old, new any, unit string) {
+		if reflect.DeepEqual(old, new) {
+			return
+		}
+		c := Change{PreviousAssessmentID: previous.ID, CurrentAssessmentID: current.ID, Path: path, Previous: old, Current: new, Unit: unit, Quality: "CALCULATED", EvidenceRefs: []string{previous.ID, current.ID}}
+		if previous.Financial != nil {
+			c.PreviousPeriodFrom = previous.Financial.PeriodFrom
+			c.PreviousPeriodTo = previous.Financial.PeriodTo
+		}
+		if current.Financial != nil {
+			c.CurrentPeriodFrom = current.Financial.PeriodFrom
+			c.CurrentPeriodTo = current.Financial.PeriodTo
+		}
+		out = append(out, c)
 	}
-	if previous.Risk.ModelVersion != current.Risk.ModelVersion {
-		out = append(out, Change{"risk.model_version", previous.Risk.ModelVersion, current.Risk.ModelVersion, "VERSION"})
+	add("policy_version", previous.PolicyVersion, current.PolicyVersion, "VERSION")
+	add("risk.model_version", previous.Risk.ModelVersion, current.Risk.ModelVersion, "VERSION")
+	add("risk.score", previous.Risk.Score, current.Risk.Score, "POINTS")
+	add("status", previous.Status, current.Status, "STATUS")
+	if previous.Financial != nil && current.Financial != nil {
+		add("financial.operating_margin_bps", previous.Financial.MarginBPS, current.Financial.MarginBPS, "BASIS_POINTS")
+		add("financial.initial_cash_kopecks", previous.Financial.InitialCashKopecks, current.Financial.InitialCashKopecks, "KOPECKS")
+		add("financial.period_to", previous.Financial.PeriodTo, current.Financial.PeriodTo, "DATE")
 	}
-	if previous.Risk.Score != nil && current.Risk.Score != nil && *previous.Risk.Score != *current.Risk.Score {
-		out = append(out, Change{"risk.score", *previous.Risk.Score, *current.Risk.Score, "POINTS"})
-	}
-	if previous.Status != current.Status {
-		out = append(out, Change{"status", previous.Status, current.Status, "STATUS"})
-	}
-	if previous.Financial != nil && current.Financial != nil && previous.Financial.MarginBPS != current.Financial.MarginBPS {
-		out = append(out, Change{"financial.operating_margin_bps", previous.Financial.MarginBPS, current.Financial.MarginBPS, "BASIS_POINTS"})
+	add("candidates.count", len(previous.Candidates), len(current.Candidates), "COUNT")
+	if len(previous.Candidates) > 0 && len(current.Candidates) > 0 {
+		a, b := previous.Candidates[0], current.Candidates[0]
+		add("candidates.preferred.amount_kopecks", a.Schedule.AmountKopecks, b.Schedule.AmountKopecks, "KOPECKS")
+		add("candidates.preferred.term_months", a.Schedule.TermMonths, b.Schedule.TermMonths, "MONTHS")
+		add("candidates.preferred.payment_kopecks", a.Schedule.PaymentKopecks, b.Schedule.PaymentKopecks, "KOPECKS")
 	}
 	return out
 }

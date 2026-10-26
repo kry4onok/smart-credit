@@ -9,6 +9,9 @@ import (
 )
 
 const policyVersion = "sme-profile-v1"
+const SourceFirstPolicyVersion = "sme-profile-v2"
+
+func SupportedPolicy(v string) bool { return v == policyVersion || v == SourceFirstPolicyVersion }
 
 var fieldLabels = map[string]string{
 	"company.legal_form":        "Организационная форма",
@@ -120,11 +123,11 @@ func historyComplete(company *commonpb.CompanySnapshot, from, to time.Time) bool
 
 // Build produces a deterministic plan. Missing submit fields are requirements; contradictory inputs are errors.
 func Build(in Input) (*commonpb.RequirementsPlan, error) {
-	if in.Product == nil || in.Product.GetRequirementsPolicyVersion() != policyVersion {
+	if in.Product == nil || !SupportedPolicy(in.Product.GetRequirementsPolicyVersion()) {
 		return nil, &RuleError{Code: InvalidProfile, Issues: []Issue{issue("product.requirements_policy_version", InvalidProfile, "Неизвестная версия правил")}}
 	}
 	ref := dateOnly(in.ReferenceDate)
-	plan := &commonpb.RequirementsPlan{PolicyVersion: policyVersion, ReferenceDate: ref.Format("2006-01-02"), Route: commonpb.RequirementsRoute_REQUIREMENTS_ROUTE_STANDARD, Items: []*commonpb.Requirement{}, ReasonCodes: []string{}}
+	plan := &commonpb.RequirementsPlan{PolicyVersion: in.Product.GetRequirementsPolicyVersion(), ReferenceDate: ref.Format("2006-01-02"), Route: commonpb.RequirementsRoute_REQUIREMENTS_ROUTE_STANDARD, Items: []*commonpb.Requirement{}, ReasonCodes: []string{}}
 	c := in.Company
 	if c == nil {
 		c = &commonpb.CompanySnapshot{}
@@ -140,10 +143,18 @@ func Build(in Input) (*commonpb.RequirementsPlan, error) {
 	fields := []*commonpb.Requirement{
 		field("company.legal_form", legalPresent), field("company.tax_periods", taxPresent), field("company.revenue_12m", c.Revenue_12M != nil), field("company.profit_12m", c.Profit_12M != nil), field("company.obligations", c.Obligations != nil), field("company.financial_period", finance != nil), field("company.financial_basis", c.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED), field("company.obligations_as_of", c.GetObligationsAsOf() != ""), field("form.amount", f.GetAmount() != nil), field("form.term_months", f.GetTermMonths() > 0), field("form.purpose", f.GetPurpose() != commonpb.PurposeTag_PURPOSE_TAG_UNSPECIFIED),
 	}
+	for _, item := range fields {
+		if in.Product.GetRequirementsPolicyVersion() == SourceFirstPolicyVersion && strings.HasPrefix(item.FieldPath, "company.") && item.FieldPath != "company.legal_form" {
+			item.RequiredAt = commonpb.RequirementStage_REQUIREMENT_STAGE_ON_REQUEST
+			if item.FieldPath == "company.tax_periods" {
+				item.RequiredAt = commonpb.RequirementStage_REQUIREMENT_STAGE_ASSESSMENT
+			}
+		}
+	}
 	plan.Items = append(plan.Items, fields...)
 	plan.CanSubmit = true
 	for _, r := range fields {
-		if r.GetStatus() != commonpb.RequirementStatus_REQUIREMENT_STATUS_PROVIDED {
+		if r.GetRequiredAt() == commonpb.RequirementStage_REQUIREMENT_STAGE_SUBMIT && r.GetStatus() != commonpb.RequirementStatus_REQUIREMENT_STATUS_PROVIDED {
 			plan.CanSubmit = false
 		}
 	}

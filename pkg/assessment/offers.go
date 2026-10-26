@@ -2,13 +2,14 @@ package assessment
 
 import (
 	"errors"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 	"slices"
 	"sort"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 )
 
-const policyConfig = `{"version":"sme-cashflow-policy-v2","min_activity_months":12,"historical_dpd_reject":90,"base_coverage_bps":13000,"stress_coverage_bps":11000,"stress_receipts_bps":8000,"stress_variable_costs_bps":9000,"cash_floor_kopecks":0,"amount_step_kopecks":100000,"max_candidates":3,"manager_confirmation":true}`
+const policyConfig = `{"version":"sme-cashflow-policy-v2","min_activity_months":12,"historical_dpd_reject":90,"base_coverage_bps":13000,"stress_coverage_bps":11000,"stress_receipts_bps":8000,"stress_variable_costs_bps":9000,"stress_receipt_delay_bps":2000,"cash_floor_kopecks":0,"amount_step_kopecks":100000,"max_candidates":3,"manager_confirmation":true}`
 
 func validUntil(in Input) time.Time {
 	t := in.AsOf.Add(24 * time.Hour)
@@ -147,6 +148,9 @@ func Generate(in Input, f FinancialSnapshot, risk RiskResult) []Candidate {
 		if !slices.Contains(p.Purposes, in.Purpose) {
 			continue
 		}
+		if p.MinTerm < 1 || p.MaxTerm > 120 || p.MaxTerm < p.MinTerm || p.RateABPS < 0 || p.RateBBPS < 0 || p.RateABPS > 10000 || p.RateBBPS > 10000 {
+			continue
+		}
 		maxTerm := p.MaxTerm
 		if in.Submission.Preferences.MaxTermMonths != nil {
 			maxTerm = min(maxTerm, *in.Submission.Preferences.MaxTermMonths)
@@ -201,6 +205,27 @@ func Generate(in Input, f FinancialSnapshot, risk RiskResult) []Candidate {
 	})
 	if len(options) > 3 {
 		options = options[:3]
+	}
+	// Retain the requested terms when affordable, so the UI can compare them
+	// with optimized alternatives without reconstructing a calculation.
+	for _, p := range in.Products {
+		if p.ID == in.RequestedProductID {
+			original, err := checkTerms(in, f, risk, p.ID, creditcalc.Terms{AmountKopecks: in.RequestedAmount, TermMonths: in.RequestedTerm, RateBPS: rate(p, risk.Grade)})
+			if err == nil {
+				present := false
+				for _, c := range options {
+					present = present || c.ID == original.ID
+				}
+				if !present {
+					if len(options) == 3 {
+						options[2] = original
+					} else {
+						options = append(options, original)
+					}
+				}
+			}
+			break
+		}
 	}
 	return options
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/events/publicstate"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/receive"
@@ -28,6 +30,9 @@ func New(db transaction.Queryer) *Repository {
 }
 
 func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, error) {
+	if len(input.AssessmentInputJSON) == 0 {
+		input.AssessmentInputJSON = []byte(`{"schema_version":1,"preferences":{}}`)
+	}
 	q := transaction.QueryerFromContext(ctx, r.db)
 	var reserved int
 	err := q.QueryRow(ctx, reserveEventQuery,
@@ -52,7 +57,11 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 		return false, fmt.Errorf("reserve event: %w", err)
 	}
 	if input.InfoProvided {
-		return r.applyInfoProvided(ctx, q, input)
+		applied, err := r.applyInfoProvided(ctx, q, input)
+		if err == nil && applied {
+			_, err = q.Exec(ctx, `UPDATE cases SET assessment_input=$2::jsonb WHERE id=$1`, input.ApplicationID, string(input.AssessmentInputJSON))
+		}
+		return applied, err
 	}
 	if input.Cancelled {
 		return r.applyCancellation(ctx, q, input)
@@ -86,7 +95,7 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 	} else {
 		scheduleValidation = true
 		triggeredRules = []string{}
-		if policyVersion != nil && *policyVersion == "sme-profile-v1" {
+		if policyVersion != nil && requirements.SupportedPolicy(*policyVersion) {
 			if input.RequirementsReferenceDate == nil || input.ProfileSchemaVersion != 2 {
 				markManual("PROFILE_V2_INVALID")
 			} else if _, _, conflict, mergeErr := mergeDocumentSnapshots([]byte(`[]`), input.DocumentsJSON); mergeErr != nil {
@@ -107,7 +116,7 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 		input.CompanyINN, input.CompanyName, string(input.CompanyJSON), string(input.FormJSON),
 		string(input.DocumentsJSON), input.AmountKopecks, input.TermMonths,
 		input.PurposeTag, status, recommendation, triggeredRules, scheduleValidation,
-		input.AggregateVersion, input.RequirementsReferenceDate)
+		input.AggregateVersion, input.RequirementsReferenceDate, string(input.AssessmentInputJSON))
 	if err != nil {
 		return false, fmt.Errorf("create case: %w", err)
 	}
@@ -164,7 +173,7 @@ func (r *Repository) applyCancellation(ctx context.Context, q transaction.Querye
 	if err != nil {
 		return false, fmt.Errorf("encode cancellation: %w", err)
 	}
-	if _, err := q.Exec(ctx, insertOfferResponseOutboxQuery, eventID, input.ApplicationID.String(), newVersion, payload); err != nil {
+	if _, err := publicstate.Publish(ctx, q, eventID, input.ApplicationID.String(), newVersion, payload); err != nil {
 		return false, fmt.Errorf("write cancellation outbox: %w", err)
 	}
 	return true, nil
@@ -248,7 +257,7 @@ func (r *Repository) applyOfferResponse(ctx context.Context, q transaction.Query
 	if err != nil {
 		return false, fmt.Errorf("encode offer response: %w", err)
 	}
-	_, err = q.Exec(ctx, insertOfferResponseOutboxQuery, eventID, input.ApplicationID.String(), newVersion, payload)
+	_, err = publicstate.Publish(ctx, q, eventID, input.ApplicationID.String(), newVersion, payload)
 	if err != nil {
 		return false, fmt.Errorf("write offer response outbox: %w", err)
 	}

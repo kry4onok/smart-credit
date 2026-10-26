@@ -136,6 +136,11 @@ func (r *Repository) Submit(ctx context.Context, params model.SubmitApplicationP
 			Documents:                 documentMetadataProto(snapshot.documents),
 		}},
 	}
+	var assessmentInput []byte
+	if err := tx.QueryRow(ctx, `SELECT assessment_input FROM applications WHERE id=$1`, params.ApplicationID).Scan(&assessmentInput); err != nil {
+		return model.Application{}, err
+	}
+	event.GetApplicationSubmitted().AssessmentInputJson = assessmentInput
 	payload, err := proto.Marshal(event)
 	if err != nil {
 		return model.Application{}, fmt.Errorf("marshal application submitted event: %w", err)

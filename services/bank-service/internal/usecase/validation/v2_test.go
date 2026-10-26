@@ -21,17 +21,20 @@ func v2ValidationInput(t *testing.T) (Snapshot, Product, *commonpb.CompanySnapsh
 		t.Fatal(err)
 	}
 	snapshot := Snapshot{CompanyJSON: data, DocumentsJSON: []byte(`[]`), ReferenceDate: &ref, AmountKopecks: 100000000, TermMonths: 24, PurposeTag: "WORKING_CAPITAL"}
-	product := Product{Found: true, PolicyVersion: "sme-profile-v1", PurposeTags: []string{"WORKING_CAPITAL"}, MinAmountKopecks: 10000000, MaxAmountKopecks: 500000000, MinTermMonths: 6, MaxTermMonths: 36}
+	product := Product{Found: true, PolicyVersion: "sme-profile-v2", PurposeTags: []string{"WORKING_CAPITAL"}, MinAmountKopecks: 10000000, MaxAmountKopecks: 500000000, MinTermMonths: 6, MaxTermMonths: 36}
 	return snapshot, product, company
 }
 
-func TestEvaluateV2RequestsOnlyMissingMandatoryDocuments(t *testing.T) {
+func TestEvaluateV2DefersAssessmentDocumentsUntilSources(t *testing.T) {
 	snapshot, product, _ := v2ValidationInput(t)
 	outcome := Evaluate(snapshot, product)
-	if outcome.Status != model.CaseStatusNeedsInfo || outcome.Reason != "REQUIREMENTS_NOT_MET" || outcome.Plan == nil || len(outcome.RequestedRequirements) != 2 {
+	if outcome.Status != model.CaseStatusEnrichment || outcome.Plan == nil || len(outcome.RequestedRequirements) != 0 {
 		t.Fatalf("outcome=%+v", outcome)
 	}
-	for _, item := range outcome.RequestedRequirements {
+	for _, item := range outcome.Plan.Items {
+		if item.Status != commonpb.RequirementStatus_REQUIREMENT_STATUS_MISSING || item.RequiredAt != commonpb.RequirementStage_REQUIREMENT_STAGE_ASSESSMENT {
+			continue
+		}
 		if item.GetRequiredAt() != commonpb.RequirementStage_REQUIREMENT_STAGE_ASSESSMENT || item.GetKind() != commonpb.RequirementKind_REQUIREMENT_KIND_DOCUMENT {
 			t.Fatalf("unexpected request: %v", item)
 		}
@@ -40,7 +43,10 @@ func TestEvaluateV2RequestsOnlyMissingMandatoryDocuments(t *testing.T) {
 		t.Fatalf("route=%v", outcome.Plan.Route)
 	}
 	docs := make([]receive.DocumentSnapshot, 0, 2)
-	for _, item := range outcome.RequestedRequirements {
+	for _, item := range outcome.Plan.Items {
+		if item.Status != commonpb.RequirementStatus_REQUIREMENT_STATUS_MISSING || item.RequiredAt != commonpb.RequirementStage_REQUIREMENT_STAGE_ASSESSMENT {
+			continue
+		}
 		docs = append(docs, receive.DocumentSnapshot{DocumentID: item.Id, DocumentType: "BANK_STATEMENT", UploadedAt: *snapshot.ReferenceDate, RequirementID: item.Id, CoveragePeriod: item.Period})
 		if item.Code == "BUSINESS_RESULT" {
 			docs[len(docs)-1].DocumentType = "MANAGEMENT_REPORT"
@@ -66,23 +72,17 @@ func TestEvaluateV2MissingMoneyAndManualExceptions(t *testing.T) {
 	}
 	snapshot.CompanyJSON = data
 	outcome := Evaluate(snapshot, product)
-	if outcome.Status != model.CaseStatusNeedsInfo {
+	if outcome.Status != model.CaseStatusEnrichment {
 		t.Fatalf("missing money=%+v", outcome)
 	}
-	found := false
-	for _, item := range outcome.RequestedRequirements {
-		if item.Id == "company_profit_12m" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("profit requirement absent: %+v", outcome.RequestedRequirements)
+	if len(outcome.RequestedRequirements) != 0 {
+		t.Fatalf("baseline profit must not block source collection: %+v", outcome)
 	}
 	product.PolicyVersion = "unknown"
 	if got := Evaluate(snapshot, product); got.Status != model.CaseStatusManualReview || got.Reason != "UNKNOWN_REQUIREMENTS_POLICY" {
 		t.Fatalf("unknown policy=%+v", got)
 	}
-	product.PolicyVersion = "sme-profile-v1"
+	product.PolicyVersion = "sme-profile-v2"
 	company.Profit_12M = &commonpb.Money{AmountKopecks: 0, Currency: "RUB"}
 	company.TaxPeriods[0].Regimes = []commonpb.TaxRegime{commonpb.TaxRegime_TAX_REGIME_AUSN_INCOME}
 	data, err = (protojson.MarshalOptions{UseProtoNames: true}).Marshal(company)

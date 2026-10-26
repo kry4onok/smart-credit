@@ -121,6 +121,24 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		if err != nil {
 			return model.ActionAccepted{}, err
 		}
+		filtered := make([]*commonpb.Requirement, 0, len(snapshot.requirements))
+		for _, item := range snapshot.requirements {
+			if item.Id == "assessment_input" {
+				var raw []byte
+				if err := tx.QueryRow(ctx, `SELECT assessment_input FROM applications WHERE id=$1`, params.ApplicationID).Scan(&raw); err != nil {
+					return model.ActionAccepted{}, err
+				}
+				var value struct {
+					Financials json.RawMessage `json:"financials"`
+				}
+				if err := json.Unmarshal(raw, &value); err != nil || len(value.Financials) == 0 || string(value.Financials) == "null" {
+					return model.ActionAccepted{}, domain.ErrInvalidApplicationPatch
+				}
+				continue
+			}
+			filtered = append(filtered, item)
+		}
+		snapshot.requirements = filtered
 		answered = answeredFields(snapshot.requirements, params)
 		if issues := requirements.ValidateResponse(snapshot.requirements, plan, answered); len(issues) > 0 {
 			return model.ActionAccepted{}, &requirements.RuleError{Code: issues[0].Code, Issues: issues}
@@ -160,6 +178,11 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 			Company:                companyProto(companySnapshot(company)),
 		}},
 	}
+	var assessmentInput []byte
+	if err := tx.QueryRow(ctx, `SELECT assessment_input FROM applications WHERE id=$1`, params.ApplicationID).Scan(&assessmentInput); err != nil {
+		return model.ActionAccepted{}, err
+	}
+	event.GetInfoProvided().AssessmentInputJson = assessmentInput
 	payload, err := proto.Marshal(event)
 	if err != nil {
 		return model.ActionAccepted{}, fmt.Errorf("marshal info provided event: %w", err)

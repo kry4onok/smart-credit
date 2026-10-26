@@ -25,7 +25,7 @@ BANK_DEMO_SEED := services/bank-service/seeds/demo.sql
 CLIENT_MIGRATIONS := services/client-service/migrations
 CONTRACT_GO_TOOLCHAIN ?= go1.27.1
 OAPI_CODEGEN := GOTOOLCHAIN=$(CONTRACT_GO_TOOLCHAIN) go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
-GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+GOLANGCI_LINT := GOTOOLCHAIN=$(CONTRACT_GO_TOOLCHAIN) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 OPENAPI_OUTPUT_DIRS := \
 	pkg/api/common \
 	services/auth/internal/generated \

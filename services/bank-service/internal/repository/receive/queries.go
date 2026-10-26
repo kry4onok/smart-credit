@@ -22,14 +22,14 @@ INSERT INTO cases (
     company_inn, company_name, company_snapshot, application_snapshot,
     documents_snapshot, requested_amount_kopecks, requested_term_months,
     purpose_tag, status, recommendation, triggered_rules, next_run_at,
-    version, audit_version, client_event_version, requirements_reference_date
+    version, audit_version, client_event_version, requirements_reference_date, assessment_input
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9::jsonb, $10::jsonb,
     $11::jsonb, $12, $13,
     $14, $15, $16, $17,
     CASE WHEN $18::boolean THEN now() ELSE NULL END,
-    1, 1, $19, $20
+    1, 1, $19, $20, $21::jsonb
 )`
 
 const insertAuditQuery = `
@@ -70,6 +70,7 @@ SET company_inn = $2, company_name = $3,
     status = 'VALIDATION', recommendation = NULL, public_reason = NULL,
     triggered_rules = '{}', next_run_at = now(), lease_until = NULL,
     scoring_input_revision = scoring_input_revision + 1,
+    assessment_generation=assessment_generation+1, assessment_as_of=now(), assessment_sources=NULL,
     current_scoring_attempt_id = NULL,
     client_event_version = $10, version = version + 1,
     audit_version = audit_version + 1, updated_at = now()
@@ -91,6 +92,7 @@ SET company_inn = $2, company_name = $3,
     next_run_at = CASE WHEN $11 = 'VALIDATION' THEN now() ELSE NULL END,
     lease_until = NULL,
     scoring_input_revision = scoring_input_revision + 1,
+    assessment_generation=assessment_generation+1, assessment_as_of=now(), assessment_sources=NULL,
     current_scoring_attempt_id = NULL,
     client_event_version = $10, version = version + 1,
     audit_version = audit_version + 1, updated_at = now()
@@ -103,6 +105,7 @@ SET status = 'MANUAL_REVIEW', recommendation = 'MANUAL_REVIEW',
     public_reason = $3, triggered_rules = ARRAY[$4::text],
     next_run_at = NULL, lease_until = NULL,
     scoring_input_revision = scoring_input_revision + 1,
+    assessment_generation=assessment_generation+1, assessment_as_of=now(), assessment_sources=NULL,
     current_scoring_attempt_id = NULL,
     client_event_version = $2, version = version + 1,
     audit_version = audit_version + 1, updated_at = now()
@@ -173,7 +176,3 @@ INSERT INTO audit_log (id, case_id, case_version, action, actor_type, actor_id, 
 VALUES ($1, $2, $3, $4, 'CLIENT', $5,
     jsonb_build_object('from_status', $6::text, 'to_status', $7::text,
                        'event_id', $8::text, 'offer_id', $9::text), $10)`
-
-const insertOfferResponseOutboxQuery = `
-INSERT INTO outbox (event_id, aggregate_id, aggregate_version, event_type, payload)
-VALUES ($1, $2, $3, 'ApplicationPublicStatePublished', $4)`

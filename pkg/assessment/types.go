@@ -3,8 +3,9 @@
 package assessment
 
 import (
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 )
 
 const PolicyVersion = "sme-cashflow-policy-v2"
@@ -200,10 +201,18 @@ type Candidate struct {
 	ValidUntil           time.Time           `json:"valid_until"`
 }
 type Change struct {
-	Path     string `json:"path"`
-	Previous any    `json:"previous"`
-	Current  any    `json:"current"`
-	Unit     string `json:"unit"`
+	PreviousAssessmentID string   `json:"previous_assessment_id"`
+	CurrentAssessmentID  string   `json:"current_assessment_id"`
+	PreviousPeriodFrom   string   `json:"previous_period_from,omitempty"`
+	PreviousPeriodTo     string   `json:"previous_period_to,omitempty"`
+	CurrentPeriodFrom    string   `json:"current_period_from,omitempty"`
+	CurrentPeriodTo      string   `json:"current_period_to,omitempty"`
+	Quality              string   `json:"quality"`
+	EvidenceRefs         []string `json:"evidence_refs"`
+	Path                 string   `json:"path"`
+	Previous             any      `json:"previous"`
+	Current              any      `json:"current"`
+	Unit                 string   `json:"unit"`
 }
 type Result struct {
 	SchemaVersion        int                `json:"schema_version"`
