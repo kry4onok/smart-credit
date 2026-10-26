@@ -83,8 +83,11 @@ class AssistantTests(unittest.TestCase):
             result = self.service.SummarizeCase(request, self.context)
         prompt, facts = generate.call_args.args[:2]
         self.assertEqual(result.model_version, "qwen2.5:7b")
-        self.assertNotIn("grade", prompt)
-        self.assertNotIn("score_factors", prompt)
+        self.assertNotIn("грейд", prompt)
+        self.assertNotIn("факторы скоринга", prompt)
+        self.assertIn("связное резюме", prompt)
+        self.assertIn("Не перечисляй поля", prompt)
+        self.assertNotIn("'Продукт: <product>.'", prompt)
         self.assertNotIn("WORKING_CAPITAL", json.dumps(facts))
         self.assertNotIn("NEEDS_INFO", json.dumps(facts))
 
@@ -238,6 +241,8 @@ class AssistantTests(unittest.TestCase):
                     summary = self.service.SummarizeCase(assistant_pb2.SummarizeCaseRequest(**fields), self.context)
                     self.assertEqual(summary.model_version, "template")
                     self.assertEqual(summary.text, server.summary_template(server.summary_facts(assistant_pb2.SummarizeCaseRequest(**fields))))
+                    self.assertNotIn("Продукт:", summary.text)
+                    self.assertNotIn("Статус:", summary.text)
                     if explanation_fields := case.get("explanation"):
                         explanation = self.service.ExplainDecision(
                             assistant_pb2.ExplainDecisionRequest(**explanation_fields), self.context

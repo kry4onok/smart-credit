@@ -156,6 +156,21 @@ class HelpTests(unittest.TestCase):
         self.assertTrue(result.clarify_targets)
         self.assertEqual(result.fallback_reason, help_pb2.FALLBACK_REASON_MODEL_UNAVAILABLE)
 
+    def test_question_fallback_uses_relevant_bank_fact(self):
+        item = request(help_pb2.HELP_MODE_QUESTION)
+        item.question = "Почему сумма меньше запрошенной?"
+        item.context.statements.add(
+            id="st-amount", topic=help_pb2.STATEMENT_TOPIC_AFFORDABILITY,
+            target_id="req-1", priority=80, evidence_ids=["ev-1"],
+            variants=[help_pb2.StatementVariant(id="concise", text="Сумма покрыта не полностью."),
+                      help_pb2.StatementVariant(id="detailed", text="Непокрытая часть потребности — 100 000 руб.")],
+        )
+        result = self.service(Mock(side_effect=TimeoutError())).Help(item, Context())
+        self.assertEqual(result.status, help_pb2.ANSWER_STATUS_ANSWERED)
+        self.assertEqual(result.fallback_reason, help_pb2.FALLBACK_REASON_MODEL_TIMEOUT)
+        self.assertIn("Непокрытая часть потребности", " ".join(
+            entry.text for block in result.blocks for entry in block.items))
+
     def test_timeout_and_queue(self):
         timed = self.service(Mock(side_effect=TimeoutError()))
         result = timed.Help(request(), Context())

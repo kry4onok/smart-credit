@@ -104,6 +104,16 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
   // Several targets of one kind produce identical buttons that lead to the same place: keep one.
   const actions = (response?.actions ?? []).filter((a, i, all) => all.findIndex((b) => b.kind === a.kind && b.label === a.label) === i);
   const fromModel = response?.source === "RESPONSE_SOURCE_MODEL";
+  const fallbackLabel: Record<string, string> = {
+    FALLBACK_REASON_MODEL_TIMEOUT: "Ответ из проверенных данных: модель не успела ответить",
+    FALLBACK_REASON_MODEL_UNAVAILABLE: "Ответ из проверенных данных: модель недоступна",
+    FALLBACK_REASON_QUEUE_FULL: "Ответ из проверенных данных: модель занята",
+    FALLBACK_REASON_INVALID_MODEL_OUTPUT: "Ответ из проверенных данных: ответ модели не прошёл проверку",
+    FALLBACK_REASON_NO_SUPPORTED_CONTEXT: "Ответ из проверенных данных: пока не хватает сведений",
+  };
+  const sourceLabel = fromModel
+    ? "Модель выбрала подходящие проверенные сведения банка"
+    : fallbackLabel[response?.fallback_reason ?? ""] ?? "Ответ из проверенных данных банка";
   return (
     <section className="panel helper" aria-labelledby={`helper-${audience}`}>
       <div className="helper-head">
@@ -160,7 +170,7 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
             </div>
           )}
           <p className="helper-source">
-            {fromModel ? `Сформулировано моделью ${response.model_version ?? ""} по данным банка` : "Ответ по шаблону: модель сейчас недоступна, факты те же"}
+            {sourceLabel}
           </p>
         </div>
       )}

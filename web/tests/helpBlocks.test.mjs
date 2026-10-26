@@ -23,3 +23,13 @@ test("details after a summary keep their heading", () => {
   ]);
   assert.deepEqual(out.map((b) => b.title), [undefined, "Подробнее"]);
 });
+
+
+test("identical statements in different blocks are shown once", () => {
+  const out = tidyBlocks([
+    { kind: "BLOCK_KIND_DETAILS", items: [{ statement_id: "a", text: "Проверьте статус заявки." }] },
+    { kind: "BLOCK_KIND_NEXT_STEPS", items: [{ statement_id: "b", text: "Проверьте статус заявки." }] },
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].block.items[0].text, "Проверьте статус заявки.");
+});

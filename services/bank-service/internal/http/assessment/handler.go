@@ -102,7 +102,7 @@ func (h *Handler) load(ctx context.Context, id uuid.UUID) (Snapshot, assistanthe
 			s.Freshness = "STALE"
 		}
 	}
-	v := assistanthelp.View{ApplicationID: id.String(), Revision: fmt.Sprintf("bank:%d:%d:%d", s.Version, s.InputRevision, s.Generation), Status: s.Status, NextStep: reason, Pending: s.Freshness != "CURRENT"}
+	v := assistanthelp.View{ApplicationID: id.String(), Revision: fmt.Sprintf("bank:%d:%d:%d", s.Version, s.InputRevision, s.Generation), Status: s.Status, Reason: reason, Pending: s.Freshness != "CURRENT"}
 	if s.Assessment != nil {
 		p := assessment.Public(*s.Assessment)
 		p.Changes = s.Assessment.Changes

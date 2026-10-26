@@ -16,11 +16,16 @@ type Block = NonNullable<HelpResponse["blocks"]>[number];
 export function tidyBlocks(blocks: Block[]): { block: Block; title?: string }[] {
   const merged: Block[] = [];
   const limits: NonNullable<Block["items"]> = [];
+  const seenText = new Set<string>();
   for (const b of blocks) {
     const items = (b.items ?? []).filter((item) => {
-      if (item.statement_id !== "limitations" && b.kind !== "BLOCK_KIND_LIMITATIONS") return true;
-      if (!limits.some((l) => l.text === item.text)) limits.push(item);
-      return false;
+      if (item.statement_id === "limitations" || b.kind === "BLOCK_KIND_LIMITATIONS") {
+        if (!limits.some((l) => l.text === item.text)) limits.push(item);
+        return false;
+      }
+      if (item.text && seenText.has(item.text)) return false;
+      if (item.text) seenText.add(item.text);
+      return true;
     });
     if (!items.length) continue;
     const same = merged.find((m) => m.kind === b.kind);

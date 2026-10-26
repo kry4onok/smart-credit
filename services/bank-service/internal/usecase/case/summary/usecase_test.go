@@ -62,8 +62,9 @@ func TestSummaryFallsBackWhenAssistantFails(t *testing.T) {
 		Company:     model.Company{INN: "7707083893"}}
 	assistant := &assistantStub{err: errors.New("unavailable")}
 	result, err := New(repositoryStub{caseItem: caseItem, found: true}, assistant).Execute(context.Background(), caseItem.ID)
-	if err != nil || result.Source != "template" || !strings.Contains(result.Text, "Грейд скоринга: B.") ||
-		!strings.Contains(result.Text, "Статус: Расчёт скоринговой оценки.") {
+	if err != nil || result.Source != "template" || !strings.Contains(result.Text, "Скоринговый грейд — B.") ||
+		!strings.Contains(result.Text, "Текущий этап — «Расчёт скоринговой оценки».") ||
+		strings.Contains(result.Text, "Продукт:") {
 		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 	if strings.Contains(result.Text, caseItem.Company.INN) || strings.Contains(result.Text, "одобр") {
@@ -71,13 +72,14 @@ func TestSummaryFallsBackWhenAssistantFails(t *testing.T) {
 	}
 }
 
-func TestUnknownRuleIsNotExplained(t *testing.T) {
+func TestUnknownRuleDoesNotLeakCode(t *testing.T) {
 	caseItem := model.Case{ID: uuid.New(), Status: model.CaseStatusManualReview,
 		TriggeredRules: []string{"NEW_RULE"}}
 	facts := factsFromCase(caseItem)
-	if len(facts.RuleFacts) != 1 || facts.RuleFacts[0].Description != "" ||
-		!strings.Contains(template(facts), "NEW_RULE") {
-		t.Fatalf("unexpected facts or template: %+v, %q", facts, template(facts))
+	text := template(facts)
+	if len(facts.RuleFacts) != 1 || facts.RuleFacts[0].Description == "" ||
+		strings.Contains(text, "NEW_RULE") || !strings.Contains(text, "проверки аналитиком") {
+		t.Fatalf("unexpected facts or template: %+v, %q", facts, text)
 	}
 }
 

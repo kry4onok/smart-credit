@@ -44,8 +44,39 @@ def expand_required(plan: dict, request) -> dict:
     return {**plan, "blocks": blocks}
 
 
+def question_topics(question: str) -> tuple[str, ...]:
+    text = question.casefold()
+    if any(word in text for word in ("сумм", "вариант", "платеж", "платёж")):
+        return ("AFFORDABILITY", "OPTION")
+    if any(word in text for word in ("отказ", "решен", "решён", "статус")):
+        return ("DECISION",)
+    if any(word in text for word in ("документ", "патент")):
+        return ("REQUIREMENT",)
+    if any(word in text for word in ("дальше", "следующ")):
+        return ("NEXT_STEP",)
+    if any(word in text for word in ("оценк", "скоринг")):
+        return ("SCORE", "AFFORDABILITY")
+    return ()
+
+
 def fallback_plan(request) -> dict:
     if request.mode == help_pb2.HELP_MODE_QUESTION:
+        topics = question_topics(request.question)
+        if topics:
+            items = sorted(request.context.statements, key=lambda item: (-item.priority, item.id))
+            selected = []
+            for topic in topics:
+                selected.extend(
+                    {"statement_id": item.id, "variant_id": "detailed"}
+                    for item in items
+                    if help_pb2.StatementTopic.Name(item.topic).removeprefix("STATEMENT_TOPIC_") == topic
+                    and relevant_statement(item, request)
+                )
+                if len(selected) >= 3:
+                    break
+            if selected:
+                return {"status": "ANSWERED", "blocks": [{"kind": "DETAILS", "selections": selected[:3]}],
+                        "action_ids": [], "clarify_target_ids": []}
         targets = [item.id for item in request.context.targets[:3]]
         next_step = next((item for item in request.context.statements if item.topic == help_pb2.STATEMENT_TOPIC_NEXT_STEP), None)
         blocks = [{"kind": "NEXT_STEPS", "selections": [{"statement_id": next_step.id, "variant_id": "concise"}]}] if next_step else []

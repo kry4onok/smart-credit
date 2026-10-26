@@ -20,7 +20,7 @@ services:
     mem_limit: 2g
   bank-service:
     environment:
-      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-45s}
+      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-25s}
     logging:
       driver: json-file
       options:
@@ -38,7 +38,7 @@ services:
     ports: !reset []
   client-service:
     environment:
-      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-45s}
+      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-25s}
     logging:
       driver: json-file
       options:

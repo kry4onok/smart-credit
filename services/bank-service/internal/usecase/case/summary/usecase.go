@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
@@ -81,14 +82,22 @@ func factsFromCase(caseItem model.Case) Facts {
 		TriggeredRuleCodes: append([]string(nil), caseItem.TriggeredRules...),
 	}
 	for _, code := range facts.TriggeredRuleCodes {
-		facts.RuleFacts = append(facts.RuleFacts, DescribedCode{Code: code, Description: ruleDescriptions[code]})
+		description := ruleDescriptions[code]
+		if description == "" {
+			description = "Сработало правило, требующее проверки аналитиком"
+		}
+		facts.RuleFacts = append(facts.RuleFacts, DescribedCode{Code: code, Description: description})
 	}
 	if caseItem.Score != nil && caseItem.Score.AssessmentStatus == "ASSESSED" {
 		facts.Grade = string(caseItem.Score.Grade)
 		for _, reason := range caseItem.Score.Reasons {
 			code := string(reason.Code)
 			facts.ReasonCodes = append(facts.ReasonCodes, code)
-			facts.ReasonFacts = append(facts.ReasonFacts, DescribedCode{Code: code, Description: strings.TrimSpace(reason.Description)})
+			description := strings.TrimSpace(reason.Description)
+			if description == "" || internalCode.MatchString(description) {
+				description = "Фактор скоринга без опубликованного описания"
+			}
+			facts.ReasonFacts = append(facts.ReasonFacts, DescribedCode{Code: code, Description: description})
 		}
 	}
 	return facts
@@ -96,29 +105,28 @@ func factsFromCase(caseItem model.Case) Facts {
 
 func template(facts Facts) string {
 	parts := make([]string, 0, 6)
+	purpose := displayValue(facts.Purpose, facts.PurposeDescription, "цель уточняется")
+	status := displayValue(facts.Status, facts.StatusDescription, "уточняется")
 	if facts.ProductName != "" {
-		parts = append(parts, "Продукт: "+facts.ProductName+".")
-	}
-	if facts.Purpose != "" {
-		purpose := facts.Purpose
-		if facts.PurposeDescription != "" {
-			purpose = facts.PurposeDescription
+		opening := "Рассматривается заявка на продукт «" + facts.ProductName + "»"
+		if purpose != "" {
+			opening += " с целью «" + purpose + "»"
 		}
-		parts = append(parts, "Цель: "+purpose+".")
+		parts = append(parts, opening+".")
+	} else if purpose != "" {
+		parts = append(parts, "В заявке указана цель «"+purpose+"».")
 	}
-	if facts.StatusDescription != "" {
-		parts = append(parts, "Статус: "+facts.StatusDescription+".")
-	} else if facts.Status != "" {
-		parts = append(parts, "Статус: "+facts.Status+".")
+	if status != "" {
+		parts = append(parts, "Текущий этап — «"+status+"».")
 	}
 	if facts.Grade != "" {
-		parts = append(parts, "Грейд скоринга: "+facts.Grade+".")
+		parts = append(parts, "Скоринговый грейд — "+facts.Grade+".")
 	}
 	if len(facts.ReasonCodes) > 0 {
-		parts = append(parts, "Факторы скоринга: "+formatFacts(facts.ReasonFacts, facts.ReasonCodes)+".")
+		parts = append(parts, "В оценке отмечены "+formatFacts(facts.ReasonFacts, facts.ReasonCodes, "Фактор скоринга без опубликованного описания")+".")
 	}
 	if len(facts.TriggeredRuleCodes) > 0 {
-		parts = append(parts, "Правила банка: "+formatFacts(facts.RuleFacts, facts.TriggeredRuleCodes)+".")
+		parts = append(parts, "По банковским правилам также отмечено: "+formatFacts(facts.RuleFacts, facts.TriggeredRuleCodes, "Сработало правило, требующее проверки аналитиком")+".")
 	}
 	if len(parts) == 0 {
 		return "Данные для резюме не переданы."
@@ -126,11 +134,23 @@ func template(facts Facts) string {
 	return strings.Join(parts, " ")
 }
 
-func formatFacts(described []DescribedCode, codes []string) string {
+var internalCode = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
+func displayValue(value, description, generic string) string {
+	if description != "" {
+		return description
+	}
+	if internalCode.MatchString(value) {
+		return generic
+	}
+	return value
+}
+
+func formatFacts(described []DescribedCode, codes []string, generic string) string {
 	items := make([]string, 0, len(codes))
 	for i, code := range codes {
-		item := code
-		if i < len(described) && described[i].Code == code && described[i].Description != "" {
+		item := generic
+		if i < len(described) && described[i].Code == code && described[i].Description != "" && !internalCode.MatchString(described[i].Description) {
 			item = described[i].Description
 		}
 		items = append(items, strings.TrimRight(item, "."))

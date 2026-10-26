@@ -279,9 +279,54 @@ func Validate(r *pb.HelpRequest, now time.Time) error {
 	return nil
 }
 
+func questionTopics(question string) []string {
+	q := strings.ToLower(question)
+	switch {
+	case strings.Contains(q, "сумм") || strings.Contains(q, "вариант") || strings.Contains(q, "платеж") || strings.Contains(q, "платёж"):
+		return []string{"AFFORDABILITY", "OPTION"}
+	case strings.Contains(q, "отказ") || strings.Contains(q, "решен") || strings.Contains(q, "решён") || strings.Contains(q, "статус"):
+		return []string{"DECISION"}
+	case strings.Contains(q, "документ") || strings.Contains(q, "патент"):
+		return []string{"REQUIREMENT"}
+	case strings.Contains(q, "дальше") || strings.Contains(q, "следующ"):
+		return []string{"NEXT_STEP"}
+	case strings.Contains(q, "оценк") || strings.Contains(q, "скоринг"):
+		return []string{"SCORE", "AFFORDABILITY"}
+	}
+	return nil
+}
+
 func FallbackPlan(r *pb.HelpRequest) *pb.AnswerPlan {
 	p := &pb.AnswerPlan{Status: pb.AnswerStatus_ANSWER_STATUS_INSUFFICIENT_DATA}
 	if mode(r) == "QUESTION" {
+		if topics := questionTopics(r.Question); len(topics) > 0 {
+			items := append([]*pb.Statement(nil), r.Context.Statements...)
+			sort.SliceStable(items, func(i, j int) bool {
+				if items[i].Priority != items[j].Priority {
+					return items[i].Priority > items[j].Priority
+				}
+				return items[i].Id < items[j].Id
+			})
+			block := &pb.PlanBlock{Kind: pb.BlockKind_BLOCK_KIND_DETAILS}
+			for _, wanted := range topics {
+				for _, s := range items {
+					if topic(s) == wanted && relevant(s, r) {
+						block.Selections = append(block.Selections, &pb.Selection{StatementId: s.Id, VariantId: "detailed"})
+						if len(block.Selections) == 3 {
+							break
+						}
+					}
+				}
+				if len(block.Selections) == 3 {
+					break
+				}
+			}
+			if len(block.Selections) > 0 {
+				p.Status = pb.AnswerStatus_ANSWER_STATUS_ANSWERED
+				p.Blocks = []*pb.PlanBlock{block}
+				return p
+			}
+		}
 		for _, t := range r.Context.Targets[:min(3, len(r.Context.Targets))] {
 			p.ClarifyTargetIds = append(p.ClarifyTargetIds, t.Id)
 		}

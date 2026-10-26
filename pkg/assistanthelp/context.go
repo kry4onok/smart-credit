@@ -43,7 +43,7 @@ func statusLabel(status string) string {
 	if label, ok := statusLabels[status]; ok {
 		return "«" + label + "»"
 	}
-	return status
+	return "статус уточняется"
 }
 
 // Context contains only approved statements. Forecasts are described as
@@ -61,17 +61,23 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 	}
 	next := v.NextStep
 	if next == "" {
-		next = "Откройте карточку заявки, чтобы увидеть текущий этап."
+		switch {
+		case audience == pb.Audience_AUDIENCE_ANALYST && v.Status == "MANUAL_REVIEW":
+			next = "Проверьте оценку и доступные варианты, затем зафиксируйте решение по делу."
+		case audience == pb.Audience_AUDIENCE_ANALYST:
+			next = "Проверьте текущий статус и данные дела перед дальнейшим действием."
+		case v.Status == "DISBURSED":
+			next = "Выдача завершена; подробности доступны в истории заявки."
+		case v.Status == "REJECTED":
+			next = "Посмотрите опубликованное объяснение решения в карточке заявки."
+		default:
+			next = "Следите за обновлением статуса заявки."
+		}
 	}
 	add("application", "Следующий шаг", next, pb.TargetKind_TARGET_KIND_PROFILE, pb.StatementTopic_STATEMENT_TOPIC_NEXT_STEP, pb.EvidenceKind_EVIDENCE_KIND_PROFILE)
 	decision := fmt.Sprintf("Текущий статус заявки: %s.", statusLabel(v.Status))
 	if v.Reason != "" {
 		decision += " " + v.Reason
-	}
-	// The generic hint about opening the card is noise in the decision answer, which the
-	// client already reads inside that card.
-	if v.NextStep != "" {
-		decision += " " + v.NextStep
 	}
 	add("decision", "Статус заявки", decision, pb.TargetKind_TARGET_KIND_DECISION, pb.StatementTopic_STATEMENT_TOPIC_DECISION, pb.EvidenceKind_EVIDENCE_KIND_DECISION)
 	for _, q := range v.Requirements[:min(30, len(v.Requirements))] {
@@ -88,25 +94,32 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 		c.CalculationId = &r.ID
 		if r.Financial != nil {
 			f := r.Financial
-			add("cashflow", "Денежный поток", fmt.Sprintf("Расчёт использует денежный поток за %s–%s. Прогноз повторяет сезонность без роста; базовый и стрессовый сценарии являются прогнозом, а не подтверждёнными поступлениями.", f.PeriodFrom, f.PeriodTo), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_AFFORDABILITY, pb.EvidenceKind_EVIDENCE_KIND_FINANCIAL)
+			add("cashflow", "Денежный поток", fmt.Sprintf("Расчёт опирается на денежный поток за период %s–%s. Прогноз повторяет сезонность без роста и не считается подтверждёнными поступлениями.", f.PeriodFrom, f.PeriodTo), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_AFFORDABILITY, pb.EvidenceKind_EVIDENCE_KIND_FINANCIAL)
 		}
 		for _, o := range r.Candidates {
-			text := fmt.Sprintf("%s: сумма %s руб., срок %d мес., ставка %.2f%% годовых, регулярный платёж %s руб., всего выплат %s руб., непокрытая потребность %s руб. Последний платёж смотрите в графике. Это расчётный вариант; условия должен подтвердить сотрудник банка.", o.ProductName, money(o.Schedule.AmountKopecks), o.Schedule.TermMonths, float64(o.Schedule.RateBPS)/100, money(o.Schedule.PaymentKopecks), money(o.Schedule.TotalPaymentKopecks), money(o.UncoveredNeedKopecks))
+			text := fmt.Sprintf("Вариант «%s»: %s руб. на %d мес. под %s годовых. Платёж — %s руб. в месяц, всего — %s руб.; непокрытая часть потребности — %s руб. Это предварительный расчёт, условия подтверждает банк.", o.ProductName, money(o.Schedule.AmountKopecks), o.Schedule.TermMonths, percent(int64(o.Schedule.RateBPS)), money(o.Schedule.PaymentKopecks), money(o.Schedule.TotalPaymentKopecks), money(o.UncoveredNeedKopecks))
 			add(o.ID, "Расчётный вариант", text, pb.TargetKind_TARGET_KIND_OPTION, pb.StatementTopic_STATEMENT_TOPIC_OPTION, pb.EvidenceKind_EVIDENCE_KIND_CALCULATION)
 		}
+		for _, o := range r.Candidates {
+			if o.UncoveredNeedKopecks > 0 {
+				text := fmt.Sprintf("Расчётный вариант покрывает не всю запрошенную сумму: непокрытая часть потребности составляет %s руб. Банк учитывает способность денежного потока выдерживать регулярный платёж; окончательные условия подтверждает сотрудник банка.", money(o.UncoveredNeedKopecks))
+				add("amount_gap", "Почему сумма меньше", text, pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_AFFORDABILITY, pb.EvidenceKind_EVIDENCE_KIND_CALCULATION)
+				break
+			}
+		}
 		for i, ch := range r.Changes[:min(10, len(r.Changes))] {
-			add(fmt.Sprintf("change:%d", i), "Изменение оценки", fmt.Sprintf("%s: было %v, стало %v; единица %s.", ch.Path, ch.Previous, ch.Current, ch.Unit), pb.TargetKind_TARGET_KIND_CHANGE, pb.StatementTopic_STATEMENT_TOPIC_CHANGE, pb.EvidenceKind_EVIDENCE_KIND_CHANGE)
+			add(fmt.Sprintf("change:%d", i), "Изменение оценки", changeText(ch), pb.TargetKind_TARGET_KIND_CHANGE, pb.StatementTopic_STATEMENT_TOPIC_CHANGE, pb.EvidenceKind_EVIDENCE_KIND_CHANGE)
 		}
 	}
 	if audience == pb.Audience_AUDIENCE_ANALYST && v.Risk != nil {
 		for _, f := range v.Risk.Factors {
-			add(f.ID, "Фактор риска", fmt.Sprintf("%s: значение %d (%s), вклад %d из %d баллов. Период %s–%s. Это экспертная оценка, не вероятность дефолта.", f.ID, f.Value, f.Unit, f.Points, f.MaxPoints, f.PeriodFrom, f.PeriodTo), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_SCORE, pb.EvidenceKind_EVIDENCE_KIND_SCORE)
+			add(f.ID, "Фактор риска", factorText(f), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_SCORE, pb.EvidenceKind_EVIDENCE_KIND_SCORE)
 		}
 	}
 	if audience == pb.Audience_AUDIENCE_ANALYST && v.Checks != nil {
 		for i, source := range v.Checks.Sources[:min(20, len(v.Checks.Sources))] {
 			id := fmt.Sprintf("source:%d", i)
-			add(id, "Проверка источника", fmt.Sprintf("Источник %s, вид %s, роль %s: состояние %s, совпадение %s, вывод %s. Недоступный ответ или неоднозначное совпадение не подтверждают нарушение компании.", source.ID, source.Kind, source.Role, source.Status, source.Match, source.Conclusion), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_POLICY, pb.EvidenceKind_EVIDENCE_KIND_CHECK)
+			add(id, "Проверка источника", sourceText(source), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_POLICY, pb.EvidenceKind_EVIDENCE_KIND_CHECK)
 			e := c.Evidence[len(c.Evidence)-1]
 			e.IsMock = source.Provenance.IsMock
 			if source.Provenance.SourceRef != "" {
@@ -151,11 +164,11 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 			c.Actions = append(c.Actions, &pb.Action{Id: "open:" + target.Id, Kind: kind, TargetId: target.Id, Label: target.Label})
 		}
 	}
-	limitation := "Демонстрационные сведения синтетические. Расчёт не гарантирует одобрение или выдачу кредита."
+	limitation := "Данные и расчёты демонстрационные; условия и решение банка подтверждаются отдельно."
 	if c.Freshness == pb.Freshness_FRESHNESS_STALE {
 		limitation += " Срок актуальности оценки истёк; требуется новая проверка."
 	} else if v.Pending {
-		limitation += " Выполняется обновление заявки; дождитесь подтверждения нового состояния."
+		limitation += " Данные обновляются; дождитесь актуального статуса."
 	}
 	c.Statements = append(c.Statements, &pb.Statement{Id: "limitations", Topic: pb.StatementTopic_STATEMENT_TOPIC_DATA_QUALITY, Required: true, Priority: 100, Variants: []*pb.StatementVariant{{Id: "concise", Text: limitation}, {Id: "detailed", Text: limitation}}})
 	// Hash the complete source view, never timestamps generated for this request.
@@ -168,5 +181,3 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 	c.ContextId = hex.EncodeToString(sum[:])
 	return c
 }
-
-func money(n int64) string { return fmt.Sprintf("%d.%02d", n/100, n%100) }

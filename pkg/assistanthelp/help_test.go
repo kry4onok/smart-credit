@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
 	pb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -211,4 +212,52 @@ func TestDecisionStatementNamesStatusInRussianWithPublicReason(t *testing.T) {
 		return
 	}
 	t.Fatal("decision statement missing")
+}
+
+func TestQuestionFallbackExplainsSmallerAmount(t *testing.T) {
+	now := time.Now().UTC()
+	view := View{ApplicationID: "22222222-2222-4222-8222-222222222222", Revision: "client:5:2", Status: "UNDER_REVIEW",
+		Public: &assessment.PublicResult{ID: "calc-1", ValidUntil: now.Add(30 * time.Second),
+			Candidates: []assessment.Candidate{{ID: "option-1", ProductName: "Демо: денежный поток",
+				Schedule:             creditcalc.Schedule{Terms: creditcalc.Terms{AmountKopecks: 275100000, TermMonths: 36, RateBPS: 1600}, PaymentKopecks: 9671700, TotalPaymentKopecks: 348181194},
+				UncoveredNeedKopecks: 224900000}}}}
+	request := &pb.HelpRequest{RequestId: "11111111-1111-4111-8111-111111111111", Context: Context(view, pb.Audience_AUDIENCE_CLIENT, now),
+		Mode: pb.HelpMode_HELP_MODE_QUESTION, Detail: pb.Detail_DETAIL_DETAILED, Locale: "ru-RU", Question: "Почему сумма меньше запрошенной?"}
+	answer, err := Fallback(request, pb.FallbackReason_FALLBACK_REASON_MODEL_TIMEOUT, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	texts := []string{}
+	for _, block := range answer.Blocks {
+		for _, item := range block.Items {
+			texts = append(texts, item.Text)
+		}
+	}
+	joined := strings.Join(texts, " ")
+	if answer.Status != pb.AnswerStatus_ANSWER_STATUS_ANSWERED || !strings.Contains(joined, "не всю запрошенную сумму") ||
+		!strings.Contains(joined, "2 249 000,00 руб.") || strings.Contains(joined, "Уточните, какой пункт") {
+		t.Fatalf("fallback did not answer amount question: %s", joined)
+	}
+}
+
+func TestAnalystContextUsesReadableLabels(t *testing.T) {
+	now := time.Now().UTC()
+	view := View{ApplicationID: "22222222-2222-4222-8222-222222222222", Revision: "bank:5:2", Status: "MANUAL_REVIEW",
+		Risk:   &assessment.RiskResult{Factors: []assessment.Factor{{ID: "customer_concentration", Value: 1500, Unit: "BASIS_POINTS", Points: 250, MaxPoints: 250, PeriodFrom: "2025-10-01", PeriodTo: "2026-09-30"}}},
+		Checks: &assessment.CheckResult{Sources: []assessment.Source{{ID: "registry", Kind: "REGISTRY", Role: "BORROWER", Status: "SUCCESS", Match: "EXACT", Conclusion: "CLEAR"}}}}
+	context := Context(view, pb.Audience_AUDIENCE_ANALYST, now)
+	if got := context.Statements[0].Variants[0].Text; !strings.Contains(got, "Проверьте оценку") {
+		t.Fatalf("analyst next step = %q", got)
+	}
+	for _, statement := range context.Statements {
+		text := statement.Variants[0].Text
+		for _, code := range []string{"customer_concentration", "BASIS_POINTS", "REGISTRY", "BORROWER", "SUCCESS", "EXACT", "CLEAR"} {
+			if strings.Contains(text, code) {
+				t.Fatalf("technical code %q leaked in %q", code, text)
+			}
+		}
+	}
+	if got := statusLabel("NEW_UNKNOWN_STATUS"); strings.Contains(got, "NEW_UNKNOWN_STATUS") {
+		t.Fatalf("unknown status leaked: %q", got)
+	}
 }
