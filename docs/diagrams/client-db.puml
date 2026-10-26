@@ -1,0 +1,88 @@
+@startuml
+title Smart Credit — client_db (основные таблицы и связи)
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName "Segoe UI"
+skinparam entity {
+  BackgroundColor #F4F8FD
+  BorderColor #55708D
+  FontColor #172234
+}
+
+entity companies {
+  * org_id : UUID <<PK, external auth_db>>
+  --
+  * inn : TEXT
+  * version : BIGINT
+}
+entity products {
+  * id : UUID <<PK>>
+  --
+  * version : BIGINT
+  * code : TEXT <<UNIQUE>>
+  * requirements_policy_version : TEXT
+}
+entity applications {
+  * id : UUID <<PK, = bank cases.id>>
+  --
+  * org_id : UUID <<FK>>
+  * product_id : UUID <<snapshot, no FK>>
+  * status : TEXT
+  pending_action : TEXT
+  * version : BIGINT
+  * client_event_version : BIGINT
+  * bank_event_version : BIGINT
+}
+entity application_documents {
+  * id : UUID <<PK>>
+  --
+  * application_id : UUID <<FK>>
+  * storage_key : TEXT <<UNIQUE>>
+  * sha256 : TEXT
+}
+entity info_requests {
+  * id : UUID <<PK>>
+  --
+  * application_id : UUID <<FK>>
+  * is_active : BOOLEAN
+}
+entity offers {
+  * id : UUID <<PK>>
+  --
+  * application_id : UUID <<FK>>
+  * kind : TEXT
+  * expires_at : TIMESTAMPTZ
+}
+entity timeline_entries {
+  * id : UUID <<PK>>
+  --
+  * application_id : UUID <<FK>>
+  * status : TEXT
+}
+entity outbox {
+  * event_id : UUID <<PK>>
+  --
+  * aggregate_id : UUID <<FK>>
+  * aggregate_version : BIGINT
+  * topic : TEXT <<client.events>>
+}
+
+companies ||--o{ applications : org_id
+applications ||--o{ application_documents
+applications ||--o{ info_requests
+applications ||--o{ offers
+applications ||--o{ timeline_entries
+applications ||--o{ outbox : aggregate_id
+products .. applications : product snapshot, no FK
+
+legend bottom
+Сплошная связь — FK внутри client_db; пунктир — логическая связь без FK.
+outbox публикует client.events; processed_events дедуплицирует bank.events.
+Служебные processed_events и idempotency_keys опущены для читаемости.
+Оригиналы документов лежат в Docker volume client_documents.
+Полный состав колонок — в миграциях client-service.
+endlegend
+@enduml

@@ -1,0 +1,98 @@
+@startuml
+title Smart Credit — путь клиента
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam roundcorner 10
+skinparam ArrowColor #526273
+skinparam activity {
+  BackgroundColor #FAFAFA
+  BorderColor #526273
+  FontColor #172234
+  DiamondBackgroundColor #FFF2CC
+  DiamondBorderColor #B38F00
+}
+skinparam partition {
+  BackgroundColor #F4F6F8
+  BorderColor #A9B4BF
+  FontColor #33414F
+  FontStyle bold
+}
+skinparam note {
+  BackgroundColor #FFFBEA
+  BorderColor #B8A45C
+}
+
+start
+partition "1. Заявка" {
+  :Клиент заполняет профиль,\nчерновик и загружает документы; <<#DCEBFF>>
+  :DRAFT в client_db; <<#E5F4E3>>
+  if (Форма и документы полные?) then (да)
+    :POST /submit; <<#DCEBFF>>
+    :SUBMITTED + outbox\nApplicationSubmitted → client.events; <<#E5F4E3>>
+  else (нет)
+    :422 INVALID_APPLICATION;\nчерновик остаётся DRAFT; <<#FFE6E6>>
+    stop
+  endif
+}
+
+partition "2. Банковская проверка" {
+  :Банк создаёт дело и публикует\nсостояние в bank.events; <<#FFF2CC>>
+  :UNDER_REVIEW в карточке клиента; <<#E5F4E3>>
+  while (Нужны дополнительные сведения?) is (да)
+    :NEEDS_INFO — клиент видит запрос; <<#FFF2CC>>
+    :POST /info → InfoProvided; <<#DCEBFF>>
+    :UNDER_REVIEW — повторная проверка; <<#E5F4E3>>
+  endwhile (нет)
+  note right
+    MANUAL_REVIEW банка для клиента остаётся UNDER_REVIEW.
+    В SME_CASHFLOW_V2 расчётные варианты CALCULATED
+    ещё не являются офертой: их подтверждает аналитик.
+  end note
+  if (Банк отказал?) then (да)
+    :REJECTED + публичная причина; <<#FFE6E6>>
+    stop
+  else (нет)
+    :OFFER_AVAILABLE — условия и срок; <<#E5F4E3>>
+  endif
+}
+
+partition "3. Ответ на оферту" {
+  if (Срок оферты истёк?) then (да)
+    :Банк EXPIRED → клиент CLOSED; <<#FFE6E6>>
+    stop
+  else (нет)
+    if (Клиент отказывается?) then (да)
+      :POST /offer/decline\n→ DECLINE_PENDING; <<#DCEBFF>>
+      :Банк CANCELLED → клиент CLOSED; <<#FFE6E6>>
+      stop
+    else (принимает)
+      :POST /offer/accept\n→ ACCEPT_PENDING; <<#DCEBFF>>
+      :Банк подтверждает offer_id\n→ FORMALIZING; <<#FFF2CC>>
+    endif
+  endif
+}
+
+partition "4. Подпись и демо-выдача" {
+  if (Клиент отзывает до подписи?) then (да)
+    :POST /cancel → CANCEL_PENDING; <<#DCEBFF>>
+    :Банк CANCELLED → клиент CLOSED; <<#FFE6E6>>
+    stop
+  else (нет)
+    :POST /sign → SIGN_PENDING\nContractSigned в client.events; <<#DCEBFF>>
+    :Банк SIGNING → DISBURSED; <<#FFF2CC>>
+    :DISBURSED в карточке клиента;\nденежный перевод не выполняется; <<#E5F4E3>>
+  endif
+}
+stop
+
+legend right
+|= Цвет |= Значение |
+|<#DCEBFF>| Действие клиента |
+|<#E5F4E3>| Публичное состояние в client-service / client_db |
+|<#FFF2CC>| Действие или решение банка |
+|<#FFE6E6>| Ошибка или завершение без выдачи |
+endlegend
+@enduml

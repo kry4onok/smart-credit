@@ -28,7 +28,7 @@ flowchart LR
         docs_volume[("volume<br/>client_documents")]
     end
 
-    ollama["Ollama на хосте<br/>:11434, qwen2.5:3b"]
+    ollama["Ollama на хосте<br/>:11434, qwen2.5:7b"]
 
     browser -->|"/api/auth, /api/.well-known"| web
     browser -->|"/api/client"| web
@@ -77,7 +77,7 @@ flowchart LR
 | `assistant` | 50052 | Python gRPC: `AssistantService` (резюме дела, текст решения) и `AssistantHelpService/Help`. Вызывает Ollama, при сбое — детерминированный шаблон. |
 | `postgres` | 5432 | PostgreSQL 16.15, три БД с отдельными ролями (`deploy/postgres/init-dbs.sh`). |
 | `kafka` | 9092 (внутри 19092) | Apache Kafka 3.9.2 KRaft, топики `client.events` и `bank.events` по одной партиции (`make infra-up`). |
-| Ollama | 11434 | Запускается на хосте, не входит в compose. Модель по умолчанию `OLLAMA_MODEL=qwen2.5:3b`. |
+| Ollama | 11434 | Запускается на хосте, не входит в compose. Модель по умолчанию `OLLAMA_MODEL=qwen2.5:7b`. |
 
 Swagger UI ссылается на `/api/assessment.yaml`; в `deploy/nginx/nginx.conf` статическая раздача спецификаций ограничена `auth|client|bank|common`, поэтому Assessment and Help API надёжно открывается напрямую на `http://localhost:8081`.
 

@@ -1,0 +1,81 @@
+@startuml
+title Smart Credit — bank_db (основные таблицы и связи)
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName "Segoe UI"
+skinparam entity {
+  BackgroundColor #F5FAF7
+  BorderColor #557F69
+  FontColor #172234
+}
+
+entity products {
+  * id : UUID <<PK part>>
+  * version : BIGINT <<PK part>>
+  --
+  * code : TEXT
+  * is_active : BOOLEAN
+}
+entity product_rules {
+  * product_id : UUID <<PK, FK part>>
+  * product_version : BIGINT <<PK, FK part>>
+  --
+  * offer_ttl_hours : INTEGER
+}
+entity cases {
+  * id : UUID <<PK, = client application.id>>
+  --
+  * product_id : UUID <<no FK>>
+  * status : TEXT
+  assignee_id : UUID <<external auth_db>>
+  * version : BIGINT
+  * assessment_generation : BIGINT
+}
+entity assessments {
+  * id : TEXT <<PK>>
+  --
+  * case_id : UUID <<FK>>
+  * assessment_generation : BIGINT
+  * valid_until : TIMESTAMPTZ
+}
+entity decisions {
+  * id : UUID <<PK>>
+  --
+  * case_id : UUID <<FK>>
+  * outcome : TEXT
+}
+entity info_requests {
+  * id : UUID <<PK>>
+  --
+  * case_id : UUID <<FK>>
+  decision_id : UUID <<FK, optional>>
+}
+entity offers {
+  * id : UUID <<PK>>
+  --
+  * case_id : UUID <<FK>>
+  * decision_id : UUID <<FK>>
+  * status : TEXT
+}
+
+products ||--o| product_rules : product_id + version
+products .. cases : product snapshot, no FK
+cases ||--o{ assessments : case_id
+cases ||--o{ decisions : case_id
+cases ||--o{ info_requests : case_id
+decisions |o--o{ info_requests : decision_id
+cases ||--o{ offers : case_id
+decisions ||--o{ offers : decision_id
+
+legend bottom
+Сплошная связь — FK внутри bank_db; пунктир — логическая связь без FK.
+Служебные таблицы (outbox, processed_events, audit_log,
+scoring_attempts и другие) опущены для читаемости.
+Их состав и FK — в миграциях bank-service.
+Идентификаторы пользователя, организации и клиентской заявки не связаны межбазовыми FK.
+Полный состав колонок — в миграциях bank-service.
+endlegend
+@enduml

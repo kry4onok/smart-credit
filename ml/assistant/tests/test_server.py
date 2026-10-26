@@ -30,10 +30,10 @@ class AssistantTests(unittest.TestCase):
             product_name="Потребительский кредит", purpose="ремонт квартиры", grade="B"
         )
         text = "Продукт: Потребительский кредит. Цель: ремонт квартиры. Грейд: B."
-        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:7b")):
             result = self.service.SummarizeCase(request, self.context)
         self.assertEqual(result.text, text)
-        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.model_version, "qwen2.5:7b")
 
     def test_summary_uses_verified_descriptions_without_guessing_codes(self):
         request = assistant_pb2.SummarizeCaseRequest(
@@ -57,13 +57,13 @@ class AssistantTests(unittest.TestCase):
             "Оборотный кредит: Пополнение оборотных средств. Ручное рассмотрение, грейд B. "
             "Нет просрочек. Нужен ручной разбор."
         )
-        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:7b")):
             result = self.service.SummarizeCase(request, self.context)
-        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.model_version, "qwen2.5:7b")
         self.assertEqual(result.text, text)
 
         guessed = text + " Кредит одобрен."
-        with patch.object(server, "generate_json", return_value=({"text": guessed}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": guessed}, "qwen2.5:7b")):
             rejected = self.service.SummarizeCase(request, self.context)
         self.assertEqual(rejected.model_version, "template")
         self.assertIn("Нужен ручной разбор", rejected.text)
@@ -79,10 +79,10 @@ class AssistantTests(unittest.TestCase):
             status_description="Запрошены дополнительные данные",
         )
         text = "Продукт: Оборотный кредит. Цель: Пополнение оборотных средств. Статус: Запрошены дополнительные данные."
-        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:3b")) as generate:
+        with patch.object(server, "generate_json", return_value=({"text": text}, "qwen2.5:7b")) as generate:
             result = self.service.SummarizeCase(request, self.context)
         prompt, facts = generate.call_args.args[:2]
-        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.model_version, "qwen2.5:7b")
         self.assertNotIn("grade", prompt)
         self.assertNotIn("score_factors", prompt)
         self.assertNotIn("WORKING_CAPITAL", json.dumps(facts))
@@ -93,7 +93,7 @@ class AssistantTests(unittest.TestCase):
             product_name="Потребительский кредит", purpose="ремонт квартиры", grade="B"
         )
         invented = "Потребительский кредит, ремонт квартиры, B. Правила не применялись."
-        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:7b")):
             result = self.service.SummarizeCase(request, self.context)
         self.assertEqual(result.model_version, "template")
         self.assertNotIn("Правила", result.text)
@@ -101,7 +101,7 @@ class AssistantTests(unittest.TestCase):
 
     def test_summary_rejects_invented_decision(self):
         request = assistant_pb2.SummarizeCaseRequest(product_name="Кредит", grade="B")
-        with patch.object(server, "generate_json", return_value=({"text": "Кредит одобрен, B."}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": "Кредит одобрен, B."}, "qwen2.5:7b")):
             result = self.service.SummarizeCase(request, self.context)
         self.assertEqual(result.model_version, "template")
         self.assertNotIn("одобрен", result.text)
@@ -111,12 +111,12 @@ class AssistantTests(unittest.TestCase):
         request = assistant_pb2.ExplainDecisionRequest(
             outcome="REJECT", product_name="Потребительский кредит", analyst_public_reason=reason
         )
-        with patch.object(server, "generate_json", return_value=({"style": "empathetic"}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"style": "empathetic"}, "qwen2.5:7b")):
             result = self.service.ExplainDecision(request, self.context)
         self.assertIn("решение об отказе", result.text)
         self.assertIn(reason, result.text)
         self.assertNotIn("повторно", result.text)
-        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.model_version, "qwen2.5:7b")
 
     def test_ollama_failure_returns_safe_template(self):
         request = assistant_pb2.ExplainDecisionRequest(
@@ -137,9 +137,9 @@ class AssistantTests(unittest.TestCase):
                 term_months=24, rate_bps=1850,
             ),
         )
-        with patch.object(server, "generate_json", return_value=({"style": "neutral"}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"style": "neutral"}, "qwen2.5:7b")):
             result = self.service.ExplainDecision(request, self.context)
-        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.model_version, "qwen2.5:7b")
         for fragment in ("Оборотный кредит", "Гибкий кредит", "4 000 000,50 ₽", "24 мес.", "18,50%"):
             self.assertIn(fragment, result.text)
 
@@ -162,7 +162,7 @@ class AssistantTests(unittest.TestCase):
     def test_summary_rejects_invented_number(self):
         request = assistant_pb2.SummarizeCaseRequest(product_name="Кредит", grade="B")
         invented = "Продукт: Кредит. Грейд скоринга: B. Ставка 12%."
-        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:7b")):
             result = self.service.SummarizeCase(request, self.context)
         self.assertEqual(result.model_version, "template")
         self.assertNotIn("12", result.text)
@@ -172,7 +172,7 @@ class AssistantTests(unittest.TestCase):
             product_name="Оборотный кредит", purpose="WORKING_CAPITAL"
         )
         invented = "Продукт: Оборотный кредит. Цель: WORKING_CAPITAL. Грейд скоринга: B."
-        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"text": invented}, "qwen2.5:7b")):
             result = self.service.SummarizeCase(request, self.context)
         self.assertEqual(result.model_version, "template")
         self.assertNotIn("Грейд", result.text)
@@ -213,7 +213,7 @@ class AssistantTests(unittest.TestCase):
             "MANUAL_REVIEW": "дополнительное рассмотрение",
             "REJECT": "отказе",
         }
-        with patch.object(server, "generate_json", return_value=({"style": "neutral"}, "qwen2.5:3b")):
+        with patch.object(server, "generate_json", return_value=({"style": "neutral"}, "qwen2.5:7b")):
             for outcome, phrase in expected.items():
                 with self.subTest(outcome=outcome):
                     request = assistant_pb2.ExplainDecisionRequest(outcome=outcome)

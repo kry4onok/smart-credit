@@ -53,7 +53,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", default="127.0.0.1:50052")
     parser.add_argument("--timeout", type=float, default=5, help="Дедлайн каждого вызова, как у bank-service")
-    parser.add_argument("--expect-version", help="Например: qwen2.5:3b или template")
+    parser.add_argument("--expect-version", help="Например: qwen2.5:7b или template")
     args = parser.parse_args()
     scenarios = json.loads(SCENARIOS.read_text(encoding="utf-8"))
     assert len(scenarios) == 7, "ожидалось семь банковских demo-сценариев"
