@@ -66,6 +66,9 @@ dist/
 !LICENSE*
 !NOTICE*
 !THIRD_PARTY_NOTICES.md
+!docs/**/*.md
+!postman/fixtures/
+!postman/fixtures/**
 
 # Web
 node_modules/
