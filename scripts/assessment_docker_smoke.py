@@ -1,5 +1,6 @@
 """Exercise cash-flow assessment, Help, recheck, offers and demo disbursement in disposable Compose."""
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,11 @@ PRODUCT_ID = "10000000-0000-4000-8000-000000000022"
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--images-from", help="Reuse images from a previous smart-credit-assessment-smoke-* project")
+    args = parser.parse_args()
+    if args.images_from and not args.images_from.startswith("smart-credit-assessment-smoke-"):
+        parser.error("--images-from must identify an assessment smoke project")
     settings = dict(line.split("=", 1) for line in (ROOT / ".env.example").read_text().splitlines()
                     if line and not line.startswith("#") and "=" in line)
     project = "smart-credit-assessment-smoke-" + uuid.uuid4().hex[:12]
@@ -52,15 +58,16 @@ def main():
                             "  gateway:\n    ports: !override [\"127.0.0.1::8080\"]\n"
                             f"    volumes: !override [\"{nginx}:/etc/nginx/nginx.conf:ro\","
                             f" \"{ROOT / 'api'}:/usr/share/nginx/html/api:ro\"]\n"
-                            + "".join(f"  {name}:\n    ports: !reset []\n" for name in
+                            + "".join(f"  {name}:\n    ports: !reset []\n" + (f"    image: {args.images_from}-{name}:latest\n" if args.images_from and name not in ("kafka", "swagger-ui") else "") for name in
                                       ("kafka", "auth", "client-service", "bank-service", "swagger-ui",
                                        "scoring", "bureau-mocks", "assistant")))
         compose = ["docker", "compose", "--env-file", str(env_file), "--project-name", project,
                    "-f", str(ROOT / "deploy/docker-compose.yml"), "-f", str(override)]
         try:
-            print("Building isolated services", flush=True)
+            print("Using previous smoke images" if args.images_from else "Building isolated services", flush=True)
             run(compose + ["config", "--quiet"])
-            run(compose + ["build", "auth", "client-service", "bank-service", "scoring", "bureau-mocks", "assistant"])
+            if not args.images_from:
+                run(compose + ["build", "auth", "client-service", "bank-service", "scoring", "bureau-mocks", "assistant"])
             run(compose + ["run", "--rm", "--no-deps", "--entrypoint", "/usr/local/bin/keygen",
                            "auth", "-out", "/var/lib/smart-credit/auth/private.pem"])
             print("Starting PostgreSQL and Kafka", flush=True)
@@ -143,9 +150,19 @@ def main():
                 raise AssertionError(f"client did not reach {status}: {current['status']}")
 
             def new_application(profile_file, inn=None, amount=100000000):
+                nonlocal client
                 profile = json.loads((ROOT / "seed/profile-requirements" / profile_file).read_text())
                 if inn:
                     profile["inn"] = inn
+                if profile["inn"] != "7707083893":
+                    organization, user = str(uuid.uuid4()), str(uuid.uuid4())
+                    email = user + "@assessment.test"
+                    sql = f"""INSERT INTO organizations(id,inn,name) VALUES('{organization}','{profile['inn']}','Synthetic assessment');
+                        INSERT INTO users(id,email,full_name,password_hash,role,org_id,is_active)
+                        SELECT '{user}','{email}','Synthetic client',password_hash,'CLIENT','{organization}',true
+                        FROM users WHERE email='client@smart-credit.test';"""
+                    run(compose + ["exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "auth_db"], sql)
+                    client = login(email)
                 api("PUT", "/api/client/company", client, profile)
                 deadline = time.monotonic() + 90
                 while not any(p["id"] == PRODUCT_ID for p in api("GET", "/api/client/products", client)["items"]):
@@ -178,6 +195,14 @@ def main():
             assert result["candidates"] and any(c["uncovered_need_kopecks"] > 0 for c in result["candidates"])
             assert all(m["quality"] == "PROJECTED" for m in result["financial"]["base"])
             assert snapshot["baseline_v1"] is not None
+            deadline = time.monotonic() + 60
+            while True:
+                projected = api("GET", f"/api/client/applications/{application_id}/assessment", client)
+                if projected["assessment"] and projected["assessment"]["assessment_id"] == result["assessment_id"] and projected["freshness"] == "CURRENT":
+                    break
+                if time.monotonic() > deadline:
+                    raise AssertionError("completed assessment did not reach client projection")
+                time.sleep(1)
             context_path = f"/api/client/applications/{application_id}/help"
             descriptor = api("GET", context_path, client)
             help_body = {"context_id": descriptor["context_id"], "source_revision": descriptor["source_revision"],
@@ -229,6 +254,8 @@ def main():
 
             print("IP PSN: request only missing patent after source collection", flush=True)
             ip_id = new_application("company-ip-psn.json")
+            api("GET", f"/api/client/applications/{application_id}/assessment", client, want=404)
+            api("GET", f"/api/client/applications/{application_id}/help", client, want=404)
             wait_case(ip_id, {"NEEDS_INFO"})
             app = wait_app(ip_id, "NEEDS_INFO")
             requirements = app["info_request"]["requirements"]
