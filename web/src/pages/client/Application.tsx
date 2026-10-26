@@ -410,7 +410,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             error={amountError}
             hint={product ? `от ${moneyShort(product.min_amount)} до ${moneyShort(product.max_amount)}` : undefined}
           >
-            <MoneyInput id="amount" value={form.amount ?? undefined} invalid={!!amountError} onChange={(v) => update({ amount: v }, v === null ? null : { amount: rub(v) })} />
+            <MoneyInput id="amount" value={form.amount ?? undefined} invalid={!!amountError} onChange={(v) => update({ amount: v ?? null }, v == null ? null : { amount: rub(v) })} />
           </Field>
           <Field label="Срок, месяцев" htmlFor="term" error={termError} hint={product ? `от ${product.min_term_months} до ${product.max_term_months}` : undefined}>
             <input
@@ -648,7 +648,7 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
             ) : f === "APPLICATION_TERM_MONTHS" ? (
               <input id={`info-${f}`} type="number" min={1} step={1} max={2147483647} aria-invalid={!!fieldErrors[f]} value={(values[f] as number) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value === "" ? null : Number(e.target.value) })} />
             ) : (
-              <MoneyInput id={`info-${f}`} invalid={!!fieldErrors[f]} allowNegative={f === "COMPANY_PROFIT_12M"} value={(values[f] as number) ?? undefined} onChange={(v) => setValues({ ...values, [f]: v })} />
+              <MoneyInput id={`info-${f}`} invalid={!!fieldErrors[f]} allowNegative={f === "COMPANY_PROFIT_12M"} value={(values[f] as number) ?? undefined} onChange={(v) => setValues({ ...values, [f]: v ?? null })} />
             )}
           </Field>
         ))}
@@ -703,8 +703,7 @@ function OfferStep({ app, reload }: { app: ClientApplication; reload: () => Prom
   if (offer) return <OfferView app={app} offer={offer} reload={reload} />;
   return (
     <p className="note note-attention">
-      Предложение принято. Условия для подписи не сохранились в этом браузере — откройте заявку там, где принимали предложение,
-      или обратитесь в банк.
+      Предложение принято, но условия для подписи сейчас не загрузились. Обновите страницу чуть позже или обратитесь в банк.
     </p>
   );
 }

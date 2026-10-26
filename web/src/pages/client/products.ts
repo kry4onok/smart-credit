@@ -71,8 +71,8 @@ export function recallDraft(id: string): DraftValues {
 
 const offerKey = (id: string) => `smart-credit:accepted-offer:${id}`;
 
-// After acceptance client-service stops returning the offer, yet /sign must name its offer_id.
-// The accepted offer is kept here so the formalizing step can show the terms and sign them.
+// client-service keeps returning the accepted offer while the contract is signed; the mock server
+// drops it after acceptance. This browser copy covers the mock so /sign can still name its offer_id.
 export function rememberOffer(applicationId: string, offer: Offer) {
   try {
     localStorage.setItem(offerKey(applicationId), JSON.stringify(offer));

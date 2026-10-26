@@ -155,6 +155,7 @@ export function BankAssessmentPanel({ kase, onUse, onChanged, onBasis }: { kase:
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState(0);
   const [history, setHistory] = useState<AssessmentResult[] | null>(null);
+  const [historyError, setHistoryError] = useState<unknown>(null);
   const recheck = useAction();
   const recheckIntent = useIntent();
 
@@ -196,8 +197,13 @@ export function BankAssessmentPanel({ kase, onUse, onChanged, onBasis }: { kase:
   }
 
   async function loadHistory() {
-    const h = await call(assessmentApi.GET("/backoffice/applications/{application_id}/assessments", { params: { path: { application_id: kase.id } } }));
-    setHistory(h.items);
+    try {
+      const h = await call(assessmentApi.GET("/backoffice/applications/{application_id}/assessments", { params: { path: { application_id: kase.id } } }));
+      setHistory(h.items);
+      setHistoryError(null);
+    } catch (e) {
+      setHistoryError(e);
+    }
   }
 
   const candidates = result?.candidates ?? [];
@@ -293,6 +299,7 @@ export function BankAssessmentPanel({ kase, onUse, onChanged, onBasis }: { kase:
           История оценок
         </button>
       </div>
+      <ErrorNote error={historyError} onRetry={() => void loadHistory()} />
       {history && (
         <ol className="audit">
           {history.map((h) => (

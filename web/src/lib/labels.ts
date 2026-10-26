@@ -195,6 +195,7 @@ export const auditActionLabel: Record<string, string> = {
   BUREAU_CALL: "Запрос в БКИ",
   ASSESSMENT_COMPLETED: "Оценка денежного потока выполнена",
   ASSESSMENT_RECHECK: "Запущен пересчёт оценки",
+  CLIENT_EVENT_SKIPPED: "Действие клиента устарело и не применено",
   REQUEST_INFO: "Запрошены данные",
   INFO_REQUESTED: "Запрошены данные",
   OFFER_ACCEPTED: "Клиент принял оферту",

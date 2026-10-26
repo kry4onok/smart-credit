@@ -12,6 +12,15 @@ type Session = {
 
 const SessionContext = createContext<Session | null>(null);
 
+// Drafts and the accepted offer are kept in this browser; the next user of it must not see them.
+function forgetLocalData() {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith("smart-credit:")) localStorage.removeItem(key);
+  } catch {
+    // Storage can be unavailable (private window); then there is nothing to clear.
+  }
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +51,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return false;
     }
     setAccessToken(null);
+    forgetLocalData();
     setUser(null);
     return true;
   }, []);

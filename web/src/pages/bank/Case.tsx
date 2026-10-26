@@ -39,6 +39,8 @@ export function CasePage() {
     try {
       const next = await call(bankApi.GET("/backoffice/applications/{application_id}", { params: { path: { application_id: id } } }));
       setCase((prev) => {
+        // A slow poll answer must not roll back a newer case, e.g. the one a decision just returned.
+        if (prev && prev.id === next.id && prev.version > next.version) return prev;
         if (prev && prev.audit_version !== next.audit_version) setAuditKey((k) => k + 1);
         return next;
       });
@@ -586,7 +588,7 @@ function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
             </Field>
           )}
           <Field label="Сумма" htmlFor="d-amount">
-            <MoneyInput id="d-amount" value={amount ?? undefined} onChange={setAmount} />
+            <MoneyInput id="d-amount" value={amount ?? undefined} onChange={(v) => setAmount(v ?? null)} />
           </Field>
           <div className="form-row">
             <Field label="Срок, мес." htmlFor="d-term">

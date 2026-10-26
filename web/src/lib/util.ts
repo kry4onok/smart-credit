@@ -64,13 +64,20 @@ export function isValidInn(inn: string): boolean {
 }
 
 // Calls fn every intervalMs while enabled and the tab is visible. Status updates use polling by design.
-export function usePolling(fn: () => void, intervalMs: number, enabled: boolean) {
+// When fn returns a promise, a tick is skipped until it settles, so slow answers do not pile up.
+export function usePolling(fn: () => unknown, intervalMs: number, enabled: boolean) {
   const saved = useRef(fn);
   saved.current = fn;
   useEffect(() => {
     if (!enabled) return;
+    let inFlight = false;
     const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") saved.current();
+      if (inFlight || document.visibilityState !== "visible") return;
+      const result = saved.current();
+      if (result instanceof Promise) {
+        inFlight = true;
+        result.catch(() => undefined).finally(() => (inFlight = false));
+      }
     }, intervalMs);
     return () => window.clearInterval(id);
   }, [intervalMs, enabled]);

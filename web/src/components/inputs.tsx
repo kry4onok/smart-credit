@@ -11,14 +11,15 @@ import { ErrorNote, useAction } from "./ui";
 type MoneyInputProps = {
   id: string;
   value: number | undefined;
-  onChange: (kopecks: number | null) => void;
+  onChange: (kopecks: number | null | undefined) => void;
   allowNegative?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   "aria-describedby"?: string;
 };
 
-// MoneyInput edits rubles as text and reports kopecks; null means the text is not a valid amount.
+// MoneyInput edits rubles as text and reports kopecks: undefined when the field is empty,
+// null when the text is not a valid amount.
 export function MoneyInput({ id, value, onChange, allowNegative, disabled, invalid, "aria-describedby": describedBy }: MoneyInputProps) {
   const [text, setText] = useState(rublesInput(value));
   const focused = useRef(false);
@@ -43,7 +44,7 @@ export function MoneyInput({ id, value, onChange, allowNegative, disabled, inval
         }}
         onChange={(e) => {
           setText(e.target.value);
-          onChange(e.target.value.trim() === "" ? null : parseRubles(e.target.value, allowNegative));
+          onChange(e.target.value.trim() === "" ? undefined : parseRubles(e.target.value, allowNegative));
         }}
       />
       <span aria-hidden>₽</span>

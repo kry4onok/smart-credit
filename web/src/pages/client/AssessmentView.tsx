@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { assessmentApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
 import type { Candidate, ClientApplication, ClientAssessment, PublicResult } from "../../api/types";
 import { CashFlowChart, CoverageBar } from "../../components/CashFlowChart";
 import { CompareBars } from "../../components/Compare";
 import { HelpPanel, clientModes } from "../../components/HelpPanel";
-import { Badge, ErrorNote } from "../../components/ui";
+import { Badge, ErrorNote, useNow } from "../../components/ui";
 import { dateTime, money, months, rate, rub } from "../../lib/format";
 import { assessmentStatusLabel } from "../../lib/labels";
 
@@ -134,11 +135,17 @@ function OptionCard({ c, selected, onSelect, requested }: { c: Candidate; select
   );
 }
 
+// Statuses before the bank's decision: only then the calculated options are still a forecast of
+// what the manager may confirm. After an offer, a refusal or a cancellation they would mislead.
+const underReview = new Set<ClientApplication["status"]>(["SUBMITTED", "UNDER_REVIEW", "NEEDS_INFO"]);
+
 // AssessmentView explains the bank's cash-flow assessment to the client after submission.
 export function AssessmentView({ app }: { app: ClientApplication }) {
   const [data, setData] = useState<ClientAssessment | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState(0);
+  const navigate = useNavigate();
+  const now = useNow();
 
   useEffect(() => {
     call(assessmentApi.GET("/client/applications/{application_id}/assessment", { params: { path: { application_id: app.id } } }))
@@ -156,8 +163,9 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
   if (error) return <ErrorNote error={error} />;
   if (!data) return null;
   const result = data.assessment;
+  const decided = !underReview.has(app.status);
   if (!result) {
-    if (app.status === "DRAFT") return null;
+    if (app.status === "DRAFT" || decided) return null;
     return (
       <section className="panel assess">
         <h2>Оценка банка</h2>
@@ -169,11 +177,39 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
     );
   }
 
-  const candidates = result.candidates ?? [];
+  const f = result.financial;
+  // An outdated calculation keeps the charts for context, but its options are no longer valid.
+  const stale = data.freshness === "STALE" || Date.parse(result.valid_until) <= now;
+  const help = (
+    <HelpPanel
+      applicationId={app.id}
+      audience="client"
+      modes={!decided && !stale && result.candidates?.length ? clientModes : clientModes.filter((m) => m.mode !== "COMPARE_OPTIONS")}
+      onOpenProfile={() => navigate("/cabinet/company")}
+    />
+  );
+
+  // After the decision the offer or the refusal above is what counts; the calculation stays as a
+  // collapsed reference without the options and the pre-decision status.
+  if (decided) {
+    return (
+      <>
+        {f && (
+          <details className="panel summary">
+            <summary>Расчёт денежного потока</summary>
+            <p className="muted">Расчёт от {dateTime(result.as_of)}, показан для справки.</p>
+            <CashFlowChart caption="Денежный поток бизнеса" history={f.history} base={f.base} stress={f.stress} />
+          </details>
+        )}
+        {help}
+      </>
+    );
+  }
+
+  const candidates = stale ? [] : (result.candidates ?? []);
   const option = candidates[Math.min(selected, candidates.length - 1)];
   const requested = app.form ? { amount: app.form.amount.amount_kopecks, term: app.form.term_months } : undefined;
-  const f = result.financial;
-  const tone = result.status === "READY_FOR_CONFIRMATION" ? "success" : result.status === "REJECT" ? "danger" : "attention";
+  const tone = stale ? "muted" : result.status === "READY_FOR_CONFIRMATION" ? "success" : result.status === "REJECT" ? "danger" : "attention";
 
   return (
     <>
@@ -183,11 +219,13 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
             <h2 id="assess-title">Как банк оценил заявку</h2>
             <p className="muted">
               Расчёт от {dateTime(result.as_of)}
-              {data.freshness !== "CURRENT" && " — данные обновляются"}
+              {data.freshness === "PENDING" && !stale && " — данные обновляются"}
             </p>
           </div>
-          <Badge tone={tone}>{assessmentStatusLabel[result.status] ?? result.status}</Badge>
+          <Badge tone={tone}>{stale ? "Расчёт устарел" : (assessmentStatusLabel[result.status] ?? result.status)}</Badge>
         </div>
+
+        {stale && <p className="field-hint">Расчёт устарел: банк пересчитает его, когда получит новые данные. Варианты кредита появятся после пересчёта.</p>}
 
         <ImpactChart items={impacts(result, requested?.amount, option)} />
 
@@ -227,12 +265,7 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
         </section>
       )}
 
-      <HelpPanel
-        applicationId={app.id}
-        audience="client"
-        modes={candidates.length ? clientModes : clientModes.filter((m) => m.mode !== "COMPARE_OPTIONS")}
-        onOpenProfile={() => (window.location.href = "/cabinet/company")}
-      />
+      {help}
     </>
   );
 }

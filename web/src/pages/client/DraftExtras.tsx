@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AssessmentPreferences, DocumentMetadata, LegalForm, Requirement, RequirementsPlan } from "../../api/types";
 import { DocumentSlot, MoneyInput } from "../../components/inputs";
 import { Choices, Field } from "../../components/ui";
@@ -59,6 +60,13 @@ export function PreferencesSection({ prefs, onChange, amountKopecks }: { prefs: 
     for (const key of Object.keys(next) as (keyof AssessmentPreferences)[]) if (next[key] === null || next[key] === undefined) delete next[key];
     onChange(next);
   };
+  // Unparsable text («50 тыс») keeps the saved value and shows why instead of clearing it.
+  const [invalid, setInvalid] = useState<{ payment?: boolean; min?: boolean }>({});
+  const amountField = (key: "payment" | "min", field: "max_payment_kopecks" | "minimum_useful_amount_kopecks") => (v: number | null | undefined) => {
+    setInvalid((prev) => ({ ...prev, [key]: v === null }));
+    if (v !== null) set({ [field]: v });
+  };
+  const invalidText = "Введите сумму числом, например 50 000.";
   return (
     <div className="prefs">
       <p className="field-hint">
@@ -75,11 +83,11 @@ export function PreferencesSection({ prefs, onChange, amountKopecks }: { prefs: 
         />
       </Field>
       <div className="form-grid">
-        <Field label="Комфортный платёж в месяц, до" htmlFor="pref-payment" hint="Банк не предложит вариант с платежом выше">
-          <MoneyInput id="pref-payment" value={prefs.max_payment_kopecks ?? undefined} onChange={(v) => set({ max_payment_kopecks: v ?? undefined })} />
+        <Field label="Комфортный платёж в месяц, до" htmlFor="pref-payment" hint="Банк не предложит вариант с платежом выше" error={invalid.payment ? invalidText : undefined}>
+          <MoneyInput id="pref-payment" value={prefs.max_payment_kopecks ?? undefined} invalid={invalid.payment} onChange={amountField("payment", "max_payment_kopecks")} />
         </Field>
-        <Field label="Минимальная сумма, которая решит задачу" htmlFor="pref-min" hint="Без неё банк не станет уменьшать сумму">
-          <MoneyInput id="pref-min" value={prefs.minimum_useful_amount_kopecks ?? undefined} onChange={(v) => set({ minimum_useful_amount_kopecks: v ?? undefined })} />
+        <Field label="Минимальная сумма, которая решит задачу" htmlFor="pref-min" hint="Без неё банк не станет уменьшать сумму" error={invalid.min ? invalidText : undefined}>
+          <MoneyInput id="pref-min" value={prefs.minimum_useful_amount_kopecks ?? undefined} invalid={invalid.min} onChange={amountField("min", "minimum_useful_amount_kopecks")} />
         </Field>
         <Field label="Срок не больше, месяцев" htmlFor="pref-term">
           <input
