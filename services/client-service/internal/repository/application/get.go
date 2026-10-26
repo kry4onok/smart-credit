@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 	"github.com/google/uuid"
@@ -15,7 +18,7 @@ import (
 
 func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (model.Application, error) {
 	var application model.Application
-	var companySnapshot []byte
+	var companySnapshot, productRaw, planRaw []byte
 	var amount *int64
 	var termMonths *int
 	var purpose *string
@@ -26,13 +29,13 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 		       requested_amount_kopecks, requested_term_months, purpose_tag,
 		       status, stage_label, next_action, pending_action, public_reason,
 		       version, created_at, updated_at,
-		       EXISTS (SELECT 1 FROM timeline_entries WHERE application_id = applications.id AND action = 'SIGN')
+		       EXISTS (SELECT 1 FROM timeline_entries WHERE application_id = applications.id AND action = 'SIGN'), product_snapshot, requirements_reference_date, bank_requirements_plan
 		FROM applications
 		WHERE id = $1 AND org_id = $2`, applicationID, orgID).Scan(
 		&application.ID, &application.ProductID, &application.ProductVersion, &companySnapshot,
 		&amount, &termMonths, &purpose, &application.Status, &application.StageLabel,
 		&application.NextAction, &application.PendingAction, &application.PublicReason,
-		&application.Version, &application.CreatedAt, &application.UpdatedAt, &hasSignature,
+		&application.Version, &application.CreatedAt, &application.UpdatedAt, &hasSignature, &productRaw, &application.RequirementsReferenceDate, &planRaw,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Application{}, domain.ErrApplicationNotFound
@@ -64,6 +67,25 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 	if err != nil {
 		return model.Application{}, err
 	}
+	if len(planRaw) > 0 {
+		application.RequirementsPlan = &commonpb.RequirementsPlan{}
+		if err := protojson.Unmarshal(planRaw, application.RequirementsPlan); err != nil {
+			return model.Application{}, fmt.Errorf("decode bank plan: %w", err)
+		}
+	}
+	if application.Status == "DRAFT" {
+		var product productSnapshotJSON
+		if err := json.Unmarshal(productRaw, &product); err != nil {
+			return model.Application{}, err
+		}
+		application.RequirementsPlan, err = buildPlan(application.Company, product, application.Form, application.Documents, application.RequirementsReferenceDate)
+		if err != nil {
+			return model.Application{}, err
+		}
+	}
+	if application.RequirementsPlan != nil && application.Status != "DRAFT" {
+		application.RequirementsPlan.CanSubmit = false
+	}
 	application.AllowedActions = allowedActions(application.Status, application.PendingAction, hasSignature)
 	return application, nil
 }
@@ -73,25 +95,16 @@ func decodeCompanySnapshot(raw []byte, company *model.Company) error {
 	if err := json.Unmarshal(raw, &snapshot); err != nil {
 		return err
 	}
-	registeredAt, err := time.Parse("2006-01-02", snapshot.RegisteredAt)
-	if err != nil {
+	if _, err := time.Parse(time.DateOnly, snapshot.RegisteredAt); err != nil {
 		return err
 	}
-	*company = model.Company{
-		INN:                snapshot.INN,
-		Name:               snapshot.Name,
-		OKVED:              snapshot.OKVED,
-		RegisteredAt:       registeredAt,
-		Revenue12mKopecks:  snapshot.Revenue12m.AmountKopecks,
-		Profit12mKopecks:   snapshot.Profit12m.AmountKopecks,
-		ObligationsKopecks: snapshot.Obligations.AmountKopecks,
-	}
+	*company = snapshotCompany(snapshot)
 	return nil
 }
 
 func (r *Repository) documents(ctx context.Context, applicationID uuid.UUID) ([]model.ApplicationDocument, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at
+		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at, requirement_id, coverage_from, coverage_to
 		FROM application_documents
 		WHERE application_id = $1
 		ORDER BY uploaded_at, id`, applicationID)
@@ -104,7 +117,7 @@ func (r *Repository) documents(ctx context.Context, applicationID uuid.UUID) ([]
 	for rows.Next() {
 		var document model.ApplicationDocument
 		if err := rows.Scan(&document.ID, &document.DocumentType, &document.FileName,
-			&document.Sha256, &document.IsMock, &document.UploadedAt); err != nil {
+			&document.Sha256, &document.IsMock, &document.UploadedAt, &document.RequirementID, &document.CoverageFrom, &document.CoverageTo); err != nil {
 			return nil, fmt.Errorf("scan application document: %w", err)
 		}
 		documents = append(documents, document)
@@ -118,13 +131,13 @@ func (r *Repository) documents(ctx context.Context, applicationID uuid.UUID) ([]
 func (r *Repository) infoRequest(ctx context.Context, applicationID uuid.UUID) (*model.ApplicationInfoRequest, error) {
 	var request model.ApplicationInfoRequest
 	err := r.db.QueryRow(ctx, `
-		SELECT id, message, required_fields, required_document_types, created_at
+		SELECT id, message, required_fields, required_document_types, created_at, requirements
 		FROM info_requests
 		WHERE application_id = $1 AND is_active
 		ORDER BY created_at DESC, id DESC
 		LIMIT 1`, applicationID).Scan(
 		&request.ID, &request.Message, &request.RequiredFields,
-		&request.RequiredDocumentTypes, &request.CreatedAt,
+		&request.RequiredDocumentTypes, &request.CreatedAt, &request.Requirements,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

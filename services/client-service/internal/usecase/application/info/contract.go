@@ -24,6 +24,9 @@ func (u *UseCase) Execute(ctx context.Context, params model.ProvideInfoParams) (
 	}
 	if params.Company != nil {
 		if err := domain.ValidateCompany(*params.Company); err != nil {
+			if params.Company.ProfileSchemaVersion != nil {
+				return model.ActionAccepted{}, err
+			}
 			return model.ActionAccepted{}, domain.ErrInvalidInfoResponse
 		}
 	}

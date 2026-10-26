@@ -16,13 +16,13 @@ func (r *Repository) Get(ctx context.Context, id uuid.UUID) (model.Product, erro
 	err := r.db.QueryRow(ctx, `
 		SELECT id, version, code, name, description, purpose_tags,
 		       min_amount_kopecks, max_amount_kopecks, min_term_months,
-		       max_term_months, indicative_rate_bps, required_document_types
+		       max_term_months, indicative_rate_bps, required_document_types, requirements_policy_version
 		FROM products
 		WHERE id = $1`, id).Scan(
 		&item.ID, &item.Version, &item.Code, &item.Name, &item.Description,
 		&item.PurposeTags, &item.MinAmountKopecks, &item.MaxAmountKopecks,
 		&item.MinTermMonths, &item.MaxTermMonths, &item.IndicativeRateBps,
-		&item.RequiredDocumentTypes,
+		&item.RequiredDocumentTypes, &item.RequirementsPolicyVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Product{}, domain.ErrProductNotFound

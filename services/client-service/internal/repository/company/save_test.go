@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	profileconv "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 	"github.com/google/uuid"
@@ -67,7 +69,7 @@ func TestUpdateCompanyUsesExpectedVersion(t *testing.T) {
 }
 
 func testCompany() model.Company {
-	return model.Company{INN: "7707083893", Name: "Демо", OKVED: "62.01", RegisteredAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC), Revenue12mKopecks: 100, Profit12mKopecks: -10, ObligationsKopecks: 20}
+	return model.Company{INN: "7707083893", Name: "Демо", OKVED: "62.01", RegisteredAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC), Revenue12mKopecks: profileconv.Ptr(int64(100)), Profit12mKopecks: profileconv.Ptr(int64(-10)), ObligationsKopecks: profileconv.Ptr(int64(20))}
 }
 
 func fillCompany(dest []any, profile model.Company, version int64) {
@@ -75,8 +77,8 @@ func fillCompany(dest []any, profile model.Company, version int64) {
 	*dest[1].(*string) = profile.Name
 	*dest[2].(*string) = profile.OKVED
 	*dest[3].(*time.Time) = profile.RegisteredAt
-	*dest[4].(*int64) = profile.Revenue12mKopecks
-	*dest[5].(*int64) = profile.Profit12mKopecks
-	*dest[6].(*int64) = profile.ObligationsKopecks
+	*dest[4].(**int64) = profile.Revenue12mKopecks
+	*dest[5].(**int64) = profile.Profit12mKopecks
+	*dest[6].(**int64) = profile.ObligationsKopecks
 	*dest[7].(*int64) = version
 }

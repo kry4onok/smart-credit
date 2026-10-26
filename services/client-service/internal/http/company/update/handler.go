@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	profileconv "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/compat"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
@@ -24,11 +26,11 @@ func (h *Handler) Handle(ctx context.Context, request generated.UpdateCompanyReq
 		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_COMPANY_PROFILE", "Профиль компании заполнен некорректно.")}, nil
 	}
 	profile := *request.Body
-	if code, detail := compat.LegacyProfileProblem(profile); code != "" {
-		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, code, detail)}, nil
+	if profile.ProfileSchemaVersion == nil && (profile.Revenue12m == nil || profile.Profit12m == nil || profile.Obligations == nil) {
+		return problemResponse{domainerror.Problem(ctx, 422, "INVALID_COMPANY_PROFILE", "Укажите финансовые показатели старого профиля.")}, nil
 	}
-	if profile.Revenue12m.Currency != common.MoneyCurrencyRUB || profile.Profit12m.Currency != common.SignedMoneyCurrencyRUB || profile.Obligations.Currency != common.MoneyCurrencyRUB {
-		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_COMPANY_PROFILE", "Профиль компании заполнен некорректно.")}, nil
+	if !profileconv.ValidCurrencies(profile) {
+		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_COMPANY_PROFILE", "Валюта должна быть RUB.")}, nil
 	}
 	expectedVersion, err := parseIfMatch(request.Params.IfMatch)
 	if err != nil {

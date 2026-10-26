@@ -16,6 +16,8 @@ on:
       - "go.mod"
       - "go.sum"
       - "pkg/api/**"
+      - "pkg/requirements/**"
+      - "seed/profile-requirements/**"
       - "proto/**"
       - "services/client-service/**"
   pull_request:
@@ -32,6 +34,8 @@ on:
       - "go.mod"
       - "go.sum"
       - "pkg/api/**"
+      - "pkg/requirements/**"
+      - "seed/profile-requirements/**"
       - "proto/**"
       - "services/client-service/**"
 

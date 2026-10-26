@@ -3,7 +3,10 @@ package document
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
@@ -57,5 +60,17 @@ func TestExecuteRejectsInvalidDocument(t *testing.T) {
 				t.Fatalf("error = %v, called = %v", err, repository.called)
 			}
 		})
+	}
+}
+
+func TestDocumentVocabularyMatchesContract(t *testing.T) {
+	for number, name := range commonpb.DocumentType_name {
+		if number == 0 {
+			continue
+		}
+		value := strings.TrimPrefix(name, "DOCUMENT_TYPE_")
+		if !validDocumentType(value) {
+			t.Errorf("contract document type rejected: %s", value)
+		}
 	}
 }

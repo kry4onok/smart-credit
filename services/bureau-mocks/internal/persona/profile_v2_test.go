@@ -9,6 +9,10 @@ import (
 )
 
 func TestProfileFixturesResolveInBureau(t *testing.T) {
+	links, err := profilefixtures.LoadPersonas()
+	if err != nil {
+		t.Fatal(err)
+	}
 	data, err := profilefixtures.Load()
 	if err != nil {
 		t.Fatal(err)
@@ -16,6 +20,11 @@ func TestProfileFixturesResolveInBureau(t *testing.T) {
 	catalog, err := Load(filepath.Join("..", "..", "..", "..", "seed", "personas.yaml"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, link := range links.Personas {
+		if _, ok := catalog.Lookup(link.BureauINN); !ok {
+			t.Fatalf("missing registry persona %s", link.ScenarioID)
+		}
 	}
 	for _, item := range data.Cases {
 		scenario, ok := catalog.Lookup(item.Profile.Inn)

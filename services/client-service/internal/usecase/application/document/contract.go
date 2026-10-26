@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
 	"github.com/google/uuid"
@@ -23,6 +25,11 @@ func (u *Usecase) Execute(ctx context.Context, params model.AddApplicationDocume
 	}
 	if !validDocumentType(params.DocumentType) || strings.TrimSpace(params.FileName) == "" || len(params.Content) == 0 || len(params.Content) > MaxDocumentSize {
 		return model.ApplicationDocument{}, domain.ErrInvalidDocumentUpload
+	}
+	if params.RequirementID != nil || params.CoverageFrom != nil || params.CoverageTo != nil {
+		if params.RequirementID == nil || strings.TrimSpace(*params.RequirementID) == "" || len(*params.RequirementID) > 512 || params.CoverageFrom == nil || params.CoverageTo == nil || params.CoverageFrom.After(*params.CoverageTo) {
+			return model.ApplicationDocument{}, &requirements.RuleError{Code: requirements.InvalidDocumentCoverage}
+		}
 	}
 	if err := validateFile(params.FileName, params.Content); err != nil {
 		return model.ApplicationDocument{}, err

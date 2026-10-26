@@ -15,7 +15,7 @@ func CanCancelApplication(status string, pendingAction *string, hasSignature boo
 }
 
 func ValidateApplicationPatch(patch model.ApplicationPatch) error {
-	if patch.AmountKopecks == nil && patch.TermMonths == nil && patch.Purpose == nil {
+	if patch.AmountKopecks == nil && patch.TermMonths == nil && patch.Purpose == nil && patch.Company == nil {
 		return ErrInvalidApplicationPatch
 	}
 	if patch.AmountKopecks != nil && (patch.AmountCurrency != "RUB" || *patch.AmountKopecks < 1 || *patch.AmountKopecks > maxSafeInteger) {

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	profileconv "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,9 +36,9 @@ func TestFetchScopesQueryAndMapsMissingProfile(t *testing.T) {
 					*dest[1].(*string) = "Company"
 					*dest[2].(*string) = "62.01"
 					*dest[3].(*time.Time) = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-					*dest[4].(*int64) = 100
-					*dest[5].(*int64) = -50
-					*dest[6].(*int64) = 20
+					*dest[4].(**int64) = profileconv.Ptr(int64(100))
+					*dest[5].(**int64) = profileconv.Ptr(int64(-50))
+					*dest[6].(**int64) = profileconv.Ptr(int64(20))
 					*dest[7].(*int64) = 3
 					return nil
 				}}
@@ -45,7 +47,7 @@ func TestFetchScopesQueryAndMapsMissingProfile(t *testing.T) {
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("err = %v", err)
 			}
-			if err == nil && (result.Version != 3 || result.Profit12mKopecks != -50) {
+			if err == nil && (result.Version != 3 || (result.Profit12mKopecks == nil || *result.Profit12mKopecks != -50)) {
 				t.Fatalf("company = %+v", result)
 			}
 		})

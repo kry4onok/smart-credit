@@ -23,7 +23,7 @@ func (r *Repository) List(ctx context.Context, purpose *string) (model.ProductCa
 	rows, err := r.db.Query(ctx, `
 		SELECT id, version, code, name, description, purpose_tags,
 		       min_amount_kopecks, max_amount_kopecks, min_term_months,
-		       max_term_months, indicative_rate_bps, required_document_types
+		       max_term_months, indicative_rate_bps, required_document_types, requirements_policy_version
 		FROM products
 		WHERE ($1::text IS NULL OR $1 = ANY(purpose_tags))
 		ORDER BY code, id`, purposeArg)
@@ -39,7 +39,7 @@ func (r *Repository) List(ctx context.Context, purpose *string) (model.ProductCa
 			&item.ID, &item.Version, &item.Code, &item.Name, &item.Description,
 			&item.PurposeTags, &item.MinAmountKopecks, &item.MaxAmountKopecks,
 			&item.MinTermMonths, &item.MaxTermMonths, &item.IndicativeRateBps,
-			&item.RequiredDocumentTypes,
+			&item.RequiredDocumentTypes, &item.RequirementsPolicyVersion,
 		); err != nil {
 			return model.ProductCatalog{}, fmt.Errorf("scan product: %w", err)
 		}

@@ -10,6 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
@@ -22,9 +26,17 @@ const documentIdempotencyRoutePrefix = "POST /client/applications/"
 func (r *Repository) AddDocument(ctx context.Context, params model.AddApplicationDocumentParams) (model.ApplicationDocument, error) {
 	contentHash := sha256.Sum256(params.Content)
 	idempotencyRoute := documentIdempotencyRoutePrefix + params.ApplicationID.String() + "/documents"
-	requestHash := sha256.Sum256([]byte(strings.Join([]string{
+	hashParts := []string{
 		params.ApplicationID.String(), params.DocumentType, params.FileName, hex.EncodeToString(contentHash[:]),
-	}, ":")))
+	}
+	if params.RequirementID != nil || params.CoverageFrom != nil || params.CoverageTo != nil {
+		hashParts = append(hashParts, valueOrEmpty(params.RequirementID), referenceDateString(params.CoverageFrom), referenceDateString(params.CoverageTo))
+	}
+	requestJSON, _ := json.Marshal(hashParts)
+	requestHash := sha256.Sum256(requestJSON)
+	if params.RequirementID == nil && params.CoverageFrom == nil && params.CoverageTo == nil {
+		requestHash = sha256.Sum256([]byte(strings.Join(hashParts, ":")))
+	}
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -68,6 +80,13 @@ func (r *Repository) AddDocument(ctx context.Context, params model.AddApplicatio
 	}
 
 	var status string
+	var pending *string
+	var companyRaw, productRaw []byte
+	var ref *time.Time
+	var amount *int64
+	var term *int
+	var purpose *string
+	var requested []*commonpb.Requirement
 	var productDocumentTypes []string
 	var infoDocumentTypes []string
 	err = tx.QueryRow(ctx, `
@@ -81,21 +100,60 @@ func (r *Repository) AddDocument(ctx context.Context, params model.AddApplicatio
 			       WHERE ir.application_id = a.id AND ir.is_active
 			       ORDER BY ir.created_at DESC, ir.id DESC
 			       LIMIT 1
-		       ), '{}'::text[])
-		FROM applications a
+		       ), '{}'::text[]), a.pending_action,a.company_snapshot,a.product_snapshot,a.requirements_reference_date,a.requested_amount_kopecks,a.requested_term_months,a.purpose_tag,
+ COALESCE((SELECT ir.requirements FROM info_requests ir WHERE ir.application_id=a.id AND ir.is_active LIMIT 1),'[]'::jsonb)
+ FROM applications a
 		WHERE a.id = $1 AND a.org_id = $2
-		FOR UPDATE`, params.ApplicationID, params.OrgID).Scan(&status, &productDocumentTypes, &infoDocumentTypes)
+		FOR UPDATE`, params.ApplicationID, params.OrgID).Scan(&status, &productDocumentTypes, &infoDocumentTypes, &pending, &companyRaw, &productRaw, &ref, &amount, &term, &purpose, &requested)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.ApplicationDocument{}, domain.ErrApplicationNotFound
 	}
 	if err != nil {
 		return model.ApplicationDocument{}, fmt.Errorf("load application for document upload: %w", err)
 	}
-	if status != "DRAFT" && status != "NEEDS_INFO" {
+	if pending != nil || (status != "DRAFT" && status != "NEEDS_INFO") {
 		return model.ApplicationDocument{}, domain.ErrApplicationDocumentState
 	}
-	if !contains(productDocumentTypes, params.DocumentType) && !contains(infoDocumentTypes, params.DocumentType) {
-		return model.ApplicationDocument{}, domain.ErrApplicationDocumentType
+	var product productSnapshotJSON
+	if err := json.Unmarshal(productRaw, &product); err != nil {
+		return model.ApplicationDocument{}, err
+	}
+	if product.RequirementsPolicyVersion != nil {
+		if params.RequirementID == nil || params.CoverageFrom == nil || params.CoverageTo == nil || params.CoverageFrom.After(*params.CoverageTo) {
+			return model.ApplicationDocument{}, &requirements.RuleError{Code: requirements.InvalidDocumentCoverage}
+		}
+		if status == "DRAFT" {
+			var company model.Company
+			if err := decodeCompanySnapshot(companyRaw, &company); err != nil {
+				return model.ApplicationDocument{}, err
+			}
+			plan, err := buildPlan(company, product, &model.ApplicationForm{AmountKopecks: valueOrZero(amount), TermMonths: valueOrZero(term), Purpose: valueOrEmpty(purpose)}, nil, ref)
+			if err != nil {
+				return model.ApplicationDocument{}, err
+			}
+			requested = plan.GetItems()
+		}
+		var requirement *commonpb.Requirement
+		for _, item := range requested {
+			if item.GetId() == *params.RequirementID {
+				requirement = item
+				break
+			}
+		}
+		if requirement == nil || requirement.GetKind() != commonpb.RequirementKind_REQUIREMENT_KIND_DOCUMENT {
+			return model.ApplicationDocument{}, &requirements.RuleError{Code: requirements.UnknownRequirement}
+		}
+		candidate := &commonpb.DocumentMetadata{DocumentId: "candidate", RequirementId: *params.RequirementID, DocumentType: commonpb.DocumentType(commonpb.DocumentType_value["DOCUMENT_TYPE_"+params.DocumentType]), CoveragePeriod: coverageProto(params.CoverageFrom, params.CoverageTo)}
+		if len(requirements.MatchDocuments(requirement, []*commonpb.DocumentMetadata{candidate})) == 0 {
+			return model.ApplicationDocument{}, &requirements.RuleError{Code: requirements.InvalidDocumentCoverage}
+		}
+	} else {
+		if params.RequirementID != nil || params.CoverageFrom != nil || params.CoverageTo != nil {
+			return model.ApplicationDocument{}, &requirements.RuleError{Code: requirements.UnknownRequirement}
+		}
+		if !contains(productDocumentTypes, params.DocumentType) && !contains(infoDocumentTypes, params.DocumentType) {
+			return model.ApplicationDocument{}, domain.ErrApplicationDocumentType
+		}
 	}
 
 	documentID := uuid.New()
@@ -114,15 +172,15 @@ func (r *Repository) AddDocument(ctx context.Context, params model.AddApplicatio
 	document := model.ApplicationDocument{
 		ID: documentID, DocumentType: params.DocumentType, FileName: params.FileName,
 		Sha256: hex.EncodeToString(contentHash[:]), IsMock: true, StorageKey: storageKey,
-		SizeBytes: int64(len(params.Content)),
+		SizeBytes: int64(len(params.Content)), RequirementID: params.RequirementID, CoverageFrom: params.CoverageFrom, CoverageTo: params.CoverageTo,
 	}
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO application_documents (
 			id, application_id, document_type, file_name, storage_key,
-			size_bytes, sha256, is_mock, uploaded_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8)
+			size_bytes, sha256, is_mock, uploaded_by, requirement_id, coverage_from, coverage_to
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11)
 		RETURNING uploaded_at`, document.ID, params.ApplicationID, document.DocumentType,
-		document.FileName, document.StorageKey, document.SizeBytes, document.Sha256, params.UserID).Scan(&document.UploadedAt); err != nil {
+		document.FileName, document.StorageKey, document.SizeBytes, document.Sha256, params.UserID, document.RequirementID, document.CoverageFrom, document.CoverageTo).Scan(&document.UploadedAt); err != nil {
 		return model.ApplicationDocument{}, fmt.Errorf("save document metadata: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `

@@ -7,6 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
@@ -64,11 +68,14 @@ func (r *Repository) Create(ctx context.Context, params model.CreateApplicationP
 	if err != nil {
 		return model.Application{}, err
 	}
+	if product.RequirementsPolicyVersion != nil && (*product.RequirementsPolicyVersion != "sme-profile-v1" || company.ProfileSchemaVersion == nil || *company.ProfileSchemaVersion != 2) {
+		return model.Application{}, &requirements.RuleError{Code: requirements.InvalidProfile, Issues: []requirements.Issue{{Path: "company.profile_schema_version", Code: requirements.InvalidProfile, Message: "Продукт требует профиль v2 и поддержанную политику"}}}
+	}
 	companySnapshot, err := json.Marshal(companySnapshot(company))
 	if err != nil {
 		return model.Application{}, fmt.Errorf("encode company snapshot: %w", err)
 	}
-	productSnapshot, err := json.Marshal(productSnapshot(product))
+	productSnapshotRaw, err := json.Marshal(productSnapshot(product))
 	if err != nil {
 		return model.Application{}, fmt.Errorf("encode product snapshot: %w", err)
 	}
@@ -78,20 +85,26 @@ func (r *Repository) Create(ctx context.Context, params model.CreateApplicationP
 	err = tx.QueryRow(ctx, `
 		INSERT INTO applications (
 			id, org_id, client_user_id, product_id, product_version,
-			product_snapshot, company_snapshot, status, stage_label, next_action, version
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'DRAFT', 'Черновик', 'Заполните заявку', 1)
+			product_snapshot, company_snapshot, status, stage_label, next_action, version, requirements_reference_date
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'DRAFT', 'Черновик', 'Заполните заявку', 1, CASE WHEN $8::boolean THEN (now() AT TIME ZONE 'UTC')::date ELSE NULL END)
 		RETURNING id, product_id, product_version, status, stage_label,
-		          next_action, version, created_at, updated_at`,
+		          next_action, version, created_at, updated_at, requirements_reference_date`,
 		applicationID, params.OrgID, params.UserID, product.ID, product.Version,
-		productSnapshot, companySnapshot).Scan(
+		productSnapshotRaw, companySnapshot, product.RequirementsPolicyVersion != nil).Scan(
 		&application.ID, &application.ProductID, &application.ProductVersion,
 		&application.Status, &application.StageLabel, &application.NextAction,
-		&application.Version, &application.CreatedAt, &application.UpdatedAt,
+		&application.Version, &application.CreatedAt, &application.UpdatedAt, &application.RequirementsReferenceDate,
 	)
 	if err != nil {
 		return model.Application{}, fmt.Errorf("create application: %w", err)
 	}
 	application.Company = company
+	if product.RequirementsPolicyVersion != nil {
+		application.RequirementsPlan, err = buildPlan(company, productSnapshot(product), nil, nil, application.RequirementsReferenceDate)
+		if err != nil {
+			return model.Application{}, err
+		}
+	}
 	application.AllowedActions = []string{"EDIT_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT"}
 
 	if _, err := tx.Exec(ctx, `
@@ -123,11 +136,12 @@ func fetchCompany(ctx context.Context, tx Tx, orgID uuid.UUID) (model.Company, e
 	var company model.Company
 	err := tx.QueryRow(ctx, `
 		SELECT inn, name, okved, registered_at, revenue_12m_kopecks,
-		       profit_12m_kopecks, obligations_kopecks, version
+		       profit_12m_kopecks, obligations_kopecks, version, profile_schema_version, legal_form, tax_periods, financial_period, financial_basis, obligations_as_of
 		FROM companies WHERE org_id = $1`, orgID).Scan(
 		&company.INN, &company.Name, &company.OKVED, &company.RegisteredAt,
 		&company.Revenue12mKopecks, &company.Profit12mKopecks,
 		&company.ObligationsKopecks, &company.Version,
+		&company.ProfileSchemaVersion, &company.LegalForm, &company.TaxPeriods, &company.FinancialPeriod, &company.FinancialBasis, &company.ObligationsAsOf,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Company{}, domain.ErrCompanyNotFound
@@ -143,12 +157,12 @@ func fetchProduct(ctx context.Context, tx Tx, id uuid.UUID) (model.Product, erro
 	err := tx.QueryRow(ctx, `
 		SELECT id, version, code, name, description, purpose_tags,
 		       min_amount_kopecks, max_amount_kopecks, min_term_months,
-		       max_term_months, indicative_rate_bps, required_document_types
+		       max_term_months, indicative_rate_bps, required_document_types, requirements_policy_version
 		FROM products WHERE id = $1`, id).Scan(
 		&product.ID, &product.Version, &product.Code, &product.Name, &product.Description,
 		&product.PurposeTags, &product.MinAmountKopecks, &product.MaxAmountKopecks,
 		&product.MinTermMonths, &product.MaxTermMonths, &product.IndicativeRateBps,
-		&product.RequiredDocumentTypes,
+		&product.RequiredDocumentTypes, &product.RequirementsPolicyVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Product{}, domain.ErrProductNotFound
@@ -165,43 +179,60 @@ type moneySnapshot struct {
 }
 
 type companySnapshotJSON struct {
-	INN          string        `json:"inn"`
-	Name         string        `json:"name"`
-	OKVED        string        `json:"okved"`
-	RegisteredAt string        `json:"registered_at"`
-	Revenue12m   moneySnapshot `json:"revenue_12m"`
-	Profit12m    moneySnapshot `json:"profit_12m"`
-	Obligations  moneySnapshot `json:"obligations"`
+	model.ProfileDetails
+	INN          string         `json:"inn"`
+	Name         string         `json:"name"`
+	OKVED        string         `json:"okved"`
+	RegisteredAt string         `json:"registered_at"`
+	Revenue12m   *moneySnapshot `json:"revenue_12m,omitempty"`
+	Profit12m    *moneySnapshot `json:"profit_12m,omitempty"`
+	Obligations  *moneySnapshot `json:"obligations,omitempty"`
 }
 
 func companySnapshot(value model.Company) companySnapshotJSON {
-	return companySnapshotJSON{
-		INN: value.INN, Name: value.Name, OKVED: value.OKVED,
-		RegisteredAt: value.RegisteredAt.Format("2006-01-02"),
-		Revenue12m:   moneySnapshot{AmountKopecks: value.Revenue12mKopecks, Currency: "RUB"},
-		Profit12m:    moneySnapshot{AmountKopecks: value.Profit12mKopecks, Currency: "RUB"},
-		Obligations:  moneySnapshot{AmountKopecks: value.ObligationsKopecks, Currency: "RUB"},
+	return companySnapshotJSON{ProfileDetails: value.ProfileDetails, INN: value.INN, Name: value.Name, OKVED: value.OKVED, RegisteredAt: value.RegisteredAt.Format(time.DateOnly), Revenue12m: optionalMoney(value.Revenue12mKopecks), Profit12m: optionalMoney(value.Profit12mKopecks), Obligations: optionalMoney(value.ObligationsKopecks)}
+}
+func optionalMoney(v *int64) *moneySnapshot {
+	if v == nil {
+		return nil
 	}
+	return &moneySnapshot{AmountKopecks: *v, Currency: "RUB"}
+}
+func snapshotCompany(v companySnapshotJSON) model.Company {
+	registered, _ := time.Parse(time.DateOnly, v.RegisteredAt)
+	c := model.Company{ProfileDetails: v.ProfileDetails, INN: v.INN, Name: v.Name, OKVED: v.OKVED, RegisteredAt: registered}
+	if v.Revenue12m != nil {
+		c.Revenue12mKopecks = profile.Ptr(v.Revenue12m.AmountKopecks)
+	}
+	if v.Profit12m != nil {
+		c.Profit12mKopecks = profile.Ptr(v.Profit12m.AmountKopecks)
+	}
+	if v.Obligations != nil {
+		c.ObligationsKopecks = profile.Ptr(v.Obligations.AmountKopecks)
+	}
+	return c
 }
 
 type productSnapshotJSON struct {
-	ID                    uuid.UUID     `json:"id"`
-	Version               int64         `json:"version"`
-	Code                  string        `json:"code"`
-	Name                  string        `json:"name"`
-	Description           string        `json:"description"`
-	PurposeTags           []string      `json:"purpose_tags"`
-	MinAmount             moneySnapshot `json:"min_amount"`
-	MaxAmount             moneySnapshot `json:"max_amount"`
-	MinTermMonths         int           `json:"min_term_months"`
-	MaxTermMonths         int           `json:"max_term_months"`
-	IndicativeRateBps     *int          `json:"indicative_rate_bps,omitempty"`
-	RequiredDocumentTypes []string      `json:"required_document_types"`
+	RequirementsPolicyVersion *string       `json:"requirements_policy_version,omitempty"`
+	ID                        uuid.UUID     `json:"id"`
+	Version                   int64         `json:"version"`
+	Code                      string        `json:"code"`
+	Name                      string        `json:"name"`
+	Description               string        `json:"description"`
+	PurposeTags               []string      `json:"purpose_tags"`
+	MinAmount                 moneySnapshot `json:"min_amount"`
+	MaxAmount                 moneySnapshot `json:"max_amount"`
+	MinTermMonths             int           `json:"min_term_months"`
+	MaxTermMonths             int           `json:"max_term_months"`
+	IndicativeRateBps         *int          `json:"indicative_rate_bps,omitempty"`
+	RequiredDocumentTypes     []string      `json:"required_document_types"`
 }
 
 func productSnapshot(value model.Product) productSnapshotJSON {
 	return productSnapshotJSON{
-		ID: value.ID, Version: value.Version, Code: value.Code, Name: value.Name,
+		RequirementsPolicyVersion: value.RequirementsPolicyVersion,
+		ID:                        value.ID, Version: value.Version, Code: value.Code, Name: value.Name,
 		Description: value.Description, PurposeTags: value.PurposeTags,
 		MinAmount:     moneySnapshot{AmountKopecks: value.MinAmountKopecks, Currency: "RUB"},
 		MaxAmount:     moneySnapshot{AmountKopecks: value.MaxAmountKopecks, Currency: "RUB"},

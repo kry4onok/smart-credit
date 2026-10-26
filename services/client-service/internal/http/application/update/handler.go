@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
@@ -26,10 +28,14 @@ func (h *Handler) Handle(ctx context.Context, request generated.UpdateApplicatio
 	if request.Body == nil {
 		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION_FORM", "Форма заявки заполнена некорректно.")}, nil
 	}
-	if request.Body.Company != nil {
-		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "PROFILE_V2_NOT_ENABLED", "Обновление профиля в черновике будет доступно после подключения этапа 1.")}, nil
-	}
 	patch := model.ApplicationPatch{TermMonths: request.Body.TermMonths}
+	if request.Body.Company != nil {
+		if !profile.ValidCurrencies(*request.Body.Company) {
+			return problemResponse{domainerror.Problem(ctx, 422, "INVALID_COMPANY_PROFILE", "Валюта должна быть RUB.")}, nil
+		}
+		c := profile.FromHTTP(*request.Body.Company)
+		patch.Company = &c
+	}
 	if request.Body.Purpose != nil {
 		purpose := string(*request.Body.Purpose)
 		patch.Purpose = &purpose

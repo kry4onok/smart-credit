@@ -4,23 +4,24 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
 )
 
 func ToResponse(value model.Application) generated.ClientApplication {
 	response := generated.ClientApplication{
-		Id:             common.Id(value.ID),
-		ProductId:      common.Id(value.ProductID),
-		ProductVersion: value.ProductVersion,
-		Company:        companyProfile(value.Company),
-		Status:         common.ClientStatus(value.Status),
-		StageLabel:     value.StageLabel,
-		NextAction:     value.NextAction,
-		AllowedActions: allowedActions(value.AllowedActions),
-		Documents:      documents(value.Documents),
-		CreatedAt:      value.CreatedAt,
-		UpdatedAt:      value.UpdatedAt,
-		Version:        value.Version,
+		Id:               common.Id(value.ID),
+		ProductId:        common.Id(value.ProductID),
+		ProductVersion:   value.ProductVersion,
+		Company:          companyProfile(value.Company),
+		RequirementsPlan: profile.PlanHTTP(value.RequirementsPlan),
+		Status:           common.ClientStatus(value.Status),
+		StageLabel:       value.StageLabel,
+		NextAction:       value.NextAction,
+		AllowedActions:   allowedActions(value.AllowedActions),
+		Documents:        documents(value.Documents),
+		CreatedAt:        value.CreatedAt,
+		UpdatedAt:        value.UpdatedAt,
+		Version:          value.Version,
 	}
 	if value.Form != nil {
 		response.Form = &generated.ApplicationForm{
@@ -45,15 +46,7 @@ func ToResponse(value model.Application) generated.ClientApplication {
 	return response
 }
 
-func companyProfile(value model.Company) common.CompanyProfile {
-	return common.CompanyProfile{
-		Inn: value.INN, Name: value.Name, Okved: value.OKVED,
-		RegisteredAt: openapi_types.Date{Time: value.RegisteredAt},
-		Revenue12m:   &common.Money{AmountKopecks: value.Revenue12mKopecks, Currency: common.MoneyCurrencyRUB},
-		Profit12m:    &common.SignedMoney{AmountKopecks: value.Profit12mKopecks, Currency: common.SignedMoneyCurrencyRUB},
-		Obligations:  &common.Money{AmountKopecks: value.ObligationsKopecks, Currency: common.MoneyCurrencyRUB},
-	}
-}
+func companyProfile(v model.Company) common.CompanyProfile { return profile.ToHTTP(v) }
 
 func allowedActions(values []string) []generated.ClientApplicationAllowedActions {
 	result := make([]generated.ClientApplicationAllowedActions, len(values))
@@ -67,12 +60,13 @@ func documents(values []model.ApplicationDocument) []common.DocumentMetadata {
 	result := make([]common.DocumentMetadata, len(values))
 	for i, value := range values {
 		result[i] = common.DocumentMetadata{
-			Id:           common.Id(value.ID),
-			DocumentType: common.DocumentType(value.DocumentType),
-			FileName:     value.FileName,
-			Sha256:       value.Sha256,
-			IsMock:       value.IsMock,
-			UploadedAt:   value.UploadedAt,
+			Id:            common.Id(value.ID),
+			DocumentType:  common.DocumentType(value.DocumentType),
+			FileName:      value.FileName,
+			Sha256:        value.Sha256,
+			IsMock:        value.IsMock,
+			UploadedAt:    value.UploadedAt,
+			RequirementId: value.RequirementID, CoveragePeriod: profile.CoverageHTTP(value.CoverageFrom, value.CoverageTo),
 		}
 	}
 	return result
@@ -93,6 +87,7 @@ func infoRequest(value *model.ApplicationInfoRequest) *common.InfoRequest {
 		RequiredFields:        fields,
 		RequiredDocumentTypes: documentTypes,
 		CreatedAt:             value.CreatedAt,
+		Requirements:          profile.RequirementsHTTP(value.Requirements),
 	}
 }
 

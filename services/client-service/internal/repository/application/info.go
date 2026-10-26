@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
+
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
@@ -20,6 +23,8 @@ import (
 const provideInfoRoutePrefix = "POST /client/applications/"
 
 type infoSnapshot struct {
+	requirements       []*commonpb.Requirement
+	referenceDate      *time.Time
 	status             string
 	pendingAction      *string
 	version            int64
@@ -79,11 +84,17 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		return model.ActionAccepted{}, err
 	}
 	if snapshot.status != "NEEDS_INFO" || snapshot.pendingAction != nil || snapshot.requestID != params.RequestID {
+		if snapshot.product.RequirementsPolicyVersion != nil {
+			return model.ActionAccepted{}, domain.ErrStaleInfoRequest
+		}
 		return model.ActionAccepted{}, domain.ErrApplicationInfoConflict
 	}
 
 	company := snapshot.company
 	if params.Company != nil {
+		if params.Company.INN != snapshot.company.INN {
+			return model.ActionAccepted{}, domain.ErrProfileIdentityImmutable
+		}
 		company = *params.Company
 	}
 	form := snapshot.form
@@ -98,15 +109,35 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 			form.Purpose = *params.Fields.Purpose
 		}
 	}
-	if err := validateInfoResponse(snapshot, params, company, form); err != nil {
+	var answered []string
+	if snapshot.product.RequirementsPolicyVersion != nil {
+		if len(snapshot.requirements) == 0 {
+			return model.ActionAccepted{}, domain.ErrStaleInfoRequest
+		}
+		if form.AmountKopecks < snapshot.product.MinAmount.AmountKopecks || form.AmountKopecks > snapshot.product.MaxAmount.AmountKopecks || form.TermMonths < snapshot.product.MinTermMonths || form.TermMonths > snapshot.product.MaxTermMonths || !contains(snapshot.product.PurposeTags, form.Purpose) {
+			return model.ActionAccepted{}, &requirements.RuleError{Code: requirements.RequirementsNotMet, Issues: []requirements.Issue{{Path: "form", Code: requirements.RequirementsNotMet, Message: "Сумма, срок и цель должны соответствовать продукту"}}}
+		}
+		plan, err := buildPlan(company, snapshot.product, &form, snapshot.documents, snapshot.referenceDate)
+		if err != nil {
+			return model.ActionAccepted{}, err
+		}
+		answered = answeredFields(snapshot.requirements, params)
+		if issues := requirements.ValidateResponse(snapshot.requirements, plan, answered); len(issues) > 0 {
+			return model.ActionAccepted{}, &requirements.RuleError{Code: issues[0].Code, Issues: issues}
+		}
+	} else if err := validateInfoResponse(snapshot, params, company, form); err != nil {
 		return model.ActionAccepted{}, err
 	}
+
 	companyJSON, err := json.Marshal(companySnapshot(company))
 	if err != nil {
 		return model.ActionAccepted{}, fmt.Errorf("encode company snapshot for info response: %w", err)
 	}
 
 	selectedDocuments, err := selectInfoDocuments(snapshot.documents, snapshot.requiredDocuments, params)
+	if snapshot.product.RequirementsPolicyVersion != nil && err == nil {
+		selectedDocuments = snapshot.documents
+	}
 	if err != nil {
 		return model.ActionAccepted{}, err
 	}
@@ -122,10 +153,11 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		OccurredAt:       timestamppb.New(now),
 		CorrelationId:    eventID.String(),
 		Payload: &eventspb.Event_InfoProvided{InfoProvided: &eventspb.InfoProvided{
-			RequestId: params.RequestID.String(),
-			Form:      formProto(form),
-			Documents: documentMetadataProto(selectedDocuments),
-			Company:   companyProto(companySnapshot(company)),
+			RequestId:              params.RequestID.String(),
+			AnsweredRequirementIds: answered,
+			Form:                   formProto(form),
+			Documents:              documentMetadataProto(selectedDocuments),
+			Company:                companyProto(companySnapshot(company)),
 		}},
 	}
 	payload, err := proto.Marshal(event)
@@ -195,31 +227,20 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 	var purpose *string
 	err := tx.QueryRow(ctx, `
 		SELECT status, pending_action, version, client_event_version, company_snapshot,
-		       product_snapshot, requested_amount_kopecks, requested_term_months, purpose_tag
+		       product_snapshot, requested_amount_kopecks, requested_term_months, purpose_tag, requirements_reference_date
 		FROM applications
 		WHERE id = $1 AND org_id = $2
 		FOR UPDATE`, applicationID, orgID).Scan(
 		&snapshot.status, &snapshot.pendingAction, &snapshot.version, &snapshot.clientEventVersion, &companyRaw,
-		&productRaw, &amount, &term, &purpose)
+		&productRaw, &amount, &term, &purpose, &snapshot.referenceDate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return infoSnapshot{}, domain.ErrApplicationNotFound
 	}
 	if err != nil {
 		return infoSnapshot{}, fmt.Errorf("load application for info response: %w", err)
 	}
-	var companySnapshotValue companySnapshotJSON
-	if err := json.Unmarshal(companyRaw, &companySnapshotValue); err != nil {
-		return infoSnapshot{}, fmt.Errorf("decode company snapshot for info response: %w", err)
-	}
-	registeredAt, err := time.Parse("2006-01-02", companySnapshotValue.RegisteredAt)
-	if err != nil {
-		return infoSnapshot{}, fmt.Errorf("parse company snapshot for info response: %w", err)
-	}
-	snapshot.company = model.Company{
-		INN: companySnapshotValue.INN, Name: companySnapshotValue.Name, OKVED: companySnapshotValue.OKVED,
-		RegisteredAt: registeredAt, Revenue12mKopecks: companySnapshotValue.Revenue12m.AmountKopecks,
-		Profit12mKopecks:   companySnapshotValue.Profit12m.AmountKopecks,
-		ObligationsKopecks: companySnapshotValue.Obligations.AmountKopecks,
+	if err := decodeCompanySnapshot(companyRaw, &snapshot.company); err != nil {
+		return infoSnapshot{}, err
 	}
 	if err := json.Unmarshal(productRaw, &snapshot.product); err != nil {
 		return infoSnapshot{}, fmt.Errorf("decode product snapshot for info response: %w", err)
@@ -229,12 +250,12 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 	}
 	snapshot.form = model.ApplicationForm{AmountKopecks: *amount, TermMonths: *term, Purpose: *purpose}
 	err = tx.QueryRow(ctx, `
-		SELECT id, required_fields, required_document_types
+		SELECT id, required_fields, required_document_types, requirements
 		FROM info_requests
 		WHERE application_id = $1 AND is_active
 		ORDER BY created_at DESC, id DESC
 		LIMIT 1
-		FOR UPDATE`, applicationID).Scan(&snapshot.requestID, &snapshot.requiredFields, &snapshot.requiredDocuments)
+		FOR UPDATE`, applicationID).Scan(&snapshot.requestID, &snapshot.requiredFields, &snapshot.requiredDocuments, &snapshot.requirements)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return infoSnapshot{}, domain.ErrApplicationInfoConflict
 	}
@@ -242,7 +263,7 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 		return infoSnapshot{}, fmt.Errorf("load active info request: %w", err)
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at
+		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at, requirement_id, coverage_from, coverage_to
 		FROM application_documents
 		WHERE application_id = $1
 		ORDER BY uploaded_at, id`, applicationID)
@@ -253,7 +274,7 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 	for rows.Next() {
 		var document model.ApplicationDocument
 		if err := rows.Scan(&document.ID, &document.DocumentType, &document.FileName,
-			&document.Sha256, &document.IsMock, &document.UploadedAt); err != nil {
+			&document.Sha256, &document.IsMock, &document.UploadedAt, &document.RequirementID, &document.CoverageFrom, &document.CoverageTo); err != nil {
 			return infoSnapshot{}, fmt.Errorf("scan document for info response: %w", err)
 		}
 		snapshot.documents = append(snapshot.documents, document)
@@ -371,4 +392,48 @@ func hasRequiredDocuments(documents []model.ApplicationDocument, required []stri
 		}
 	}
 	return true
+}
+
+func answeredFields(request []*commonpb.Requirement, params model.ProvideInfoParams) []string {
+	ids := []string{}
+	for _, r := range request {
+		if r.GetKind() != commonpb.RequirementKind_REQUIREMENT_KIND_FIELD {
+			continue
+		}
+		present := false
+		if c := params.Company; c != nil {
+			switch r.GetFieldPath() {
+			case "company.legal_form":
+				present = c.LegalForm != nil
+			case "company.tax_periods":
+				present = c.TaxPeriods != nil
+			case "company.revenue_12m":
+				present = c.Revenue12mKopecks != nil
+			case "company.profit_12m":
+				present = c.Profit12mKopecks != nil
+			case "company.obligations":
+				present = c.ObligationsKopecks != nil
+			case "company.financial_period":
+				present = c.FinancialPeriod != nil
+			case "company.financial_basis":
+				present = c.FinancialBasis != nil
+			case "company.obligations_as_of":
+				present = c.ObligationsAsOf != nil
+			}
+		}
+		if f := params.Fields; f != nil {
+			switch r.GetFieldPath() {
+			case "form.amount":
+				present = f.AmountKopecks != nil
+			case "form.term_months":
+				present = f.TermMonths != nil
+			case "form.purpose":
+				present = f.Purpose != nil
+			}
+		}
+		if present {
+			ids = append(ids, r.GetId())
+		}
+	}
+	return ids
 }
