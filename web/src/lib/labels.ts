@@ -1,18 +1,21 @@
 import type { BankStatus, ClientStatus, DocumentType, InfoField, PurposeTag, ScoreReason } from "../api/types";
 
 export const purposeLabel: Record<PurposeTag, string> = {
-  WORKING_CAPITAL: "Пополнить оборотные средства",
-  EQUIPMENT: "Купить оборудование",
-  EXPANSION: "Развить бизнес",
+  WORKING_CAPITAL: "Товар и текущие расходы",
+  EQUIPMENT: "Оборудование и транспорт",
+  EXPANSION: "Помещение и открытие новой точки",
   OTHER: "Несколько целей или другая цель",
 };
 
 export const purposeHint: Record<PurposeTag, string> = {
   WORKING_CAPITAL: "Закупка товара, зарплаты, аренда, кассовые разрывы",
-  EQUIPMENT: "Станки, транспорт, техника для работы",
-  EXPANSION: "Новая точка, направление или крупный проект",
-  OTHER: "Опишите, на что нужны деньги",
+  EQUIPMENT: "Станки, техника, транспорт для работы",
+  EXPANSION: "Аренда или ремонт помещения, новая точка, расширение",
+  OTHER: "Нужно на разное или на то, чего нет в списке — опишите своими словами",
 };
+
+// The four purposes in the order the client chooses from.
+export const purposeOrder: PurposeTag[] = ["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION", "OTHER"];
 
 export const documentLabel: Record<DocumentType, string> = {
   BANK_STATEMENT: "Выписка по расчётному счёту",
