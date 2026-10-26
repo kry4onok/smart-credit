@@ -1,6 +1,7 @@
 import type { components as Auth } from "./generated/auth";
 import type { components as Client } from "./generated/client";
 import type { components as Bank } from "./generated/bank";
+import type { components as Assessment } from "./generated/assessment";
 
 type C = Client["schemas"];
 type B = Bank["schemas"];
@@ -41,3 +42,30 @@ export type AnalystDecisionRequest = B["AnalystDecisionRequest"];
 export type AuditEntry = B["AuditEntry"];
 export type AuditPage = B["AuditPage"];
 export type CaseSummary = { text: string; source: "assistant" | "template" };
+
+type C2 = Client["schemas"];
+export type LegalForm = C2["LegalForm"];
+export type TaxRegime = C2["TaxRegime"];
+export type TaxPeriod = C2["TaxPeriod"];
+export type Requirement = C2["Requirement"];
+export type RequirementsPlan = C2["RequirementsPlan"];
+
+type A = Assessment["schemas"];
+export type AssessmentSubmission = A["Submission"];
+export type AssessmentPreferences = A["Preferences"];
+export type AssessmentInputEnvelope = A["AssessmentInputEnvelope"];
+export type ClientAssessment = A["ClientAssessment"];
+export type PublicResult = A["PublicResult"];
+export type BankAssessment = A["BankAssessment"];
+export type AssessmentResult = A["Result"];
+export type Candidate = A["Candidate"];
+export type CashMonth = A["CashMonth"];
+export type HistoricalCashMonth = A["HistoricalCashMonth"];
+export type FinancialSnapshot = A["FinancialSnapshot"];
+export type AssessmentFactor = A["Factor"];
+export type AssessmentIssue = A["Issue"];
+export type AssessmentChange = A["Change"];
+export type CheckSource = A["Source"];
+export type HelpContext = A["HelpContext"];
+export type HelpResponse = A["HelpResponse"];
+export type HelpSelectionRequest = A["SelectionRequest"];

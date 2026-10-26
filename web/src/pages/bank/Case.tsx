@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { bankApi } from "../../api/http";
+import { bankApi, isMock } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
-import type { AnalystDecisionRequest, AuditEntry, BankCase, CaseSummary, DocumentType, InfoField } from "../../api/types";
+import type { AnalystDecisionRequest, AuditEntry, BankCase, Candidate, CaseSummary, DocumentType, InfoField, Product } from "../../api/types";
 import { CompareBars, offerRows } from "../../components/Compare";
 import { MoneyInput } from "../../components/inputs";
+import { HelpPanel, analystModes } from "../../components/HelpPanel";
+import { BankAssessmentPanel, type OfferBasis } from "./AssessmentPanel";
 import { BankPipeline } from "../../components/Pipeline";
 import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useTitle } from "../../components/ui";
-import { date, dateTime, money, months, rate, shortId } from "../../lib/format";
+import { date, dateTime, money, months, rate, rub, shortId } from "../../lib/format";
 import {
   actorLabel,
   auditActionLabel,
@@ -30,6 +32,8 @@ export function CasePage() {
   const [kase, setCase] = useState<BankCase | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [auditKey, setAuditKey] = useState(0);
+  const [prefill, setPrefill] = useState<Prefill | null>(null);
+  const [basis, setBasis] = useState<OfferBasis>(null);
 
   const load = useCallback(async () => {
     try {
@@ -98,7 +102,11 @@ export function CasePage() {
             />
           </section>
 
+          <BankAssessmentPanel kase={kase} onUse={(c) => setPrefill({ candidate: c, nonce: Date.now() })} onChanged={() => void load()} onBasis={setBasis} />
+
           <AssistantSummary id={kase.id} />
+          {/* The in-browser mock has no assistant: the panel only makes sense against the backend. */}
+          {!isMock && <HelpPanel applicationId={kase.id} audience="analyst" modes={analystModes} />}
 
           <section className="panel">
             <h2>Скоринг</h2>
@@ -195,7 +203,7 @@ export function CasePage() {
         </div>
 
         <aside className="case-side">
-          <Actions kase={kase} onUpdated={updated} reload={load} />
+          <Actions kase={kase} onUpdated={updated} reload={load} prefill={prefill} basis={basis} />
         </aside>
       </div>
     </>
@@ -318,7 +326,11 @@ function Audit({ id, refreshKey }: { id: string; refreshKey: number }) {
   );
 }
 
-function Actions({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: (c: BankCase) => void; reload: () => Promise<void> }) {
+type Prefill = { candidate: Candidate; nonce: number };
+
+type FormProps = { kase: BankCase; onUpdated: (c: BankCase) => void; reload: () => Promise<void>; prefill: Prefill | null; basis: OfferBasis };
+
+function Actions({ kase, onUpdated, reload, prefill, basis }: FormProps) {
   const take = useAction();
   const takeIntent = useIntent();
   const canTake = kase.allowed_actions.includes("TAKE");
@@ -338,7 +350,7 @@ function Actions({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: (c: B
     else void reload();
   }
 
-  if (canDecide) return <DecisionForm kase={kase} onUpdated={onUpdated} reload={reload} />;
+  if (canDecide) return <DecisionForm kase={kase} onUpdated={onUpdated} reload={reload} prefill={prefill} basis={basis} />;
   return (
     <div className="panel side-panel">
       <h2>Действия</h2>
@@ -382,8 +394,11 @@ function parsePercent(text: string): number | null {
   return m ? Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0")) : null;
 }
 
-function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: (c: BankCase) => void; reload: () => Promise<void> }) {
+function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [requirementIds, setRequirementIds] = useState<string[]>([]);
+  const plan = kase.requirements_plan;
   const [productId, setProductId] = useState(kase.product_id);
   const [otherProduct, setOtherProduct] = useState("");
   const [amount, setAmount] = useState<number | null>(kase.application.amount.amount_kopecks);
@@ -395,8 +410,37 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
   const [publicReason, setPublicReason] = useState("");
   const [comment, setComment] = useState("");
   const [shown, setShown] = useState(false);
+  const [candidateId, setCandidateId] = useState<string | null>(null);
   const act = useAction();
   const decisionIntent = useIntent();
+
+  useEffect(() => {
+    call(bankApi.GET("/backoffice/products"))
+      .then((r) => setProducts(r.items))
+      .catch(() => setProducts(null));
+  }, []);
+
+  function applyCandidate(c: Candidate) {
+    const s = c.schedule;
+    const same = c.product_id === kase.product_id && s.amount_kopecks === kase.application.amount.amount_kopecks && s.term_months === kase.application.term_months;
+    setCandidateId(c.candidate_id);
+    setOutcome(same ? "APPROVE" : "COUNTER");
+    setProductId(c.product_id);
+    setAmount(s.amount_kopecks);
+    setTerm(String(s.term_months));
+    setRatePct((s.rate_bps / 100).toLocaleString("ru-RU", { maximumFractionDigits: 2 }));
+    setPublicReason((r) => r || (same ? "Банк одобрил заявку на запрошенных условиях." : "Банк рассчитал условия, которые бизнес сможет обслуживать по своему денежному потоку."));
+    setComment((cm) => cm || `Подтверждён расчётный вариант ${c.candidate_id.slice(0, 12)}.`);
+  }
+
+  // «Предложить этот вариант» in the assessment panel fills the form with the calculated terms.
+  useEffect(() => {
+    if (prefill) applyCandidate(prefill.candidate);
+  }, [prefill?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A recheck replaces the options: a picked option that is gone can no longer be offered.
+  const candidates = basis?.candidates ?? [];
+  const picked = candidates.find((c) => c.candidate_id === candidateId) ?? null;
 
   const withOffer = outcome === "APPROVE" || outcome === "COUNTER";
   const needsReason = outcome === "REJECT" || outcome === "COUNTER";
@@ -406,7 +450,10 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
 
   const problems: string[] = [];
   if (!outcome) problems.push("Выберите решение.");
-  if (withOffer) {
+  if (withOffer && basis) {
+    if (!candidates.length) problems.push("Предложить можно только рассчитанный вариант, а его сейчас нет: запросите данные или откажите.");
+    else if (!picked) problems.push("Выберите расчётный вариант.");
+  } else if (withOffer) {
     if (!/^[0-9a-f-]{36}$/i.test(finalProduct)) problems.push("Укажите продукт оферты.");
     if (amount === null || amount <= 0) problems.push("Укажите сумму оферты.");
     if (!Number.isInteger(termN) || termN < 1) problems.push("Укажите срок в месяцах.");
@@ -414,7 +461,7 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
   }
   if (outcome === "REQUEST_INFO") {
     if (!message.trim()) problems.push("Напишите клиенту, что нужно уточнить.");
-    if (!fields.length && !docs.length) problems.push("Отметьте хотя бы одно поле или документ.");
+    if (plan ? !requirementIds.length : !fields.length && !docs.length) problems.push("Отметьте хотя бы одно поле или документ.");
   }
   if (needsReason && !publicReason.trim()) problems.push("Для клиента нужна понятная причина решения.");
   if (!comment.trim()) problems.push("Добавьте внутренний комментарий.");
@@ -428,7 +475,14 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
       // The reason field is hidden for REQUEST_INFO; text typed under another outcome must not leak.
       ...(outcome !== "REQUEST_INFO" && publicReason.trim() ? { public_reason: publicReason.trim() } : {}),
       ...(withOffer ? { offer: { product_id: finalProduct, amount: { amount_kopecks: amount!, currency: "RUB" }, term_months: termN, rate_bps: rateBps! } } : {}),
-      ...(outcome === "REQUEST_INFO" ? { info_request: { message: message.trim(), required_fields: fields, required_document_types: docs } } : {}),
+      // Profile v2 cases ask by requirement IDs from the server plan; legacy arrays stay empty.
+      ...(outcome === "REQUEST_INFO"
+        ? {
+            info_request: plan
+              ? { message: message.trim(), required_fields: [], required_document_types: [], requirement_ids: requirementIds }
+              : { message: message.trim(), required_fields: fields, required_document_types: docs },
+          }
+        : {}),
     };
     const next = await act.run(async () => {
       try {
@@ -473,14 +527,57 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
         />
       </fieldset>
 
-      {withOffer && (
+      {withOffer && basis && (
+        <fieldset className="sub-form">
+          <legend>Расчётный вариант</legend>
+          {candidates.length > 0 ? (
+            <>
+              <Choices
+                name="candidate"
+                className="candidate-picks"
+                options={candidates.map((c) => ({
+                  value: c.candidate_id,
+                  label: money(rub(c.schedule.amount_kopecks)),
+                  hint: `${months(c.schedule.term_months)}, ${rate(c.schedule.rate_bps)}, платёж ${money(rub(c.schedule.payment_kopecks))}. ${c.product_name}`,
+                }))}
+                value={picked?.candidate_id ?? null}
+                optionClassName={(_, on) => `candidate-pick${on ? " on" : ""}`}
+                onChange={(cid) => {
+                  const c = candidates.find((x) => x.candidate_id === cid);
+                  if (c) applyCandidate(c);
+                }}
+              />
+              <p className="field-hint">Банк принимает оферту только с продуктом, суммой, сроком и ставкой из актуального расчёта.</p>
+            </>
+          ) : (
+            <p className="note note-attention">
+              {basis.stale
+                ? "Оценка устарела: пересчитайте её, чтобы получить актуальные варианты."
+                : "Расчёт не нашёл условий с посильным платежом. Запросите у клиента данные или откажите; после новых данных пересчитайте оценку."}
+            </p>
+          )}
+        </fieldset>
+      )}
+
+      {withOffer && !basis && (
         <fieldset className="sub-form">
           <legend>Условия оферты</legend>
           <Field label="Продукт" htmlFor="d-product">
             <select id="d-product" value={productId} onChange={(e) => setProductId(e.target.value)}>
-              <option value={kase.product_id}>{kase.product_name} (из заявки)</option>
-              {kase.offer && kase.offer.product_id !== kase.product_id && <option value={kase.offer.product_id}>{kase.offer.product_name}</option>}
-              <option value="other">Другой продукт…</option>
+              {products ? (
+                products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.id === kase.product_id ? " (из заявки)" : ""}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value={kase.product_id}>{kase.product_name} (из заявки)</option>
+                  {kase.offer && kase.offer.product_id !== kase.product_id && <option value={kase.offer.product_id}>{kase.offer.product_name}</option>}
+                  <option value="other">Другой продукт…</option>
+                </>
+              )}
             </select>
           </Field>
           {productId === "other" && (
@@ -508,6 +605,20 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
           <Field label="Сообщение клиенту" htmlFor="d-msg">
             <textarea id="d-msg" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Пришлите, пожалуйста, выписку за последние 12 месяцев" />
           </Field>
+          {plan ? (
+            <div className="checks">
+              {plan.items.map((r) => (
+                <label key={r.id} className="check">
+                  <input type="checkbox" checked={requirementIds.includes(r.id)} onChange={() => setRequirementIds(toggle(requirementIds, r.id))} />
+                  <span>
+                    {r.label}
+                    {r.period ? ` (${r.period.from} — ${r.period.to})` : ""}
+                    {r.status === "PROVIDED" && <em className="tag tag-ok">есть</em>}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
           <div className="checks">
             {infoFields.map((f) => (
               <label key={f} className="check">
@@ -522,6 +633,7 @@ function DecisionForm({ kase, onUpdated, reload }: { kase: BankCase; onUpdated: 
               </label>
             ))}
           </div>
+          )}
         </fieldset>
       )}
 

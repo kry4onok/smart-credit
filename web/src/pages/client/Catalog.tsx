@@ -153,7 +153,9 @@ export function CatalogPage() {
                 )}
               </dl>
               <p className="product-docs">
-                Понадобится: {p.required_document_types.map((d) => documentLabel[d].toLowerCase()).join(", ")}
+                {p.required_document_types.length
+                  ? `Понадобится: ${p.required_document_types.map((d) => documentLabel[d].toLowerCase()).join(", ")}`
+                  : "Документы банк подберёт по форме бизнеса и налоговому режиму"}
               </p>
               <footer>
                 <button type="button" className={`btn ${why ? "btn-secondary" : "btn-primary"}`} disabled={create.busy} onClick={() => void apply(p)}>

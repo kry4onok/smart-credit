@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { clientApi } from "../../api/http";
+import { assessmentApi, clientApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
-import type { ApplicationFormPatch, ClientApplication, CompanyProfile, InfoField, Offer, Product, PurposeTag, TimelineEntry } from "../../api/types";
+import type { AssessmentPreferences, ApplicationFormPatch, DocumentMetadata, Requirement, ClientApplication, CompanyProfile, InfoField, Offer, Product, PurposeTag, TimelineEntry } from "../../api/types";
 import { useSession } from "../../auth/session";
 import { DocumentSlot, MoneyInput } from "../../components/inputs";
 import { CompareBars, offerRows } from "../../components/Compare";
 import { ClientPipeline } from "../../components/Pipeline";
 import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useNow, useTitle } from "../../components/ui";
 import { date, dateTime, money, moneyShort, monthlyPayment, months, rate, rub, timeLeft } from "../../lib/format";
-import { clientStatusLabel, clientStatusTone, documentLabel, infoFieldLabel, purposeLabel } from "../../lib/labels";
+import { clientStatusLabel, clientStatusTone, documentLabel, infoFieldLabel, legalFormLabel, purposeLabel, taxRegimeLabel } from "../../lib/labels";
 import { latestDocuments, validateInfoValue } from "../../lib/applicationValidation";
 import { usePolling, useIntent } from "../../lib/util";
 import { loadProducts, recallDraft, recallOffer, rememberDraft, rememberOffer } from "./products";
+import { HintsPanel, PreferencesSection, RequirementsSection } from "./DraftExtras";
+import { AssessmentView } from "./AssessmentView";
+import { loanHints, monthsBetween } from "../../lib/hints";
 
 const settled = new Set(["DRAFT", "DISBURSED", "REJECTED", "CLOSED"]);
 
@@ -100,6 +103,7 @@ export function ApplicationPage() {
         <NextStep app={app} product={product} onChange={apply} reload={load} fetchApp={fetchApp} />
       </section>
 
+      {app.status !== "DRAFT" && <AssessmentView app={app} />}
       {app.status !== "DRAFT" && <Summary app={app} />}
       {app.status !== "DRAFT" && <Timeline id={app.id} version={app.version} />}
     </>
@@ -174,6 +178,9 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
   const latest = useRef(app);
   if (app.version >= latest.current.version) latest.current = app;
   const queue = useRef<ApplicationFormPatch | null>(null);
+  // Assessment preferences (priority, comfortable payment…) share the queue: both bump the card version.
+  const [prefs, setPrefs] = useState<AssessmentPreferences | null>(null);
+  const prefsQueue = useRef<AssessmentPreferences | null>(null);
   const inflight = useRef<Promise<boolean> | null>(null);
   const failed = useRef(false);
   const timer = useRef<number | undefined>(undefined);
@@ -227,22 +234,83 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
     [onChange, patchOnce, refresh],
   );
 
-  // Drains the queue one PATCH at a time; every caller waits until nothing is left in flight.
+  const putPrefs = useCallback(
+    (preferences: AssessmentPreferences) =>
+      call(
+        assessmentApi.PUT("/client/applications/{application_id}/assessment-input", {
+          params: { path: { application_id: latest.current.id }, header: { "If-Match": `"${latest.current.version}"` } },
+          body: { schema_version: 1, preferences },
+        }),
+      ),
+    [],
+  );
+
+  const savePrefs = useCallback(
+    async (preferences: AssessmentPreferences): Promise<boolean> => {
+      setSaveState("saving");
+      try {
+        let saved;
+        try {
+          saved = await putPrefs(preferences);
+        } catch (e) {
+          if (!(e instanceof ApiError && e.status === 409)) throw e;
+          await refresh();
+          saved = await putPrefs(preferences);
+        }
+        latest.current = { ...latest.current, version: saved.version };
+        onChange(latest.current);
+        setSaveState("saved");
+        setSaveError(null);
+        return true;
+      } catch (e) {
+        prefsQueue.current ??= preferences;
+        failed.current = true;
+        setSaveState("error");
+        setSaveError(e);
+        return false;
+      }
+    },
+    [onChange, putPrefs, refresh],
+  );
+
+  // Drains the queue one request at a time; every caller waits until nothing is left in flight.
   const flush = useCallback(async (): Promise<boolean> => {
     window.clearTimeout(timer.current);
-    while (!failed.current && (inflight.current || queue.current)) {
+    while (!failed.current && (inflight.current || queue.current || prefsQueue.current)) {
       if (inflight.current) {
         await inflight.current;
         continue;
       }
-      const patch = queue.current!;
-      queue.current = null;
-      inflight.current = save(patch).finally(() => {
+      if (queue.current) {
+        const patch = queue.current;
+        queue.current = null;
+        inflight.current = save(patch);
+      } else {
+        const preferences = prefsQueue.current!;
+        prefsQueue.current = null;
+        inflight.current = savePrefs(preferences);
+      }
+      inflight.current = inflight.current.finally(() => {
         inflight.current = null;
       });
     }
     return !failed.current;
-  }, [save]);
+  }, [save, savePrefs]);
+
+  // Products with the cash-flow assessment accept preferences; for others the endpoint is absent.
+  useEffect(() => {
+    call(assessmentApi.GET("/client/applications/{application_id}/assessment-input", { params: { path: { application_id: app.id } } }))
+      .then((env) => setPrefs(env.assessment_input.preferences ?? {}))
+      .catch(() => setPrefs(null));
+  }, [app.id]);
+
+  function updatePrefs(next: AssessmentPreferences) {
+    setPrefs(next);
+    prefsQueue.current = next;
+    failed.current = false;
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => void flush(), 900);
+  }
 
   const retry = () => {
     failed.current = false;
@@ -301,11 +369,39 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
     if (result) onChange(result);
   }
 
+  const plan = app.requirements_plan;
+  const company = app.company;
+  const periodMonths = company.financial_period ? Math.max(1, monthsBetween(company.financial_period.from, new Date(company.financial_period.to)) + 1) : 12;
+  const hints = loanHints({
+    amountKopecks: form.amount ?? undefined,
+    termMonths: form.term,
+    rateBps: product?.indicative_rate_bps,
+    profitKopecks: company.profit_12m?.amount_kopecks,
+    revenueKopecks: company.revenue_12m?.amount_kopecks,
+    obligationsKopecks: company.obligations?.amount_kopecks,
+    periodMonths,
+    registeredAt: company.registered_at,
+    maxPaymentKopecks: prefs?.max_payment_kopecks,
+    maxTerm: product?.max_term_months,
+    minAmountKopecks: product?.min_amount.amount_kopecks,
+  });
+  const planReady = !plan || plan.can_submit;
+  const missingSubmitDocs = plan ? plan.items.filter((r) => r.kind === "DOCUMENT" && r.required_at === "SUBMIT" && r.status === "MISSING") : [];
+  const docsReady = plan ? missingSubmitDocs.length === 0 : missingDocs.length === 0;
+  const ready = canSubmit && planReady && docsReady;
+  let step = 0;
+  const no = () => ++step;
+  const onUploaded = (doc: DocumentMetadata) => {
+    onChange({ ...latest.current, documents: [...latest.current.documents.filter((d) => d.id !== doc.id && (plan || d.document_type !== doc.document_type)), doc] });
+    // The upload raised the draft version on the server; the next PATCH needs it in If-Match.
+    void refresh().catch(() => undefined);
+  };
+
   return (
     <div className="draft">
       <fieldset className="draft-step">
         <legend>
-          <span className="step-no">1</span> Условия кредита
+          <span className="step-no">{no()}</span> Условия кредита
         </legend>
         <div className="form-grid">
           <Field
@@ -348,59 +444,87 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             {rate(product.indicative_rate_bps)}. Это предварительный расчёт, не оферта.
           </p>
         )}
+        <HintsPanel
+          hints={hints}
+          onFix={(fix) => {
+            if (fix.amountKopecks) update({ amount: fix.amountKopecks }, { amount: rub(fix.amountKopecks) });
+            if (fix.termMonths) update({ term: fix.termMonths }, { term_months: fix.termMonths });
+          }}
+        />
         <p className={`autosave autosave-${saveState}`} aria-live="polite">
           {saveState === "saving" ? "Сохраняем…" : saveState === "saved" ? "Черновик сохранён" : saveState === "error" ? "" : "Изменения сохраняются автоматически"}
         </p>
         {saveState === "error" && <ErrorNote error={saveError} onRetry={retry} />}
       </fieldset>
 
+      {prefs && (
+        <fieldset className="draft-step">
+          <legend>
+            <span className="step-no">{no()}</span> Если всю сумму дать не получится
+          </legend>
+          <PreferencesSection prefs={prefs} onChange={updatePrefs} amountKopecks={form.amount ?? undefined} />
+        </fieldset>
+      )}
+
       <fieldset className="draft-step">
         <legend>
-          <span className="step-no">2</span> Компания
+          <span className="step-no">{no()}</span> Бизнес
         </legend>
         <CompanySnapshot company={app.company} />
         <p className="field-hint">
-          Сведения взяты из <Link to="/cabinet/company">профиля компании</Link> в момент создания черновика.
+          Сведения взяты из <Link to="/cabinet/company">профиля бизнеса</Link> в момент создания черновика.
         </p>
       </fieldset>
 
       <fieldset className="draft-step">
         <legend>
-          <span className="step-no">3</span> Документы
+          <span className="step-no">{no()}</span> Документы
         </legend>
-        {required.length === 0 && <p className="field-hint">Для этого продукта документы не нужны.</p>}
-        {required.map((type) => (
-          <DocumentSlot
-            key={type}
+        {plan ? (
+          <RequirementsSection
             applicationId={app.id}
-            type={type}
+            plan={plan}
+            legalForm={app.company.legal_form}
             documents={app.documents}
-            enabled={app.allowed_actions.includes("UPLOAD_DOCUMENT")}
-            onUploaded={(doc) => {
-              onChange({ ...latest.current, documents: [...latest.current.documents.filter((d) => d.document_type !== doc.document_type), doc] });
-              // The upload raised the draft version on the server; the next PATCH needs it in If-Match.
-              void refresh().catch(() => undefined);
-            }}
+            canUpload={app.allowed_actions.includes("UPLOAD_DOCUMENT")}
+            onUploaded={onUploaded}
           />
-        ))}
+        ) : (
+          <>
+            {required.length === 0 && <p className="field-hint">Для этого продукта документы не нужны.</p>}
+            {required.map((type) => (
+              <DocumentSlot
+                key={type}
+                applicationId={app.id}
+                type={type}
+                legalForm={app.company.legal_form}
+                documents={app.documents}
+                enabled={app.allowed_actions.includes("UPLOAD_DOCUMENT")}
+                onUploaded={onUploaded}
+              />
+            ))}
+          </>
+        )}
         <p className="field-hint">Файл сохраняется как демо-документ. Суммы и реквизиты из PDF, Excel или изображения не извлекаются автоматически — их нужно указать в форме. Банк проверяет наличие документа.</p>
       </fieldset>
 
       <fieldset className="draft-step">
         <legend>
-          <span className="step-no">4</span> Отправка в банк
+          <span className="step-no">{no()}</span> Отправка в банк
         </legend>
         <ul className="checklist">
           <li className={formReady ? "ok" : ""}>Сумма, срок и цель заполнены</li>
-          <li className={missingDocs.length === 0 ? "ok" : ""}>Документы приложены</li>
+          <li className={docsReady ? "ok" : ""}>{plan ? "Документы для отправки приложены" : "Документы приложены"}</li>
+          {plan && <li className={plan.can_submit ? "ok" : ""}>{plan.can_submit ? "Банк готов принять заявку" : "Заполните недостающие сведения"}</li>}
           <li className={user?.can_submit !== false ? "ok" : ""}>
             {user?.can_submit !== false ? "У вас есть право отправлять заявки" : "Отправить заявку может только уполномоченный сотрудник"}
           </li>
         </ul>
         {missingFields.length > 0 && <p className="field-hint" role="status">До отправки заполните: {missingFields.join(", ")}. Заявка останется черновиком, пока вы её не отправите.</p>}
-        {missingDocs.length > 0 && <p className="field-hint" role="status">Приложите: {missingDocs.map((type) => documentLabel[type]).join(", ")}.</p>}
+        {!plan && missingDocs.length > 0 && <p className="field-hint" role="status">Приложите: {missingDocs.map((type) => documentLabel[type]).join(", ")}.</p>}
+        {hints.some((h) => h.level === "bad") && <p className="field-hint">Заявку можно отправить и так — подсказки выше показывают, на что банк обратит внимание.</p>}
         <ErrorNote error={submit.error} />
-        <button type="button" className="btn btn-primary" disabled={!canSubmit || submit.busy} onClick={() => void send()}>
+        <button type="button" className="btn btn-primary" disabled={!ready || submit.busy} onClick={() => void send()}>
           {submit.busy ? "Отправляем…" : "Отправить заявку"}
         </button>
       </fieldset>
@@ -413,7 +537,11 @@ function CompanySnapshot({ company }: { company: CompanyProfile }) {
     <Dl
       items={[
         ["Компания", company.name],
+        ...(company.legal_form ? ([["Форма", legalFormLabel[company.legal_form]]] as [string, string][]) : []),
         ["ИНН", company.inn],
+        ...(company.tax_periods?.length
+          ? ([["Налоговый режим", company.tax_periods[company.tax_periods.length - 1].regimes.map((r) => taxRegimeLabel[r] ?? r).join(", ")]] as [string, string][])
+          : []),
         ["ОКВЭД", company.okved],
         ["Зарегистрирована", date(company.registered_at)],
         ["Выручка за 12 мес.", money(company.revenue_12m)],
@@ -423,6 +551,16 @@ function CompanySnapshot({ company }: { company: CompanyProfile }) {
     />
   );
 }
+
+// Requirement field paths that the legacy inputs already know how to edit.
+const fieldByPath: Record<string, InfoField> = {
+  "company.revenue_12m": "COMPANY_REVENUE_12M",
+  "company.profit_12m": "COMPANY_PROFIT_12M",
+  "company.obligations": "COMPANY_OBLIGATIONS",
+  "form.amount": "APPLICATION_AMOUNT",
+  "form.term_months": "APPLICATION_TERM_MONTHS",
+  "form.purpose": "APPLICATION_PURPOSE",
+};
 
 const companyFields: Partial<Record<InfoField, "revenue_12m" | "profit_12m" | "obligations">> = {
   COMPANY_REVENUE_12M: "revenue_12m",
@@ -443,16 +581,27 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
   const documents = latestDocuments(app.documents);
   const send = useAction();
   const intent = useIntent();
+  // Profile v2 requests name requirements (documents with periods, fields by path); legacy ones use the two arrays.
+  const requirements = request.requirements ?? [];
+  const v2 = requirements.length > 0;
+  const docRequirements = requirements.filter((r) => r.kind === "DOCUMENT");
+  const requestedFields: InfoField[] = v2
+    ? requirements.filter((r) => r.kind === "FIELD" && r.field_path && fieldByPath[r.field_path]).map((r) => fieldByPath[r.field_path!])
+    : request.required_fields;
+  const otherFields = v2 ? requirements.filter((r) => r.kind === "FIELD" && (!r.field_path || !fieldByPath[r.field_path])) : [];
+  const attachedFor = (r: Requirement) => app.documents.filter((d) => d.requirement_id === r.id || r.document_ids.includes(d.id));
 
-  const fieldErrors = Object.fromEntries(request.required_fields.map((field) => [field, validateInfoValue(field, values[field])])) as Partial<Record<InfoField, string | null>>;
-  const invalidFields = request.required_fields.filter((field) => fieldErrors[field]);
-  const missingDocuments = request.required_document_types.filter((type) => !documents.some((document) => document.document_type === type));
+  const fieldErrors = Object.fromEntries(requestedFields.map((field) => [field, validateInfoValue(field, values[field])])) as Partial<Record<InfoField, string | null>>;
+  const invalidFields = requestedFields.filter((field) => fieldErrors[field]);
+  const missingDocuments = v2
+    ? docRequirements.filter((r) => attachedFor(r).length === 0).map((r) => r.label)
+    : request.required_document_types.filter((type) => !documents.some((document) => document.document_type === type)).map((t) => documentLabel[t]);
 
   async function submit() {
     if (invalidFields.length || missingDocuments.length) return;
     const company = { ...app.company };
     const fields: ApplicationFormPatch = {};
-    for (const f of request.required_fields) {
+    for (const f of requestedFields) {
       const key = companyFields[f];
       if (key) company[key] = rub(values[f] as number);
       if (f === "APPLICATION_AMOUNT") fields.amount = rub(values[f] as number);
@@ -467,10 +616,11 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
             params: { path: { application_id: app.id }, header: { "Idempotency-Key": key } },
             body: {
               request_id: request.id,
-              ...(request.required_fields.some((f) => companyFields[f]) ? { company } : {}),
+              ...(requestedFields.some((f) => companyFields[f]) ? { company } : {}),
               ...(Object.keys(fields).length ? { fields } : {}),
-              // Omit document_ids: the backend includes all attached document types,
-              // so answering a request does not discard the original attachments.
+              // Legacy: omit document_ids, the backend includes all attached document types.
+              // Profile v2: name the files that answer each requirement.
+              ...(v2 ? { document_ids: docRequirements.flatMap((r) => attachedFor(r).map((d) => d.id)) } : {}),
             },
           }),
         ),
@@ -484,7 +634,7 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
       <blockquote>{request.message}</blockquote>
       <p className="field-hint">Запрос от {dateTime(request.created_at)}. Изменения касаются только этой заявки.</p>
       <div className="form-grid">
-        {request.required_fields.map((f) => (
+        {requestedFields.map((f) => (
           <Field key={f} label={infoFieldLabel[f]} htmlFor={`info-${f}`} error={fieldErrors[f]}>
             {f === "APPLICATION_PURPOSE" ? (
               <select id={`info-${f}`} aria-invalid={!!fieldErrors[f]} value={(values[f] as string) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value })}>
@@ -503,22 +653,43 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
           </Field>
         ))}
       </div>
-      {request.required_document_types.map((type) => (
-        <DocumentSlot
-          key={type}
-          applicationId={app.id}
-          type={type}
-          documents={documents}
-          enabled
-          onUploaded={(doc) => {
-            onChange({ ...app, documents: [...app.documents.filter((existing) => existing.id !== doc.id), doc] });
-            void reload();
-          }}
-        />
-      ))}
+      {otherFields.length > 0 && (
+        <p className="note note-attention">
+          Банк просит уточнить: {otherFields.map((r) => r.label.toLowerCase()).join(", ")}. Обновите их в <Link to="/cabinet/company">сведениях о бизнесе</Link>.
+        </p>
+      )}
+      {v2
+        ? docRequirements.map((r) => (
+            <DocumentSlot
+              key={r.id}
+              applicationId={app.id}
+              requirement={r}
+              legalForm={app.company.legal_form}
+              documents={app.documents}
+              enabled
+              onUploaded={(doc) => {
+                onChange({ ...app, documents: [...app.documents.filter((existing) => existing.id !== doc.id), doc] });
+                void reload();
+              }}
+            />
+          ))
+        : request.required_document_types.map((type) => (
+            <DocumentSlot
+              key={type}
+              applicationId={app.id}
+              type={type}
+              legalForm={app.company.legal_form}
+              documents={documents}
+              enabled
+              onUploaded={(doc) => {
+                onChange({ ...app, documents: [...app.documents.filter((existing) => existing.id !== doc.id), doc] });
+                void reload();
+              }}
+            />
+          ))}
       <p className="field-hint">Ответ отправляется только после заполнения всех запрошенных полей и загрузки документов. До этого заявка остаётся в статусе «Нужны данные»; файл сам не заполняет финансовые показатели.</p>
       {invalidFields.length > 0 && <p className="field-hint" role="status">Проверьте поля: {invalidFields.map((field) => infoFieldLabel[field]).join(", ")}.</p>}
-      {missingDocuments.length > 0 && <p className="field-hint" role="status">Не хватает документов: {missingDocuments.map((type) => documentLabel[type]).join(", ")}.</p>}
+      {missingDocuments.length > 0 && <p className="field-hint" role="status">Не хватает документов: {missingDocuments.join(", ")}.</p>}
       <ErrorNote error={send.error} />
       <button type="button" className="btn btn-primary" disabled={invalidFields.length > 0 || missingDocuments.length > 0 || send.busy} onClick={() => void submit()}>
         {send.busy ? "Отправляем…" : "Отправить ответ банку"}
