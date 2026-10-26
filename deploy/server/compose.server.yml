@@ -1,0 +1,169 @@
+services:
+  postgres:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports: !reset []
+  kafka:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports: !reset []
+    environment:
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx1024m"
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    mem_limit: 2g
+  bank-service:
+    environment:
+      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-45s}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-bank-service:${RELEASE_TAG}
+    ports: !reset []
+  auth:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-auth:${RELEASE_TAG}
+    ports: !reset []
+  client-service:
+    environment:
+      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-45s}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-client-service:${RELEASE_TAG}
+    ports: !reset []
+  swagger-ui:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports: !reset []
+  gateway:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports: !override ["127.0.0.1:8000:8080"]
+    volumes: !override
+      - ${RELEASE_DIR}/.server/gateway.conf:/etc/nginx/nginx.conf:ro
+      - ${RELEASE_DIR}/api:/usr/share/nginx/html/api:ro
+  scoring:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-scoring:${RELEASE_TAG}
+    ports: !reset []
+  bureau-mocks:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-bureau-mocks:${RELEASE_TAG}
+    ports: !reset []
+  assistant:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-assistant:${RELEASE_TAG}
+    ports: !reset []
+    depends_on:
+      ollama:
+        condition: service_healthy
+  web:
+    volumes:
+      - ${RELEASE_DIR}/.server/web.conf:/etc/nginx/nginx.conf:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: smart-credit-web:${RELEASE_TAG}
+    ports: !reset []
+  ollama:
+    image: ollama/ollama@sha256:dea72d1e22270fe095b68fdf756d2b489d615643c5a2eaebbc5f569181e322d8
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: "-1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_CONTEXT_LENGTH: "4096"
+    volumes:
+      - ollama_data:/root/.ollama
+    mem_limit: 10g
+    cpus: 8
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+  edge:
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t && wget -q -O /dev/null http://web:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    image: nginx:1.30.6-alpine
+    ports: ["80:80", "443:443"]
+    volumes:
+      - /opt/smart-credit/shared/edge.conf:/etc/nginx/nginx.conf:ro
+      - /opt/smart-credit/shared/acme:/var/www/acme:ro
+      - /opt/smart-credit/shared/letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  certbot:
+    profiles: ["tools"]
+    image: certbot/certbot:v5.8.0
+    volumes:
+      - /opt/smart-credit/shared/acme:/var/www/acme
+      - /opt/smart-credit/shared/letsencrypt:/etc/letsencrypt
+  ops:
+    profiles: ["tools"]
+    image: smart-credit-ops:${RELEASE_TAG}
+    build:
+      context: ${RELEASE_DIR}
+      dockerfile: /opt/smart-credit/shared/ops.Dockerfile
+    environment:
+      AUTH_DATABASE_URL: ${AUTH_DATABASE_URL}
+      CLIENT_DATABASE_URL: ${CLIENT_DATABASE_URL}
+      BANK_DATABASE_URL: ${BANK_DATABASE_URL}
+      AUTH_DEV_CLIENT_PASSWORD: ${AUTH_DEV_CLIENT_PASSWORD}
+      AUTH_DEV_ANALYST_PASSWORD: ${AUTH_DEV_ANALYST_PASSWORD}
+      AUTH_DEV_ADMIN_PASSWORD: ${AUTH_DEV_ADMIN_PASSWORD}
+    volumes:
+      - ${RELEASE_DIR}/services/auth/migrations:/migrations/auth:ro
+      - ${RELEASE_DIR}/services/client-service/migrations:/migrations/client:ro
+      - ${RELEASE_DIR}/services/bank-service/migrations:/migrations/bank:ro
+volumes:
+  kafka_data:
+  ollama_data:

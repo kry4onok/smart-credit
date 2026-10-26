@@ -77,6 +77,7 @@ services:
       BANK_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-smart-credit}
       BANK_ASSISTANT_GRPC_ADDR: assistant:50052
       BANK_ASSISTANT_TIMEOUT: ${BANK_ASSISTANT_TIMEOUT:-5s}
+      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-5s}
       BANK_CLIENT_DOCUMENT_URL: http://client-service:8080
       BANK_CLIENT_DOCUMENT_TIMEOUT: ${BANK_CLIENT_DOCUMENT_TIMEOUT:-5s}
     depends_on:
@@ -162,6 +163,7 @@ services:
       CLIENT_DATABASE_URL: postgres://client_user:${CLIENT_DB_PASSWORD}@postgres:5432/client_db?sslmode=disable
       CLIENT_DOCUMENT_STORAGE_PATH: /var/lib/smart-credit/documents
       CLIENT_ASSISTANT_TARGET: assistant:50052
+      ASSISTANT_HELP_TIMEOUT: ${ASSISTANT_HELP_TIMEOUT:-5s}
       CLIENT_KAFKA_BROKERS: kafka:19092
       CLIENT_KAFKA_CONSUMER_GROUP: client-service
       CLIENT_JWKS_URL: http://auth:8080/.well-known/jwks.json
@@ -306,7 +308,7 @@ services:
     environment:
       ASSISTANT_ADDR: "0.0.0.0:50052"
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
       LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}

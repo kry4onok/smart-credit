@@ -81,6 +81,40 @@ def answer():
 
 @unittest.skipIf(help_pb2 is None, "Backend help.proto generated bindings are not present yet")
 class HelpTests(unittest.TestCase):
+    def test_prompt_excludes_unrelated_facts_but_preserves_companions(self):
+        from help.planner import build_prompt
+        item = request()
+        item.context.targets.add(id="factor-1", kind=help_pb2.TARGET_KIND_FACTOR, label="Risk factor")
+        item.context.evidence.add(id="ev-score", kind=help_pb2.EVIDENCE_KIND_CALCULATION, label="Unrelated score")
+        item.context.statements.add(id="st-score", topic=help_pb2.STATEMENT_TOPIC_SCORE, target_id="factor-1", evidence_ids=["ev-score"], variants=[help_pb2.StatementVariant(id="concise", text="Unrelated score")])
+        # A companion remains available even when its own topic is outside this mode.
+        item.context.statements[1].topic = help_pb2.STATEMENT_TOPIC_DECISION
+        original = item.SerializeToString()
+        _, facts = build_prompt(item)
+        self.assertEqual([s["id"] for s in facts["statements"]], ["st-need", "st-not-verified"])
+        self.assertEqual([e["id"] for e in facts["evidence"]], ["ev-1"])
+        self.assertEqual(item.SerializeToString(), original)
+        self.assertEqual(facts["actions"][0]["id"], "open-req")
+
+    def test_question_keeps_all_available_statement_topics(self):
+        from help.planner import build_prompt
+        item = request(help_pb2.HELP_MODE_QUESTION)
+        item.context.statements.add(id="st-score", topic=help_pb2.STATEMENT_TOPIC_SCORE, variants=[help_pb2.StatementVariant(id="concise", text="Score")])
+        _, facts = build_prompt(item)
+        self.assertEqual({s["id"] for s in facts["statements"]}, {s.id for s in item.context.statements})
+
+    def test_provider_schema_restricts_mode_and_known_ids_without_mutating_defaults(self):
+        from help.planner import PLAN_SCHEMA, plan_answer
+        provider = Mock(return_value=(answer(), "qwen2.5:7b"))
+        original = json.dumps(PLAN_SCHEMA, sort_keys=True)
+        plan_answer(request(), 20, provider)
+        schema = provider.call_args.args[2]
+        block = schema["properties"]["blocks"]["items"]["properties"]
+        self.assertNotIn("COMPARISON", block["kind"]["enum"])
+        self.assertEqual(block["selections"]["items"]["properties"]["statement_id"]["enum"], ["st-need", "st-not-verified"])
+        self.assertEqual(schema["properties"]["action_ids"]["items"]["enum"], ["open-req"])
+        self.assertEqual(json.dumps(PLAN_SCHEMA, sort_keys=True), original)
+
     def service(self, provider):
         return HelpService(provider, CATALOG, clock=lambda: NOW)
 
