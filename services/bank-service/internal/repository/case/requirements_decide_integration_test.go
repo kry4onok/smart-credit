@@ -79,7 +79,7 @@ func TestV2ManualRequestSelectsFreshRequirementsAndReplays(t *testing.T) {
 	counter.Outcome = "COUNTER"
 	counter.PublicReason = "Другие условия"
 	counter.Offer = &decide.Offer{ProductID: legacyProductID, AmountKopecks: 100000000, TermMonths: 24, RateBPS: 1800}
-	if _, err = repo.Decide(ctx, counter); !errors.Is(err, decide.ErrValidation) || !strings.Contains(err.Error(), "policy") {
+	if _, err = repo.Decide(ctx, counter); !errors.Is(err, decide.ErrValidation) || !strings.Contains(err.Error(), "ASSESSMENT_REQUIRED") {
 		t.Fatalf("incompatible counter policy error=%v", err)
 	}
 	bad := decide.Input{CaseID: caseID, AnalystID: analystID, IdempotencyKey: uuid.New(), ExpectedVersion: 1, Outcome: "REQUEST_INFO", Comment: "Нужны данные", InfoRequest: &decide.InfoRequest{Message: "Добавьте документ", V2: true, RequirementIDs: []string{"unknown"}}}

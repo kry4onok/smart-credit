@@ -16,7 +16,7 @@ func evaluateV2(snapshot Snapshot, product Product) Outcome {
 	manual := func(code, reason string) Outcome {
 		return Outcome{Status: model.CaseStatusManualReview, Reason: code, PublicReason: reason}
 	}
-	if product.PolicyVersion != "sme-profile-v1" {
+	if !requirements.SupportedPolicy(product.PolicyVersion) {
 		return manual("UNKNOWN_REQUIREMENTS_POLICY", "Версия правил продукта требует проверки сотрудником")
 	}
 	if len(product.RequiredDocumentTypes) > 0 {
@@ -78,7 +78,7 @@ func evaluateV2(snapshot Snapshot, product Product) Outcome {
 	result := Outcome{Status: model.CaseStatusEnrichment, Plan: plan, RequestedRequirements: []*commonpb.Requirement{}}
 	for _, item := range plan.GetItems() {
 		if item.GetStatus() == commonpb.RequirementStatus_REQUIREMENT_STATUS_MISSING &&
-			(item.GetRequiredAt() == commonpb.RequirementStage_REQUIREMENT_STAGE_SUBMIT || item.GetRequiredAt() == commonpb.RequirementStage_REQUIREMENT_STAGE_ASSESSMENT) {
+			(item.GetRequiredAt() == commonpb.RequirementStage_REQUIREMENT_STAGE_SUBMIT || product.PolicyVersion != requirements.SourceFirstPolicyVersion && item.GetRequiredAt() == commonpb.RequirementStage_REQUIREMENT_STAGE_ASSESSMENT) {
 			result.RequestedRequirements = append(result.RequestedRequirements, item)
 		}
 	}

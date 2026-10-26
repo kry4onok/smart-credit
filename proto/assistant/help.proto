@@ -1,0 +1,349 @@
+syntax = "proto3";
+
+package smartcredit.assistant.v2;
+
+option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant;assistantpb";
+
+import "google/protobuf/timestamp.proto";
+
+// Smart Credit assistant contract, specification v1.0 (2026-10-26).
+// Intended repository path: proto/assistant/help.proto.
+// Coexists with smartcredit.assistant.AssistantService; legacy wire fields stay intact.
+// Both backends may call Help. The caller authorizes access, filters by audience,
+// builds the context and checks its freshness again after inference.
+// No scoring, financial calculations or workflow mutations are performed here.
+//
+// Validation requirements in comments are application-level invariants, NOT
+// enforced by protobuf. Reject zero/unknown enums, invalid UUIDs/timestamps,
+// invalid references and oversized inputs before inference. Do not silently trim.
+//
+// Enum values use prefixed protobuf names. Short labels in the specification's
+// HTTP/model JSON (e.g. CLIENT, ANSWERED) require explicit adapter mapping;
+// raw ProtoJSON uses AUDIENCE_CLIENT, ANSWER_STATUS_ANSWERED, etc.
+service AssistantHelpService {
+  rpc Help(HelpRequest) returns (HelpResponse);
+}
+
+enum Audience {
+  AUDIENCE_UNSPECIFIED = 0;
+  AUDIENCE_CLIENT = 1;
+  AUDIENCE_ANALYST = 2;
+}
+
+enum HelpMode {
+  HELP_MODE_UNSPECIFIED = 0;
+  HELP_MODE_NEXT_STEP = 1;
+  HELP_MODE_REQUIREMENT = 2;
+  HELP_MODE_ASSESSMENT = 3;
+  HELP_MODE_COMPARE_OPTIONS = 4;
+  HELP_MODE_DECISION = 5;
+  HELP_MODE_CASE_SUMMARY = 6;
+  HELP_MODE_CHANGES = 7;
+  HELP_MODE_QUESTION = 8;
+}
+
+enum Detail {
+  DETAIL_UNSPECIFIED = 0;
+  DETAIL_CONCISE = 1;
+  DETAIL_DETAILED = 2;
+}
+
+enum Freshness {
+  FRESHNESS_UNSPECIFIED = 0;
+  // Consistent available snapshot, not a guarantee of zero Kafka lag.
+  FRESHNESS_CURRENT = 1;
+  FRESHNESS_PENDING = 2;
+  FRESHNESS_STALE = 3;
+}
+
+enum TargetKind {
+  TARGET_KIND_UNSPECIFIED = 0;
+  TARGET_KIND_REQUIREMENT = 1;
+  TARGET_KIND_FACTOR = 2;
+  TARGET_KIND_OPTION = 3;
+  TARGET_KIND_DECISION = 4;
+  TARGET_KIND_CHANGE = 5;
+  TARGET_KIND_PROFILE = 6;
+}
+
+enum EvidenceKind {
+  EVIDENCE_KIND_UNSPECIFIED = 0;
+  EVIDENCE_KIND_PROFILE = 1;
+  EVIDENCE_KIND_REQUIREMENT = 2;
+  EVIDENCE_KIND_DOCUMENT = 3;
+  EVIDENCE_KIND_CHECK = 4;
+  EVIDENCE_KIND_SCORE = 5;
+  EVIDENCE_KIND_FINANCIAL = 6;
+  EVIDENCE_KIND_CALCULATION = 7;
+  EVIDENCE_KIND_DECISION = 8;
+  EVIDENCE_KIND_POLICY = 9;
+  EVIDENCE_KIND_CHANGE = 10;
+}
+
+enum EvidenceState {
+  EVIDENCE_STATE_UNSPECIFIED = 0;
+  EVIDENCE_STATE_DECLARED = 1;
+  EVIDENCE_STATE_PROVIDED = 2;
+  EVIDENCE_STATE_VERIFIED = 3;
+  EVIDENCE_STATE_UNAVAILABLE = 4;
+  EVIDENCE_STATE_PENDING = 5;
+  EVIDENCE_STATE_AMBIGUOUS = 6;
+  EVIDENCE_STATE_NOT_APPLICABLE = 7;
+}
+
+enum StatementTopic {
+  STATEMENT_TOPIC_UNSPECIFIED = 0;
+  STATEMENT_TOPIC_PROFILE = 1;
+  STATEMENT_TOPIC_REQUIREMENT = 2;
+  STATEMENT_TOPIC_SCORE = 3;
+  STATEMENT_TOPIC_AFFORDABILITY = 4;
+  STATEMENT_TOPIC_POLICY = 5;
+  STATEMENT_TOPIC_DATA_QUALITY = 6;
+  STATEMENT_TOPIC_OPTION = 7;
+  STATEMENT_TOPIC_DECISION = 8;
+  STATEMENT_TOPIC_CHANGE = 9;
+  STATEMENT_TOPIC_NEXT_STEP = 10;
+}
+
+// Navigation only. These values never authorize or execute business commands.
+enum ActionKind {
+  ACTION_KIND_UNSPECIFIED = 0;
+  ACTION_KIND_OPEN_PROFILE = 1;
+  ACTION_KIND_OPEN_REQUIREMENT = 2;
+  ACTION_KIND_OPEN_FACTOR = 3;
+  ACTION_KIND_OPEN_OPTIONS = 4;
+  ACTION_KIND_OPEN_OFFER = 5;
+  ACTION_KIND_OPEN_TIMELINE = 6;
+}
+
+enum AnswerStatus {
+  ANSWER_STATUS_UNSPECIFIED = 0;
+  ANSWER_STATUS_ANSWERED = 1;
+  ANSWER_STATUS_PARTIAL = 2;
+  ANSWER_STATUS_INSUFFICIENT_DATA = 3;
+  ANSWER_STATUS_OUT_OF_SCOPE = 4;
+  ANSWER_STATUS_CLARIFY = 5;
+}
+
+enum BlockKind {
+  BLOCK_KIND_UNSPECIFIED = 0;
+  BLOCK_KIND_SUMMARY = 1;
+  BLOCK_KIND_DETAILS = 2;
+  BLOCK_KIND_LIMITATIONS = 3;
+  BLOCK_KIND_NEXT_STEPS = 4;
+  BLOCK_KIND_CHANGES = 5;
+  BLOCK_KIND_COMPARISON = 6;
+}
+
+enum ResponseSource {
+  RESPONSE_SOURCE_UNSPECIFIED = 0;
+  RESPONSE_SOURCE_MODEL = 1;
+  RESPONSE_SOURCE_TEMPLATE = 2;
+}
+
+enum FallbackReason {
+  FALLBACK_REASON_UNSPECIFIED = 0;
+  // Explicit NONE is distinct from an omitted/unspecified reason.
+  FALLBACK_REASON_NONE = 1;
+  FALLBACK_REASON_MODEL_UNAVAILABLE = 2;
+  FALLBACK_REASON_MODEL_TIMEOUT = 3;
+  FALLBACK_REASON_INVALID_MODEL_OUTPUT = 4;
+  FALLBACK_REASON_QUEUE_FULL = 5;
+  FALLBACK_REASON_INPUT_TOO_LARGE = 6;
+  FALLBACK_REASON_NO_SUPPORTED_CONTEXT = 7;
+}
+
+message Target {
+  string id = 1;
+  TargetKind kind = 2;
+  string label = 3;
+}
+
+message Evidence {
+  string id = 1;
+  EvidenceKind kind = 2;
+  // Internal source identifier, never a model-supplied URL.
+  string source_ref = 3;
+  string label = 4;
+  google.protobuf.Timestamp observed_at = 5;
+  // Calendar dates, YYYY-MM-DD. Absence is not an empty/unknown date.
+  optional string period_from = 6;
+  optional string period_to = 7;
+  EvidenceState state = 8;
+  bool is_mock = 9;
+}
+
+message StatementVariant {
+  // Exactly "concise" or "detailed"; unique within the parent statement.
+  string id = 1;
+  // Upstream-approved plain text with preformatted values, not model output.
+  string text = 2;
+}
+
+message Statement {
+  string id = 1;
+  StatementTopic topic = 2;
+  // May be empty only for a general caveat.
+  string target_id = 3;
+  uint32 priority = 4; // 0..100, inclusive.
+  bool required = 5;
+  repeated StatementVariant variants = 6;
+  // Application-specific statements require at least one evidence reference.
+  repeated string evidence_ids = 7;
+  // Must resolve to statements in the same context and form an acyclic graph.
+  // The renderer adds companions transitively even if the model omitted them.
+  repeated string companion_ids = 8;
+}
+
+message Action {
+  string id = 1;
+  ActionKind kind = 2;
+  string target_id = 3;
+  string label = 4;
+}
+
+// Backend-owned, audience-filtered context. No arbitrary map/Struct/raw documents.
+// ID collections have unique IDs and all references resolve within this context.
+// Limits: 80 statements, 120 evidence, 120 targets; serialized JSON input <=48 KiB.
+// Selection must preserve required statements and the full companion closure.
+message HelpContext {
+  uint32 schema_version = 1; // Exactly 1, independently of the v2 namespace.
+  string application_id = 2; // UUID, including a persisted draft.
+  Audience audience = 3;
+  // 64 lowercase hexadecimal SHA-256 characters from the backend canonicalizer.
+  // Covers semantic data and access scope, excluding request/read timestamps.
+  string context_id = 4;
+  string source_revision = 5; // Nonempty opaque upstream revision.
+  optional int64 input_revision = 6; // Missing is not zero.
+  optional string assessment_id = 7; // Full assessment cycle, not scoring attempt.
+  optional string calculation_id = 8;
+  string policy_version = 9;
+  string catalog_version = 10;
+  google.protobuf.Timestamp generated_at = 11;
+  // min(source validity, generated_at + 60s). Required and later than generated_at.
+  google.protobuf.Timestamp valid_until = 12;
+  Freshness freshness = 13;
+  repeated Target targets = 14;
+  repeated Evidence evidence = 15;
+  repeated Statement statements = 16;
+  repeated Action actions = 17;
+}
+
+message HelpRequest {
+  string request_id = 1; // UUID for tracing, not a workflow idempotency key.
+  HelpContext context = 2;
+  HelpMode mode = 3;
+  // 0..3 selected objects, not the size of the context's target catalogue.
+  // REQUIREMENT: one REQUIREMENT. COMPARE_OPTIONS: 2..3 OPTION targets from
+  // one calculation_id. CHANGES: one CHANGE containing an upstream snapshot diff.
+  // ASSESSMENT: zero or one FACTOR. CASE_SUMMARY: ANALYST only.
+  repeated string target_ids = 4;
+  // QUESTION only: 1..1000 Unicode code points. Empty for all other modes.
+  string question = 5;
+  Detail detail = 6;
+  string locale = 7; // Exactly "ru-RU".
+}
+
+message Selection {
+  string statement_id = 1;
+  string variant_id = 2; // An existing "concise" or "detailed" variant.
+}
+
+message PlanBlock {
+  BlockKind kind = 1;
+  repeated Selection selections = 2;
+}
+
+// The only permitted model output shape. No free text, numbers, URLs or commands.
+// Parse model JSON strictly: unknown keys, enum values and unresolved IDs fail.
+// Maximum 6 blocks, 18 selections total and 3 actions BEFORE companion expansion.
+// Empty ANSWERED is invalid; PARTIAL must retain applicable limitations.
+// Required statements and companions are enforced independently of model choice.
+message AnswerPlan {
+  AnswerStatus status = 1;
+  repeated PlanBlock blocks = 2;
+  repeated string action_ids = 3;
+  repeated string clarify_target_ids = 4; // Nonempty only for CLARIFY.
+}
+
+message BlockItem {
+  string statement_id = 1;
+  string text = 2;
+  repeated string evidence_ids = 3;
+}
+
+message Block {
+  BlockKind kind = 1;
+  repeated BlockItem items = 2;
+}
+
+// Rendered statement text is an output convenience, not a new trusted fact.
+// Backend validates plan and rebuilds blocks/actions/evidence from its context.
+// Fixed service phrases for CLARIFY/INSUFFICIENT_DATA/OUT_OF_SCOPE come from
+// the renderer's versioned dictionary; they are never supplied by the model.
+// Limits after rendering: CLIENT 1800 text characters, ANALYST 5000.
+// Required caveats cannot be truncated to meet the limit: use a limited fallback.
+message HelpResponse {
+  string request_id = 1;
+  string context_id = 2;
+  string source_revision = 3;
+  google.protobuf.Timestamp generated_at = 4;
+  // Must not exceed request.context.valid_until; rendering cannot renew a lease.
+  google.protobuf.Timestamp valid_until = 5;
+  AnswerStatus status = 6; // Must equal plan.status.
+  ResponseSource source = 7; // Independent of answer completeness/status.
+  string model_version = 8;
+  string prompt_version = 9;
+  string catalog_version = 10;
+  FallbackReason fallback_reason = 11;
+  repeated Block blocks = 12;
+  repeated Action actions = 13;
+  repeated Target clarify_targets = 14;
+  repeated Evidence evidence = 15;
+  AnswerPlan plan = 16; // Required for MODEL and TEMPLATE responses alike.
+}
+
+// Safe GET descriptor; never contains statements, private raw facts or a prompt.
+// GET has no mode/question and describes the available snapshot, not one answer.
+// This is a DTO, not an additional assistant RPC or an authorization mechanism.
+message Descriptor {
+  string application_id = 1;
+  Audience audience = 2;
+  string context_id = 3;
+  string source_revision = 4;
+  google.protobuf.Timestamp generated_at = 5;
+  google.protobuf.Timestamp valid_until = 6;
+  Freshness freshness = 7;
+  repeated HelpMode available_modes = 8;
+  repeated Target targets = 9;
+  repeated Evidence evidence = 10;
+}
+
+// Durable, complete CLIENT-only source snapshot published by bank-service.
+// No request context_id, generated_at or 60-second view TTL is stored here.
+// Limits: 500 statements, 500 evidence, 500 targets, serialized JSON <=256 KiB.
+// Overflow requires an explicit workflow-only snapshot with a data-quality
+// statement; silent truncation is forbidden. No request-specific selection here.
+//
+// Integration by the backend owner (not defined by this standalone file):
+// import "proto/assistant/help.proto" in proto/events/events.proto, then add
+// smartcredit.assistant.v2.PublicAssistantSnapshot assistant_context = 8;
+// to ApplicationPublicStatePublished. Omission in an accepted newer full event
+// clears the previous snapshot; old/duplicate events must not roll it back.
+message PublicAssistantSnapshot {
+  string application_id = 1;
+  Audience audience = 2; // Must be AUDIENCE_CLIENT, including on event ingestion.
+  string source_revision = 3;
+  optional int64 input_revision = 4;
+  optional string assessment_id = 5;
+  optional string calculation_id = 6;
+  string policy_version = 7;
+  string catalog_version = 8;
+  google.protobuf.Timestamp observed_at = 9;
+  // Message presence distinguishes no source deadline from an expired deadline.
+  google.protobuf.Timestamp source_valid_until = 10;
+  repeated Target targets = 11;
+  repeated Evidence evidence = 12;
+  repeated Statement statements = 13;
+  repeated Action actions = 14;
+}

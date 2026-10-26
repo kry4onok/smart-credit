@@ -3,11 +3,15 @@ package caserepository
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
+	assessmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/assessment"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/decide"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -56,8 +60,41 @@ func TestDecidePersistsOfferAuditOutboxAndReplay(t *testing.T) {
 	if _, err = tx.Exec(ctx, testDecisionCreditCheck, caseID); err != nil {
 		t.Fatal(err)
 	}
+	var asOf time.Time
+	if err = tx.QueryRow(ctx, `SELECT assessment_as_of FROM cases WHERE id=$1`, caseID).Scan(&asOf); err != nil {
+		t.Fatal(err)
+	}
+	zero := 0
+	debt := int64(0)
+	start := time.Date(asOf.Year(), asOf.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(-1, 0, 0)
+	sources := assessment.DemoSources("7707083893", "2019-04-15", "ACTIVE", assessment.CreditHistory{HistoricalMaxDPD: &zero, CurrentDPD: &zero, OverdueEpisodes: &zero, TotalDebtKopecks: &debt, PeriodFrom: start.Format(time.DateOnly), PeriodTo: start.AddDate(1, 0, -1).Format(time.DateOnly)}, asOf)
+	for i := range sources.Financials.Months {
+		receipts := int64(200000000)
+		sources.Financials.Months[i].Receipts = &receipts
+	}
+	sourceJSON, err := json.Marshal(sources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `UPDATE cases SET assessment_sources=$2 WHERE id=$1`, caseID, sourceJSON); err != nil {
+		t.Fatal(err)
+	}
+	input, err := assessmentrepository.LoadInput(ctx, tx, caseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assessed := assessment.Evaluate(input)
+	if assessed.Status != "READY_FOR_CONFIRMATION" {
+		t.Fatalf("assessment fixture: %+v", assessed)
+	}
+	inputJSON, _ := json.Marshal(input)
+	resultJSON, _ := json.Marshal(assessed)
+	publicJSON, _ := json.Marshal(assessment.Public(assessed))
+	if _, err = tx.Exec(ctx, `INSERT INTO assessments(id,case_id,input_revision,assessment_generation,input,result,public_result,valid_until) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, assessed.ID, caseID, assessed.InputRevision, assessed.Generation, inputJSON, resultJSON, publicJSON, assessed.ValidUntil); err != nil {
+		t.Fatal(err)
+	}
 	repo := New(tx)
-	in := decide.Input{CaseID: caseID, AnalystID: analystID, IdempotencyKey: uuid.New(), ExpectedVersion: 1, Outcome: "APPROVE", Comment: "Internal review only", ClientText: "Здравствуйте. Одобрено предложение.", Offer: &decide.Offer{ProductID: productID, AmountKopecks: 300000000, TermMonths: 18, RateBPS: 1600}}
+	in := decide.Input{CaseID: caseID, AnalystID: analystID, IdempotencyKey: uuid.New(), ExpectedVersion: 1, Outcome: "APPROVE", Comment: "Internal review only", ClientText: "Здравствуйте. Одобрено предложение.", Offer: &decide.Offer{ProductID: productID, AmountKopecks: 300000000, TermMonths: 18, RateBPS: 1500}}
 	if preview, ready := repo.PrepareDecision(ctx, in); !ready || preview.RequestedProductName != "Test loan" || preview.OfferedProductName != "Test loan" {
 		t.Fatalf("prepare decision: preview=%+v ready=%t", preview, ready)
 	}

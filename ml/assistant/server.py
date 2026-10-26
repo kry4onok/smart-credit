@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import socket
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
 from urllib.error import URLError
@@ -390,18 +391,14 @@ def serve():
 
     server = grpc.server(ThreadPoolExecutor(max_workers=4))
     assistant_pb2_grpc.add_AssistantServiceServicer_to_server(AssistantService(), server)
-    try:
-        from proto.assistant import help_pb2_grpc
-    except ImportError:
-        LOGGER.warning("Assistant Help protobuf bindings are not installed")
-    else:
-        from help.catalog import load_catalog
-        from help.service import HelpService
-        catalog_path = os.getenv("ASSISTANT_CATALOG_PATH", "")
-        catalog = load_catalog(catalog_path) if catalog_path else None
-        help_pb2_grpc.add_AssistantHelpServiceServicer_to_server(
-            HelpService(generate_json, catalog, timeout_error=ModelTimeout, output_error=ModelOutputError), server
-        )
+    from proto.assistant import help_pb2_grpc
+    from help.catalog import load_catalog
+    from help.service import HelpService
+    default_catalog = Path(__file__).resolve().parents[2] / "pkg/assistanthelp/catalog.json"
+    catalog = load_catalog(os.getenv("ASSISTANT_CATALOG_PATH") or default_catalog)
+    help_pb2_grpc.add_AssistantHelpServiceServicer_to_server(
+        HelpService(generate_json, catalog, timeout_error=ModelTimeout, output_error=ModelOutputError), server
+    )
     port = server.add_insecure_port(ASSISTANT_ADDR)
     if port == 0:
         raise RuntimeError(f"Не удалось открыть адрес {ASSISTANT_ADDR}")

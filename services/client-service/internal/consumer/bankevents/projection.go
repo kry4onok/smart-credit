@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
+
 	"google.golang.org/protobuf/encoding/protojson"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
@@ -139,6 +141,20 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 			return err
 		}
 	}
+	var assessmentJSON []byte
+	if len(state.AssessmentJson) > 0 {
+		var value assessment.PublicResult
+		if len(state.AssessmentJson) > 512*1024 {
+			return errors.New("public assessment too large")
+		}
+		if err := json.Unmarshal(state.AssessmentJson, &value); err != nil || value.SchemaVersion != 1 || value.ID == "" {
+			return errors.New("invalid public assessment")
+		}
+		assessmentJSON, err = json.Marshal(value)
+		if err != nil {
+			return err
+		}
+	}
 	var publicReason any
 	if state.GetPublicReason() != "" {
 		publicReason = state.GetPublicReason()
@@ -147,9 +163,9 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 		UPDATE applications
 		SET status = $2, stage_label = $3, next_action = $4, public_reason = $5,
 		    pending_action = NULL, pending_since = NULL,
-		    bank_event_version = $6, bank_requirements_plan=$7, version = version + 1, updated_at = now()
+		    bank_event_version = $6, bank_requirements_plan=$7, public_assessment=$8, version = version + 1, updated_at = now()
 		WHERE id = $1 AND bank_event_version < $6`,
-		applicationID, status, state.GetStageLabel(), state.GetNextAction(), publicReason, event.GetAggregateVersion(), planJSON)
+		applicationID, status, state.GetStageLabel(), state.GetNextAction(), publicReason, event.GetAggregateVersion(), planJSON, assessmentJSON)
 	if err != nil {
 		return fmt.Errorf("update application public state: %w", err)
 	}

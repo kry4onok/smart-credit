@@ -376,6 +376,103 @@ func (x *Obligation) GetOutstanding() *common.Money {
 	return nil
 }
 
+// Versioned typed JSON schema lives in pkg/assessment and api/assessment.yaml.
+type AssessmentSourcesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Inn           string                 `protobuf:"bytes,1,opt,name=inn,proto3" json:"inn,omitempty"`
+	AsOf          string                 `protobuf:"bytes,2,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssessmentSourcesRequest) Reset() {
+	*x = AssessmentSourcesRequest{}
+	mi := &file_proto_bureau_bureau_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssessmentSourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssessmentSourcesRequest) ProtoMessage() {}
+
+func (x *AssessmentSourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_bureau_bureau_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssessmentSourcesRequest.ProtoReflect.Descriptor instead.
+func (*AssessmentSourcesRequest) Descriptor() ([]byte, []int) {
+	return file_proto_bureau_bureau_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AssessmentSourcesRequest) GetInn() string {
+	if x != nil {
+		return x.Inn
+	}
+	return ""
+}
+
+func (x *AssessmentSourcesRequest) GetAsOf() string {
+	if x != nil {
+		return x.AsOf
+	}
+	return ""
+}
+
+type AssessmentSourcesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourcesJson   []byte                 `protobuf:"bytes,1,opt,name=sources_json,json=sourcesJson,proto3" json:"sources_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssessmentSourcesResponse) Reset() {
+	*x = AssessmentSourcesResponse{}
+	mi := &file_proto_bureau_bureau_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssessmentSourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssessmentSourcesResponse) ProtoMessage() {}
+
+func (x *AssessmentSourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_bureau_bureau_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssessmentSourcesResponse.ProtoReflect.Descriptor instead.
+func (*AssessmentSourcesResponse) Descriptor() ([]byte, []int) {
+	return file_proto_bureau_bureau_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AssessmentSourcesResponse) GetSourcesJson() []byte {
+	if x != nil {
+		return x.SourcesJson
+	}
+	return nil
+}
+
 var File_proto_bureau_bureau_proto protoreflect.FileDescriptor
 
 const file_proto_bureau_bureau_proto_rawDesc = "" +
@@ -405,13 +502,19 @@ const file_proto_bureau_bureau_proto_rawDesc = "" +
 	"\n" +
 	"Obligation\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12;\n" +
-	"\voutstanding\x18\x02 \x01(\v2\x19.smartcredit.common.MoneyR\voutstanding*\x89\x01\n" +
+	"\voutstanding\x18\x02 \x01(\v2\x19.smartcredit.common.MoneyR\voutstanding\"A\n" +
+	"\x18AssessmentSourcesRequest\x12\x10\n" +
+	"\x03inn\x18\x01 \x01(\tR\x03inn\x12\x13\n" +
+	"\x05as_of\x18\x02 \x01(\tR\x04asOf\">\n" +
+	"\x19AssessmentSourcesResponse\x12!\n" +
+	"\fsources_json\x18\x01 \x01(\fR\vsourcesJson*\x89\x01\n" +
 	"\rCompanyStatus\x12\x1e\n" +
 	"\x1aCOMPANY_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15COMPANY_STATUS_ACTIVE\x10\x01\x12\x1e\n" +
 	"\x1aCOMPANY_STATUS_LIQUIDATING\x10\x02\x12\x1d\n" +
-	"\x19COMPANY_STATUS_LIQUIDATED\x10\x032\xe4\x01\n" +
-	"\rBureauService\x12j\n" +
+	"\x19COMPANY_STATUS_LIQUIDATED\x10\x032\xd9\x02\n" +
+	"\rBureauService\x12s\n" +
+	"\x14GetAssessmentSources\x12,.smartcredit.bureau.AssessmentSourcesRequest\x1a-.smartcredit.bureau.AssessmentSourcesResponse\x12j\n" +
 	"\x11GetCompanyProfile\x12).smartcredit.bureau.CompanyProfileRequest\x1a*.smartcredit.bureau.CompanyProfileResponse\x12g\n" +
 	"\x10GetCreditHistory\x12(.smartcredit.bureau.CreditHistoryRequest\x1a).smartcredit.bureau.CreditHistoryResponseBNZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau;bureaupbb\x06proto3"
 
@@ -428,29 +531,33 @@ func file_proto_bureau_bureau_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_bureau_bureau_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_bureau_bureau_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_bureau_bureau_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_bureau_bureau_proto_goTypes = []any{
-	(CompanyStatus)(0),             // 0: smartcredit.bureau.CompanyStatus
-	(*CompanyProfileRequest)(nil),  // 1: smartcredit.bureau.CompanyProfileRequest
-	(*CompanyProfileResponse)(nil), // 2: smartcredit.bureau.CompanyProfileResponse
-	(*CreditHistoryRequest)(nil),   // 3: smartcredit.bureau.CreditHistoryRequest
-	(*CreditHistoryResponse)(nil),  // 4: smartcredit.bureau.CreditHistoryResponse
-	(*Obligation)(nil),             // 5: smartcredit.bureau.Obligation
-	(common.LegalForm)(0),          // 6: smartcredit.common.LegalForm
-	(*common.Money)(nil),           // 7: smartcredit.common.Money
+	(CompanyStatus)(0),                // 0: smartcredit.bureau.CompanyStatus
+	(*CompanyProfileRequest)(nil),     // 1: smartcredit.bureau.CompanyProfileRequest
+	(*CompanyProfileResponse)(nil),    // 2: smartcredit.bureau.CompanyProfileResponse
+	(*CreditHistoryRequest)(nil),      // 3: smartcredit.bureau.CreditHistoryRequest
+	(*CreditHistoryResponse)(nil),     // 4: smartcredit.bureau.CreditHistoryResponse
+	(*Obligation)(nil),                // 5: smartcredit.bureau.Obligation
+	(*AssessmentSourcesRequest)(nil),  // 6: smartcredit.bureau.AssessmentSourcesRequest
+	(*AssessmentSourcesResponse)(nil), // 7: smartcredit.bureau.AssessmentSourcesResponse
+	(common.LegalForm)(0),             // 8: smartcredit.common.LegalForm
+	(*common.Money)(nil),              // 9: smartcredit.common.Money
 }
 var file_proto_bureau_bureau_proto_depIdxs = []int32{
 	0, // 0: smartcredit.bureau.CompanyProfileResponse.status:type_name -> smartcredit.bureau.CompanyStatus
-	6, // 1: smartcredit.bureau.CompanyProfileResponse.legal_form:type_name -> smartcredit.common.LegalForm
-	7, // 2: smartcredit.bureau.CreditHistoryResponse.total_debt:type_name -> smartcredit.common.Money
+	8, // 1: smartcredit.bureau.CompanyProfileResponse.legal_form:type_name -> smartcredit.common.LegalForm
+	9, // 2: smartcredit.bureau.CreditHistoryResponse.total_debt:type_name -> smartcredit.common.Money
 	5, // 3: smartcredit.bureau.CreditHistoryResponse.obligations:type_name -> smartcredit.bureau.Obligation
-	7, // 4: smartcredit.bureau.Obligation.outstanding:type_name -> smartcredit.common.Money
-	1, // 5: smartcredit.bureau.BureauService.GetCompanyProfile:input_type -> smartcredit.bureau.CompanyProfileRequest
-	3, // 6: smartcredit.bureau.BureauService.GetCreditHistory:input_type -> smartcredit.bureau.CreditHistoryRequest
-	2, // 7: smartcredit.bureau.BureauService.GetCompanyProfile:output_type -> smartcredit.bureau.CompanyProfileResponse
-	4, // 8: smartcredit.bureau.BureauService.GetCreditHistory:output_type -> smartcredit.bureau.CreditHistoryResponse
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
+	9, // 4: smartcredit.bureau.Obligation.outstanding:type_name -> smartcredit.common.Money
+	6, // 5: smartcredit.bureau.BureauService.GetAssessmentSources:input_type -> smartcredit.bureau.AssessmentSourcesRequest
+	1, // 6: smartcredit.bureau.BureauService.GetCompanyProfile:input_type -> smartcredit.bureau.CompanyProfileRequest
+	3, // 7: smartcredit.bureau.BureauService.GetCreditHistory:input_type -> smartcredit.bureau.CreditHistoryRequest
+	7, // 8: smartcredit.bureau.BureauService.GetAssessmentSources:output_type -> smartcredit.bureau.AssessmentSourcesResponse
+	2, // 9: smartcredit.bureau.BureauService.GetCompanyProfile:output_type -> smartcredit.bureau.CompanyProfileResponse
+	4, // 10: smartcredit.bureau.BureauService.GetCreditHistory:output_type -> smartcredit.bureau.CreditHistoryResponse
+	8, // [8:11] is the sub-list for method output_type
+	5, // [5:8] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
 	5, // [5:5] is the sub-list for extension extendee
 	0, // [0:5] is the sub-list for field type_name
@@ -468,7 +575,7 @@ func file_proto_bureau_bureau_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_bureau_bureau_proto_rawDesc), len(file_proto_bureau_bureau_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

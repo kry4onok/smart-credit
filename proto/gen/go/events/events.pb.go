@@ -330,6 +330,7 @@ type ApplicationSubmitted struct {
 	Company                   *common.CompanySnapshot    `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty"`
 	Form                      *common.ApplicationForm    `protobuf:"bytes,6,opt,name=form,proto3" json:"form,omitempty"`
 	Documents                 []*common.DocumentMetadata `protobuf:"bytes,7,rep,name=documents,proto3" json:"documents,omitempty"`
+	AssessmentInputJson       []byte                     `protobuf:"bytes,9,opt,name=assessment_input_json,json=assessmentInputJson,proto3" json:"assessment_input_json,omitempty"`                   // UTF-8 Submission schema v1; strict DTO validation, max 256 KiB.
 	RequirementsReferenceDate string                     `protobuf:"bytes,8,opt,name=requirements_reference_date,json=requirementsReferenceDate,proto3" json:"requirements_reference_date,omitempty"` // pinned at draft creation, YYYY-MM-DD
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
@@ -414,6 +415,13 @@ func (x *ApplicationSubmitted) GetDocuments() []*common.DocumentMetadata {
 	return nil
 }
 
+func (x *ApplicationSubmitted) GetAssessmentInputJson() []byte {
+	if x != nil {
+		return x.AssessmentInputJson
+	}
+	return nil
+}
+
 func (x *ApplicationSubmitted) GetRequirementsReferenceDate() string {
 	if x != nil {
 		return x.RequirementsReferenceDate
@@ -428,6 +436,7 @@ type InfoProvided struct {
 	Form                   *common.ApplicationForm    `protobuf:"bytes,2,opt,name=form,proto3" json:"form,omitempty"`
 	Documents              []*common.DocumentMetadata `protobuf:"bytes,3,rep,name=documents,proto3" json:"documents,omitempty"`
 	Company                *common.CompanySnapshot    `protobuf:"bytes,4,opt,name=company,proto3" json:"company,omitempty"`
+	AssessmentInputJson    []byte                     `protobuf:"bytes,6,opt,name=assessment_input_json,json=assessmentInputJson,proto3" json:"assessment_input_json,omitempty"`          // Complete Submission v1, never a partial merge.
 	AnsweredRequirementIds []string                   `protobuf:"bytes,5,rep,name=answered_requirement_ids,json=answeredRequirementIds,proto3" json:"answered_requirement_ids,omitempty"` // explicitly supplied FIELD answers for v2
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
@@ -487,6 +496,13 @@ func (x *InfoProvided) GetDocuments() []*common.DocumentMetadata {
 func (x *InfoProvided) GetCompany() *common.CompanySnapshot {
 	if x != nil {
 		return x.Company
+	}
+	return nil
+}
+
+func (x *InfoProvided) GetAssessmentInputJson() []byte {
+	if x != nil {
+		return x.AssessmentInputJson
 	}
 	return nil
 }
@@ -693,6 +709,7 @@ type ApplicationPublicStatePublished struct {
 	ActiveOffer       *common.Offer            `protobuf:"bytes,5,opt,name=active_offer,json=activeOffer,proto3" json:"active_offer,omitempty"`
 	PublicReason      string                   `protobuf:"bytes,6,opt,name=public_reason,json=publicReason,proto3" json:"public_reason,omitempty"`
 	RequirementsPlan  *common.RequirementsPlan `protobuf:"bytes,7,opt,name=requirements_plan,json=requirementsPlan,proto3" json:"requirements_plan,omitempty"`
+	AssessmentJson    []byte                   `protobuf:"bytes,9,opt,name=assessment_json,json=assessmentJson,proto3" json:"assessment_json,omitempty"` // PublicResult v1 allowlist. Omission clears previous assessment.
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -776,6 +793,13 @@ func (x *ApplicationPublicStatePublished) GetRequirementsPlan() *common.Requirem
 	return nil
 }
 
+func (x *ApplicationPublicStatePublished) GetAssessmentJson() []byte {
+	if x != nil {
+		return x.AssessmentJson
+	}
+	return nil
+}
+
 type ProductCatalogPublished struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Products      []*common.Product      `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
@@ -842,7 +866,7 @@ const file_proto_events_events_proto_rawDesc = "" +
 	"\x15application_cancelled\x18\x0f \x01(\v2(.smartcredit.events.ApplicationCancelledH\x00R\x14applicationCancelled\x12\x82\x01\n" +
 	"\"application_public_state_published\x18\x10 \x01(\v23.smartcredit.events.ApplicationPublicStatePublishedH\x00R\x1fapplicationPublicStatePublished\x12i\n" +
 	"\x19product_catalog_published\x18\x11 \x01(\v2+.smartcredit.events.ProductCatalogPublishedH\x00R\x17productCatalogPublishedB\t\n" +
-	"\apayload\"\x97\x03\n" +
+	"\apayload\"\xcb\x03\n" +
 	"\x14ApplicationSubmitted\x12\x15\n" +
 	"\x06org_id\x18\x01 \x01(\tR\x05orgId\x12$\n" +
 	"\x0eclient_user_id\x18\x02 \x01(\tR\fclientUserId\x12\x1d\n" +
@@ -851,14 +875,16 @@ const file_proto_events_events_proto_rawDesc = "" +
 	"\x0fproduct_version\x18\x04 \x01(\x03R\x0eproductVersion\x12=\n" +
 	"\acompany\x18\x05 \x01(\v2#.smartcredit.common.CompanySnapshotR\acompany\x127\n" +
 	"\x04form\x18\x06 \x01(\v2#.smartcredit.common.ApplicationFormR\x04form\x12B\n" +
-	"\tdocuments\x18\a \x03(\v2$.smartcredit.common.DocumentMetadataR\tdocuments\x12>\n" +
-	"\x1brequirements_reference_date\x18\b \x01(\tR\x19requirementsReferenceDate\"\xa3\x02\n" +
+	"\tdocuments\x18\a \x03(\v2$.smartcredit.common.DocumentMetadataR\tdocuments\x122\n" +
+	"\x15assessment_input_json\x18\t \x01(\fR\x13assessmentInputJson\x12>\n" +
+	"\x1brequirements_reference_date\x18\b \x01(\tR\x19requirementsReferenceDate\"\xd7\x02\n" +
 	"\fInfoProvided\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x127\n" +
 	"\x04form\x18\x02 \x01(\v2#.smartcredit.common.ApplicationFormR\x04form\x12B\n" +
 	"\tdocuments\x18\x03 \x03(\v2$.smartcredit.common.DocumentMetadataR\tdocuments\x12=\n" +
-	"\acompany\x18\x04 \x01(\v2#.smartcredit.common.CompanySnapshotR\acompany\x128\n" +
+	"\acompany\x18\x04 \x01(\v2#.smartcredit.common.CompanySnapshotR\acompany\x122\n" +
+	"\x15assessment_input_json\x18\x06 \x01(\fR\x13assessmentInputJson\x128\n" +
 	"\x18answered_requirement_ids\x18\x05 \x03(\tR\x16answeredRequirementIds\"*\n" +
 	"\rOfferAccepted\x12\x19\n" +
 	"\boffer_id\x18\x01 \x01(\tR\aofferId\"*\n" +
@@ -868,7 +894,7 @@ const file_proto_events_events_proto_rawDesc = "" +
 	"\boffer_id\x18\x01 \x01(\tR\aofferId\x127\n" +
 	"\tsigned_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\bsignedAt\".\n" +
 	"\x14ApplicationCancelled\x12\x16\n" +
-	"\x06reason\x18\x01 \x01(\tR\x06reason\"\xa4\x03\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"\xcd\x03\n" +
 	"\x1fApplicationPublicStatePublished\x128\n" +
 	"\x06status\x18\x01 \x01(\x0e2 .smartcredit.events.ClientStatusR\x06status\x12\x1f\n" +
 	"\vstage_label\x18\x02 \x01(\tR\n" +
@@ -878,7 +904,8 @@ const file_proto_events_events_proto_rawDesc = "" +
 	"\x13active_info_request\x18\x04 \x01(\v2\x1f.smartcredit.common.InfoRequestR\x11activeInfoRequest\x12<\n" +
 	"\factive_offer\x18\x05 \x01(\v2\x19.smartcredit.common.OfferR\vactiveOffer\x12#\n" +
 	"\rpublic_reason\x18\x06 \x01(\tR\fpublicReason\x12Q\n" +
-	"\x11requirements_plan\x18\a \x01(\v2$.smartcredit.common.RequirementsPlanR\x10requirementsPlan\"R\n" +
+	"\x11requirements_plan\x18\a \x01(\v2$.smartcredit.common.RequirementsPlanR\x10requirementsPlan\x12'\n" +
+	"\x0fassessment_json\x18\t \x01(\fR\x0eassessmentJson\"R\n" +
 	"\x17ProductCatalogPublished\x127\n" +
 	"\bproducts\x18\x01 \x03(\v2\x1b.smartcredit.common.ProductR\bproducts*\x9d\x02\n" +
 	"\fClientStatus\x12\x1d\n" +

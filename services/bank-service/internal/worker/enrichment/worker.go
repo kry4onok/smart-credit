@@ -60,13 +60,24 @@ func (w *Worker) RunOnce(parent context.Context) (bool, error) {
 	}
 	profile, profileErr := w.bureau.GetCompanyProfile(ctx, claim.INN)
 	credit, creditErr := w.bureau.GetCreditHistory(ctx, claim.INN)
+	var sources []byte
+	if provider, ok := w.bureau.(interface {
+		GetAssessmentSources(context.Context, string, time.Time) ([]byte, error)
+	}); ok {
+		var sourceErr error
+		sources, sourceErr = provider.GetAssessmentSources(ctx, claim.INN, claim.AsOf)
+		if sourceErr != nil {
+			sources = nil
+		}
+	}
 	finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer finishCancel()
 	if parent.Err() != nil {
 		return true, errors.Join(parent.Err(), w.queue.Release(finishCtx, claim))
 	}
 	_, err = w.queue.Complete(finishCtx, claim, enrichmentrepository.Outcome{
-		Profile: profile, ProfileError: errorCode(profileErr),
+		SourcesJSON: sources,
+		Profile:     profile, ProfileError: errorCode(profileErr),
 		Credit: credit, CreditError: errorCode(creditErr),
 	})
 	if err != nil {

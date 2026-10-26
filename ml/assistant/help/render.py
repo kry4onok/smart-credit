@@ -15,6 +15,11 @@ _REASON = {
 }
 
 
+def _main_block(request):
+    return {help_pb2.HELP_MODE_CASE_SUMMARY: "SUMMARY", help_pb2.HELP_MODE_COMPARE_OPTIONS: "COMPARISON",
+            help_pb2.HELP_MODE_CHANGES: "CHANGES"}.get(request.mode, "DETAILS")
+
+
 def expand_required(plan: dict, request) -> dict:
     if plan["status"] in ("OUT_OF_SCOPE", "INSUFFICIENT_DATA", "CLARIFY"):
         return plan
@@ -27,7 +32,7 @@ def expand_required(plan: dict, request) -> dict:
         key = pending.pop(0)
         item = statements[key]
         if key not in seen:
-            kind = "LIMITATIONS" if item.topic == help_pb2.STATEMENT_TOPIC_DATA_QUALITY else "DETAILS"
+            kind = "LIMITATIONS" if item.topic == help_pb2.STATEMENT_TOPIC_DATA_QUALITY else _main_block(request)
             block = next((block for block in blocks if block["kind"] == kind), None)
             if block is None:
                 block = {"kind": kind, "selections": []}
@@ -60,14 +65,16 @@ def fallback_plan(request) -> dict:
     statements = {item.id: item for item in request.context.statements}
     main = [item for item in selected if statements[item["statement_id"]].topic != help_pb2.STATEMENT_TOPIC_DATA_QUALITY]
     limits = [item for item in selected if statements[item["statement_id"]].topic == help_pb2.STATEMENT_TOPIC_DATA_QUALITY]
-    kind = "SUMMARY" if request.mode == help_pb2.HELP_MODE_CASE_SUMMARY else "DETAILS"
+    kind = _main_block(request)
     blocks = []
     if main:
         blocks.append({"kind": kind, "selections": main})
     if limits:
         blocks.append({"kind": "LIMITATIONS", "selections": limits})
     status = "PARTIAL" if request.mode == help_pb2.HELP_MODE_CASE_SUMMARY and limits else "ANSWERED"
-    return {"status": status, "blocks": blocks, "action_ids": [], "clarify_target_ids": []}
+    selected_targets = {statements[item["statement_id"]].target_id for item in main}
+    action_ids = [item.id for item in request.context.actions if item.target_id in selected_targets][:3]
+    return {"status": status, "blocks": blocks, "action_ids": action_ids, "clarify_target_ids": []}
 
 
 def _plan_proto(plan: dict):

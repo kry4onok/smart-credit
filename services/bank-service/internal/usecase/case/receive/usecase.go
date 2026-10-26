@@ -1,14 +1,18 @@
 package receive
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
@@ -40,6 +44,7 @@ type Input struct {
 	CompanyINN                string
 	CompanyName               string
 	ProfileSchemaVersion      int32
+	AssessmentInputJSON       []byte
 	CompanyJSON               []byte
 	FormJSON                  []byte
 	DocumentsJSON             []byte
@@ -265,6 +270,29 @@ func parse(event *eventspb.Event) (Input, error) {
 	input.CompanyINN, input.CompanyName = company.GetInn(), company.GetName()
 	input.ProfileSchemaVersion = company.GetProfileSchemaVersion()
 	input.CompanyJSON, input.FormJSON, input.DocumentsJSON = companyJSON, formJSON, documentsJSON
+	input.AssessmentInputJSON = []byte(`{"schema_version":1,"preferences":{}}`)
+	if submitted != nil && len(submitted.AssessmentInputJson) > 0 {
+		input.AssessmentInputJSON = submitted.AssessmentInputJson
+	}
+	if provided != nil && len(provided.AssessmentInputJson) > 0 {
+		input.AssessmentInputJSON = provided.AssessmentInputJson
+	}
+	if len(input.AssessmentInputJSON) > 256*1024 || !json.Valid(input.AssessmentInputJSON) {
+		return Input{}, errors.New("invalid assessment input")
+	}
+	var submission assessment.Submission
+	decoder := json.NewDecoder(bytes.NewReader(input.AssessmentInputJSON))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&submission); err != nil {
+		return Input{}, fmt.Errorf("%w: malformed assessment input", ErrInvalidEvent)
+	}
+	var extra any
+	if err = decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return Input{}, fmt.Errorf("%w: trailing assessment input", ErrInvalidEvent)
+	}
+	if err = assessment.ValidateSubmission(submission, form.GetAmount().GetAmountKopecks()); err != nil {
+		return Input{}, fmt.Errorf("%w: %w", ErrInvalidEvent, err)
+	}
 	input.AmountKopecks, input.TermMonths, input.PurposeTag = form.GetAmount().GetAmountKopecks(), form.GetTermMonths(), purpose
 	return input, nil
 }

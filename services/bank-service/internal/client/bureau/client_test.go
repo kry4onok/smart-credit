@@ -76,3 +76,7 @@ func TestDoesNotRetryNotFound(t *testing.T) {
 		t.Fatalf("error=%v calls=%d", err, rpc.profileCalls)
 	}
 }
+
+func (r *rpcStub) GetAssessmentSources(context.Context, *bureaupb.AssessmentSourcesRequest, ...grpc.CallOption) (*bureaupb.AssessmentSourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "test stub")
+}

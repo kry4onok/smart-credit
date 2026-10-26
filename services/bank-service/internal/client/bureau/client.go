@@ -1,10 +1,15 @@
 package bureau
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
 
 	bureaupb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau"
 	"google.golang.org/grpc"
@@ -130,4 +135,27 @@ func validateCredit(value *bureaupb.CreditHistoryResponse) error {
 		}
 	}
 	return nil
+}
+
+func (c *Client) GetAssessmentSources(ctx context.Context, inn string, asOf time.Time) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+	response, err := c.rpc.GetAssessmentSources(ctx, &bureaupb.AssessmentSourcesRequest{Inn: inn, AsOf: asOf.Format(time.RFC3339Nano)})
+	if err != nil {
+		return nil, err
+	}
+	if response == nil || len(response.SourcesJson) == 0 || len(response.SourcesJson) > 256*1024 {
+		return nil, ErrInvalidResponse
+	}
+	var source assessment.Sources
+	decoder := json.NewDecoder(bytes.NewReader(response.SourcesJson))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&source); err != nil || source.SchemaVersion != 1 || source.INN != inn || len(source.Checks) > 60 {
+		return nil, ErrInvalidResponse
+	}
+	var extra any
+	if err = decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return nil, ErrInvalidResponse
+	}
+	return response.SourcesJson, nil
 }

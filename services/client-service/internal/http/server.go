@@ -20,6 +20,7 @@ import (
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationtimeline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/timeline"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
+	assessmenthandler "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/assessment"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
@@ -53,6 +54,7 @@ type server struct {
 var _ generated.StrictServerInterface = (*server)(nil)
 
 type Params struct {
+	Assessment              *assessmenthandler.Handler
 	DB                      health.Pinger
 	ReadinessTimeout        time.Duration
 	Verifier                middleware.Verifier
@@ -100,7 +102,11 @@ func New(params Params) http.Handler {
 		RequestErrorHandlerFunc:  requestErrorHandler,
 	})
 	handler := generated.HandlerWithOptions(strictHandler, generated.ChiServerOptions{ErrorHandlerFunc: requestErrorHandler})
-	protected := middleware.RequireClient(params.Verifier, middleware.ProfileJSON(handler))
+	clientHandler := handler
+	if params.Assessment != nil {
+		clientHandler = params.Assessment.Wrap(handler)
+	}
+	protected := middleware.RequireClient(params.Verifier, middleware.ProfileJSON(clientHandler))
 	staffOnly := middleware.RequireStaff(params.Verifier, handler)
 	return domainerror.Trace(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {

@@ -3,18 +3,17 @@ package decisionrepository
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
+
+	assessmentrepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/assessment"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/events/publicstate"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/decision"
-	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -31,68 +30,7 @@ func New(db transaction.Queryer, transactions *transaction.Manager) *Repository 
 }
 
 func (r *Repository) RunOnce(ctx context.Context) (bool, error) {
-	var found bool
-	err := r.transactions.WithinTransaction(ctx, func(ctx context.Context) error {
-		q := transaction.QueryerFromContext(ctx, r.db)
-		var caseID, productID uuid.UUID
-		var version, productVersion int64
-		var snapshot validation.Snapshot
-		err := q.QueryRow(ctx, claimCaseQuery).Scan(&caseID, &version, &productID, &productVersion,
-			&snapshot.CompanyJSON, &snapshot.DocumentsJSON, &snapshot.ReferenceDate, &snapshot.AmountKopecks,
-			&snapshot.TermMonths, &snapshot.PurposeTag)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("claim decision case: %w", err)
-		}
-		found = true
-		input := decision.Input{Snapshot: snapshot, Now: time.Now().UTC()}
-		input.Product, err = loadProduct(ctx, q, productID, productVersion)
-		if err != nil {
-			return err
-		}
-		var scoreID *int64
-		var grade string
-		err = q.QueryRow(ctx, loadScoreQuery, caseID).Scan(&scoreID, &grade)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("load decision score: %w", err)
-		}
-		input.ScoreFound = err == nil && scoreID != nil
-		input.Grade = grade
-		var companyOutcome, companyStatus, creditOutcome *string
-		var overdue *int
-		if err = q.QueryRow(ctx, loadChecksQuery, caseID).Scan(&companyOutcome, &companyStatus, &creditOutcome, &overdue); err != nil {
-			return fmt.Errorf("load decision checks: %w", err)
-		}
-		input.CompanyOK = companyOutcome != nil && *companyOutcome == "SUCCESS" && companyStatus != nil
-		input.CreditOK = creditOutcome != nil && *creditOutcome == "SUCCESS" && overdue != nil
-		if companyStatus != nil {
-			input.CompanyStatus = *companyStatus
-		}
-		if overdue != nil {
-			input.OverdueDays = *overdue
-		}
-		result := decision.Evaluate(input)
-		return complete(ctx, q, caseID, productID, version, scoreID, input, result)
-	})
-	return found, err
-}
-
-func loadProduct(ctx context.Context, q transaction.Queryer, id uuid.UUID, version int64) (decision.Product, error) {
-	var p decision.Product
-	err := q.QueryRow(ctx, loadProductQuery, id, version).Scan(&p.Name, &p.Version,
-		&p.Purposes, &p.Documents, &p.MinAmount, &p.MaxAmount, &p.MinTerm, &p.MaxTerm,
-		&p.MinAgeMonths, &p.MaxAmountRevenueBP, &p.MaxOverdueDays,
-		&p.GradeARateBP, &p.GradeBRateBP, &p.OfferTTLHours, &p.PolicyVersion)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return decision.Product{}, nil
-	}
-	if err != nil {
-		return decision.Product{}, fmt.Errorf("load decision product: %w", err)
-	}
-	p.Found = true
-	return p, nil
+	return assessmentrepository.New(r.db, r.transactions).RunOnce(ctx)
 }
 
 func complete(ctx context.Context, q transaction.Queryer, caseID, productID uuid.UUID, version int64,
@@ -178,7 +116,7 @@ func complete(ctx context.Context, q transaction.Queryer, caseID, productID uuid
 	if _, err = q.Exec(ctx, insertAuditQuery, uuid.New(), caseID, newVersion, result.Outcome, string(details)); err != nil {
 		return fmt.Errorf("audit automatic decision: %w", err)
 	}
-	if _, err = q.Exec(ctx, insertOutboxQuery, eventID, caseID.String(), newVersion, payload); err != nil {
+	if _, err = publicstate.Publish(ctx, q, eventID, caseID.String(), newVersion, payload); err != nil {
 		return fmt.Errorf("write automatic decision outbox: %w", err)
 	}
 	return nil

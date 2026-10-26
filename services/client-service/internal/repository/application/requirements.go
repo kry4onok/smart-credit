@@ -27,7 +27,7 @@ func buildPlan(c model.Company, p productSnapshotJSON, f *model.ApplicationForm,
 	if p.RequirementsPolicyVersion == nil {
 		return nil, nil
 	}
-	if ref == nil || c.ProfileSchemaVersion == nil || *c.ProfileSchemaVersion != 2 || *p.RequirementsPolicyVersion != "sme-profile-v1" {
+	if ref == nil || c.ProfileSchemaVersion == nil || *c.ProfileSchemaVersion != 2 || !requirements.SupportedPolicy(*p.RequirementsPolicyVersion) {
 		return nil, &requirements.RuleError{Code: requirements.InvalidProfile, Issues: []requirements.Issue{{Path: "profile", Code: requirements.InvalidProfile, Message: "Неизвестная политика, версия профиля или дата требований"}}}
 	}
 	if err := domain.ValidateCompanyAt(c, *ref); err != nil {

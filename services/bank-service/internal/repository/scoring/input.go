@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	bureaupb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau"
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
@@ -18,8 +19,10 @@ var ErrInputNotReady = errors.New("latest company and credit checks must both be
 var ErrMalformedInput = errors.New("saved scoring input is malformed")
 
 type SavedInput struct {
-	Input    scoringclient.Input
-	Revision int64
+	Input      scoringclient.Input
+	Revision   int64
+	Generation int64
+	AsOf       time.Time
 }
 
 func (r *Repository) LoadInput(ctx context.Context, caseID uuid.UUID) (SavedInput, error) {
@@ -27,12 +30,13 @@ func (r *Repository) LoadInput(ctx context.Context, caseID uuid.UUID) (SavedInpu
 		return SavedInput{}, errors.New("invalid scoring case ID")
 	}
 	var productID uuid.UUID
-	var revision int64
+	var revision, generation int64
+	var asOf time.Time
 	var companyJSON, profileJSON, creditJSON []byte
 	var profileOutcome, creditOutcome *string
 	err := r.db.QueryRow(ctx, loadInputQuery, caseID).Scan(
 		&productID, &revision, &companyJSON,
-		&profileOutcome, &profileJSON, &creditOutcome, &creditJSON,
+		&profileOutcome, &profileJSON, &creditOutcome, &creditJSON, &generation, &asOf,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SavedInput{}, ErrCaseNotFound
@@ -48,7 +52,7 @@ func (r *Repository) LoadInput(ctx context.Context, caseID uuid.UUID) (SavedInpu
 	if err != nil {
 		return SavedInput{}, fmt.Errorf("%w: %w", ErrMalformedInput, err)
 	}
-	return SavedInput{Input: input, Revision: revision}, nil
+	return SavedInput{Input: input, Revision: revision, Generation: generation, AsOf: asOf}, nil
 }
 
 func decodeSavedInput(caseID, productID uuid.UUID, companyJSON, profileJSON, creditJSON []byte) (scoringclient.Input, error) {

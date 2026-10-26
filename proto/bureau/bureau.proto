@@ -7,6 +7,7 @@ option go_package = "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/g
 import "proto/common/common.proto";
 
 service BureauService {
+  rpc GetAssessmentSources(AssessmentSourcesRequest) returns (AssessmentSourcesResponse);
   // Упрощённые ЕГРЮЛ/ЕГРИП и ФНС «Прозрачный бизнес».
   rpc GetCompanyProfile(CompanyProfileRequest) returns (CompanyProfileResponse);
   // Упрощённое БКИ.
@@ -47,3 +48,7 @@ message Obligation {
   string kind = 1;
   smartcredit.common.Money outstanding = 2;
 }
+
+// Versioned typed JSON schema lives in pkg/assessment and api/assessment.yaml.
+message AssessmentSourcesRequest { string inn = 1; string as_of = 2; }
+message AssessmentSourcesResponse { bytes sources_json = 1; }

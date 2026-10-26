@@ -48,7 +48,7 @@ func (r *Repository) RunOnce(ctx context.Context) (bool, error) {
 		if err != nil {
 			return fmt.Errorf("encode disbursed state: %w", err)
 		}
-		if _, err := q.Exec(ctx, insertDisbursementOutboxQuery, eventID,
+		if _, err := publicstate.Publish(ctx, q, eventID,
 			caseID.String(), newVersion, payload); err != nil {
 			return fmt.Errorf("write disbursed outbox: %w", err)
 		}

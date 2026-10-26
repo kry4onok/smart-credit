@@ -1,0 +1,3389 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Smart Credit Assessment and Help API",
+    "version": "1.0.0",
+    "description": "Supplement to auth.yaml, client.yaml and bank.yaml. Gateway prefix /api. JSON monetary values are integer RUB kopecks. All dates UTC. New frontend work uses this contract plus existing workflow APIs; no frontend-side underwriting."
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/client/applications/{application_id}/assessment-input": {
+      "get": {
+        "operationId": "getAssessmentInput",
+        "summary": "Current organization only; draft financial inputs/preferences.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentInputEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putAssessmentInput",
+        "summary": "Replace inputs in DRAFT/NEEDS_INFO without pending command. Send through existing submit/info afterwards.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"[1-9][0-9]*\"$"
+            },
+            "description": "Quoted optimistic card version, e.g. \"12\"."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentInputEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Submission"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/client/applications/{application_id}/assessment": {
+      "get": {
+        "operationId": "getPublicAssessment",
+        "summary": "Current organization public projection; Kafka eventual consistency.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAssessment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backoffice/applications/{application_id}/assessment": {
+      "get": {
+        "operationId": "getBankAssessment",
+        "summary": "ANALYST/ADMIN: current generation, all calculations, source checks and old baseline.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAssessment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backoffice/applications/{application_id}/assessments": {
+      "get": {
+        "operationId": "listBankAssessments",
+        "summary": "ANALYST/ADMIN: latest 20 immutable assessments, newest first.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentHistory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backoffice/applications/{application_id}/recheck": {
+      "post": {
+        "operationId": "recheckAssessment",
+        "summary": "Assigned ANALYST: MANUAL_REVIEW/NEEDS_INFO. New generation, unchanged input revision; replay returns original generation.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"[1-9][0-9]*\"$"
+            },
+            "description": "Quoted optimistic card version, e.g. \"12\"."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecheckAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/client/applications/{application_id}/help": {
+      "get": {
+        "operationId": "getClientHelpContext",
+        "summary": "Get audience-filtered, current backend context.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpContext"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "requestClientHelp",
+        "summary": "Explain approved facts; recheck context after model call; known-catalog template fallback.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backoffice/applications/{application_id}/help": {
+      "get": {
+        "operationId": "getBankHelpContext",
+        "summary": "Get audience-filtered, current backend context.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpContext"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "requestBankHelp",
+        "summary": "Explain approved facts; recheck context after model call; known-catalog template fallback.",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem; inspect code. No business mutation on conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionRequest"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "BalanceSheet": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "type": "string"
+          },
+          "assets_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "equity_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "liabilities_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "payables_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "receivables_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "assets_kopecks",
+          "liabilities_kopecks",
+          "equity_kopecks",
+          "receivables_kopecks",
+          "payables_kopecks",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "Candidate": {
+        "additionalProperties": false,
+        "properties": {
+          "base": {
+            "items": {
+              "$ref": "#/components/schemas/CashMonth"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "base_coverage_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "candidate_id": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stress": {
+            "items": {
+              "$ref": "#/components/schemas/CashMonth"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "stress_coverage_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "uncovered_need_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "product_id",
+          "product_version",
+          "product_name",
+          "schedule",
+          "uncovered_need_kopecks",
+          "base",
+          "stress",
+          "base_coverage_bps",
+          "stress_coverage_bps",
+          "status",
+          "valid_until"
+        ],
+        "type": "object",
+        "description": "Calculated proposal, not an offer. Must be current and confirmed by assigned analyst through existing decision endpoint. Rate is annual basis points."
+      },
+      "CashMonth": {
+        "additionalProperties": false,
+        "properties": {
+          "cfads_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "closing_cash_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "existing_debt_payment_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "new_debt_payment_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "operating_receipts_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "period": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "cfads_kopecks",
+          "operating_receipts_kopecks",
+          "existing_debt_payment_kopecks",
+          "new_debt_payment_kopecks",
+          "closing_cash_kopecks",
+          "quality",
+          "evidence_refs"
+        ],
+        "type": "object",
+        "description": "Monthly scenario in KOPECKS, quality PROJECTED. Financial snapshot: without new loan. Candidate: includes its exact rounded new-loan schedule."
+      },
+      "Change": {
+        "additionalProperties": false,
+        "properties": {
+          "current": {},
+          "current_assessment_id": {
+            "type": "string"
+          },
+          "current_period_from": {
+            "type": "string"
+          },
+          "current_period_to": {
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "path": {
+            "type": "string"
+          },
+          "previous": {},
+          "previous_assessment_id": {
+            "type": "string"
+          },
+          "previous_period_from": {
+            "type": "string"
+          },
+          "previous_period_to": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "previous_assessment_id",
+          "current_assessment_id",
+          "quality",
+          "evidence_refs",
+          "path",
+          "previous",
+          "current",
+          "unit"
+        ],
+        "type": "object",
+        "description": "Server-computed difference, with both assessment IDs, periods, units and evidence. Clients never reconstruct a missing baseline."
+      },
+      "CheckResult": {
+        "additionalProperties": false,
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "registration_date_is_activity_proxy": {
+            "type": "boolean"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "required": [
+          "conclusion",
+          "codes",
+          "sources",
+          "registration_date_is_activity_proxy"
+        ],
+        "type": "object"
+      },
+      "CreditHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "current_dpd": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "historical_max_dpd_12m": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "overdue_episodes_12m": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "period_from": {
+            "type": "string"
+          },
+          "period_to": {
+            "type": "string"
+          },
+          "total_debt_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "historical_max_dpd_12m",
+          "current_dpd",
+          "overdue_episodes_12m",
+          "period_from",
+          "period_to",
+          "total_debt_kopecks"
+        ],
+        "type": "object"
+      },
+      "DebtPayment": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "obligation_id": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "obligation_id",
+          "period",
+          "amount_kopecks"
+        ],
+        "type": "object"
+      },
+      "Factor": {
+        "additionalProperties": false,
+        "properties": {
+          "contribution": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "explanation_code": {
+            "type": "string"
+          },
+          "factor_id": {
+            "type": "string"
+          },
+          "max_points": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "period_from": {
+            "type": "string"
+          },
+          "period_to": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "value": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "weight_bps": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quality",
+          "factor_id",
+          "value",
+          "unit",
+          "weight_bps",
+          "contribution",
+          "max_points",
+          "status",
+          "explanation_code",
+          "period_from",
+          "period_to",
+          "evidence_refs"
+        ],
+        "type": "object",
+        "description": "Bank-only expert points; sum of contribution equals risk.score. No PD or approval probability."
+      },
+      "FinancialInput": {
+        "additionalProperties": false,
+        "properties": {
+          "balance_sheet": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BalanceSheet"
+              }
+            ],
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "RUB"
+            ]
+          },
+          "debt_payments": {
+            "items": {
+              "$ref": "#/components/schemas/DebtPayment"
+            },
+            "nullable": true,
+            "type": "array",
+            "maxItems": 1200
+          },
+          "debt_schedule_known": {
+            "allOf": [
+              {
+                "type": "boolean"
+              }
+            ],
+            "nullable": true
+          },
+          "debt_schedule_through": {
+            "type": "string"
+          },
+          "initial_cash_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "largest_customer_share_bps": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/Month"
+            },
+            "nullable": true,
+            "type": "array",
+            "maxItems": 12
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "currency",
+          "months",
+          "initial_cash_kopecks",
+          "largest_customer_share_bps",
+          "debt_schedule_known",
+          "debt_schedule_through",
+          "debt_payments",
+          "provenance"
+        ],
+        "type": "object",
+        "description": "Structured operating cash, excluding loans, capital contributions and own transfers. Last 12 complete months. Missing nullable values are unknown. HTTP client provenance may only be DECLARED or PROVIDED."
+      },
+      "FinancialSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "balance_status": {
+            "type": "string"
+          },
+          "base": {
+            "items": {
+              "$ref": "#/components/schemas/CashMonth"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "forecast_method": {
+            "type": "string"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalCashMonth"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "initial_cash_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "largest_customer_share_bps": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "operating_margin_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "period_from": {
+            "type": "string"
+          },
+          "period_to": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "stress": {
+            "items": {
+              "$ref": "#/components/schemas/CashMonth"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "currency",
+          "unit",
+          "period_from",
+          "period_to",
+          "forecast_method",
+          "history",
+          "base",
+          "stress",
+          "initial_cash_kopecks",
+          "operating_margin_bps",
+          "largest_customer_share_bps",
+          "balance_status",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "HistoricalCashMonth": {
+        "additionalProperties": false,
+        "properties": {
+          "cfads_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "operating_receipts_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "period": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "cfads_kopecks",
+          "operating_receipts_kopecks",
+          "quality",
+          "evidence_refs"
+        ],
+        "type": "object",
+        "description": "Historical operating cash only. Existing loan payments and closing cash are not inferred as zero."
+      },
+      "Input": {
+        "additionalProperties": false,
+        "properties": {
+          "application_id": {
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "assessment_generation": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "inn": {
+            "type": "string"
+          },
+          "input_revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "legal_form": {
+            "type": "string"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "requested_amount_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "requested_product_id": {
+            "type": "string"
+          },
+          "requested_term_months": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/Sources"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/Submission"
+          }
+        },
+        "required": [
+          "application_id",
+          "input_revision",
+          "assessment_generation",
+          "as_of",
+          "inn",
+          "legal_form",
+          "requested_product_id",
+          "requested_amount_kopecks",
+          "requested_term_months",
+          "purpose",
+          "submission",
+          "sources",
+          "products"
+        ],
+        "type": "object"
+      },
+      "Issue": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "path",
+          "message"
+        ],
+        "type": "object"
+      },
+      "Month": {
+        "additionalProperties": false,
+        "properties": {
+          "fixed_costs_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "maintenance_capex_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "operating_receipts_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "owner_drawings_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "period": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "taxes_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "variable_costs_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "period",
+          "operating_receipts_kopecks",
+          "variable_costs_kopecks",
+          "fixed_costs_kopecks",
+          "taxes_kopecks",
+          "maintenance_capex_kopecks",
+          "owner_drawings_kopecks",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "Payment": {
+        "additionalProperties": false,
+        "properties": {
+          "balance_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "interest_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "number": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "payment_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "period": {
+            "type": "string"
+          },
+          "principal_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number",
+          "period",
+          "payment_kopecks",
+          "principal_kopecks",
+          "interest_kopecks",
+          "balance_kopecks"
+        ],
+        "type": "object"
+      },
+      "Preferences": {
+        "additionalProperties": false,
+        "properties": {
+          "max_payment_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "max_term_months": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "minimum_useful_amount_kopecks": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true,
+            "description": "Absent: requested amount. A lower amount requires explicit preference."
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "",
+              "KEEP_AMOUNT",
+              "LOW_PAYMENT",
+              "LOW_TOTAL_COST"
+            ],
+            "default": "KEEP_AMOUNT"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "Product": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "max_amount_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_term_months": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "min_amount_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "min_term_months": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "purposes": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "rate_a_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rate_b_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "purposes",
+          "min_amount_kopecks",
+          "max_amount_kopecks",
+          "min_term_months",
+          "max_term_months",
+          "rate_a_bps",
+          "rate_b_bps"
+        ],
+        "type": "object"
+      },
+      "Provenance": {
+        "additionalProperties": false,
+        "properties": {
+          "is_mock": {
+            "type": "boolean"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "DECLARED",
+              "PROVIDED",
+              "VERIFIED"
+            ]
+          },
+          "source_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_ref",
+          "observed_at",
+          "quality",
+          "is_mock"
+        ],
+        "type": "object"
+      },
+      "PublicResult": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "assessment_generation": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "assessment_id": {
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "financial": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FinancialSnapshot"
+              }
+            ],
+            "nullable": true
+          },
+          "input_revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "policy_version": {
+            "type": "string"
+          },
+          "schema_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "MANUAL_REVIEW",
+              "NEEDS_INFO",
+              "REJECT",
+              "READY_FOR_CONFIRMATION",
+              "NO_AFFORDABLE_OPTION"
+            ]
+          },
+          "valid_until": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "assessment_id",
+          "input_revision",
+          "assessment_generation",
+          "as_of",
+          "valid_until",
+          "policy_version",
+          "status",
+          "candidates",
+          "issues",
+          "changes"
+        ],
+        "type": "object",
+        "description": "Explicit public allowlist; no risk score, factor weights, internal checks or related people."
+      },
+      "Result": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "assessment_generation": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "assessment_id": {
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "checks": {
+            "$ref": "#/components/schemas/CheckResult"
+          },
+          "financial": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FinancialSnapshot"
+              }
+            ],
+            "nullable": true
+          },
+          "input_hash": {
+            "type": "string"
+          },
+          "input_revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "original_failure_codes": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "policy_checksum": {
+            "type": "string"
+          },
+          "policy_version": {
+            "type": "string"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskResult"
+          },
+          "schema_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "MANUAL_REVIEW",
+              "NEEDS_INFO",
+              "REJECT",
+              "READY_FOR_CONFIRMATION",
+              "NO_AFFORDABLE_OPTION"
+            ]
+          },
+          "valid_until": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "assessment_id",
+          "input_revision",
+          "assessment_generation",
+          "as_of",
+          "valid_until",
+          "policy_version",
+          "policy_checksum",
+          "input_hash",
+          "status",
+          "checks",
+          "risk",
+          "original_failure_codes",
+          "candidates",
+          "issues",
+          "changes"
+        ],
+        "type": "object"
+      },
+      "RiskResult": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_score": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "config_checksum": {
+            "type": "string"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/Factor"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "grade": {
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "score": {
+            "allOf": [
+              {
+                "format": "int64",
+                "type": "integer"
+              }
+            ],
+            "nullable": true,
+            "description": "Present only when assessed; zero is a valid score."
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "model_version",
+          "config_checksum",
+          "baseline_score",
+          "factors",
+          "issues"
+        ],
+        "type": "object"
+      },
+      "Schedule": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "payment_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/Payment"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "rate_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "term_months": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_interest_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_payment_kopecks": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_kopecks",
+          "term_months",
+          "rate_bps",
+          "currency",
+          "method",
+          "payment_kopecks",
+          "total_payment_kopecks",
+          "total_interest_kopecks",
+          "payments"
+        ],
+        "type": "object"
+      },
+      "Source": {
+        "additionalProperties": false,
+        "properties": {
+          "conclusion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "match": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "role": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "subject_id",
+          "role",
+          "match",
+          "status",
+          "conclusion",
+          "valid_until",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "Sources": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "company_status": {
+            "type": "string"
+          },
+          "credit": {
+            "$ref": "#/components/schemas/CreditHistory"
+          },
+          "financials": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FinancialInput"
+              }
+            ],
+            "nullable": true
+          },
+          "inn": {
+            "type": "string"
+          },
+          "registered_at": {
+            "type": "string"
+          },
+          "schema_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "supplied_requirements": {
+            "items": {
+              "$ref": "#/components/schemas/SuppliedRequirement"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "required": [
+          "schema_version",
+          "inn",
+          "registered_at",
+          "company_status",
+          "checks",
+          "credit",
+          "supplied_requirements"
+        ],
+        "type": "object"
+      },
+      "Submission": {
+        "additionalProperties": false,
+        "properties": {
+          "financials": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FinancialInput"
+              }
+            ],
+            "nullable": true
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences"
+          },
+          "schema_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "preferences"
+        ],
+        "type": "object"
+      },
+      "SuppliedRequirement": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "period_from": {
+            "type": "string"
+          },
+          "period_to": {
+            "type": "string"
+          },
+          "source_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "period_from",
+          "period_to",
+          "source_ref"
+        ],
+        "type": "object"
+      },
+      "Target": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "TARGET_KIND_UNSPECIFIED",
+              "TARGET_KIND_REQUIREMENT",
+              "TARGET_KIND_FACTOR",
+              "TARGET_KIND_OPTION",
+              "TARGET_KIND_DECISION",
+              "TARGET_KIND_CHANGE",
+              "TARGET_KIND_PROFILE"
+            ]
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "Evidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "EVIDENCE_KIND_UNSPECIFIED",
+              "EVIDENCE_KIND_PROFILE",
+              "EVIDENCE_KIND_REQUIREMENT",
+              "EVIDENCE_KIND_DOCUMENT",
+              "EVIDENCE_KIND_CHECK",
+              "EVIDENCE_KIND_SCORE",
+              "EVIDENCE_KIND_FINANCIAL",
+              "EVIDENCE_KIND_CALCULATION",
+              "EVIDENCE_KIND_DECISION",
+              "EVIDENCE_KIND_POLICY",
+              "EVIDENCE_KIND_CHANGE"
+            ]
+          },
+          "source_ref": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_from": {
+            "type": "string"
+          },
+          "period_to": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "EVIDENCE_STATE_UNSPECIFIED",
+              "EVIDENCE_STATE_DECLARED",
+              "EVIDENCE_STATE_PROVIDED",
+              "EVIDENCE_STATE_VERIFIED",
+              "EVIDENCE_STATE_UNAVAILABLE",
+              "EVIDENCE_STATE_PENDING",
+              "EVIDENCE_STATE_AMBIGUOUS",
+              "EVIDENCE_STATE_NOT_APPLICABLE"
+            ]
+          },
+          "is_mock": {
+            "type": "boolean"
+          }
+        },
+        "required": []
+      },
+      "StatementVariant": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "Statement": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "STATEMENT_TOPIC_UNSPECIFIED",
+              "STATEMENT_TOPIC_PROFILE",
+              "STATEMENT_TOPIC_REQUIREMENT",
+              "STATEMENT_TOPIC_SCORE",
+              "STATEMENT_TOPIC_AFFORDABILITY",
+              "STATEMENT_TOPIC_POLICY",
+              "STATEMENT_TOPIC_DATA_QUALITY",
+              "STATEMENT_TOPIC_OPTION",
+              "STATEMENT_TOPIC_DECISION",
+              "STATEMENT_TOPIC_CHANGE",
+              "STATEMENT_TOPIC_NEXT_STEP"
+            ]
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatementVariant"
+            }
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "companion_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": []
+      },
+      "Action": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ACTION_KIND_UNSPECIFIED",
+              "ACTION_KIND_OPEN_PROFILE",
+              "ACTION_KIND_OPEN_REQUIREMENT",
+              "ACTION_KIND_OPEN_FACTOR",
+              "ACTION_KIND_OPEN_OPTIONS",
+              "ACTION_KIND_OPEN_OFFER",
+              "ACTION_KIND_OPEN_TIMELINE"
+            ]
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "HelpContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "application_id": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "AUDIENCE_UNSPECIFIED",
+              "AUDIENCE_CLIENT",
+              "AUDIENCE_ANALYST"
+            ]
+          },
+          "context_id": {
+            "type": "string"
+          },
+          "source_revision": {
+            "type": "string"
+          },
+          "input_revision": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Optional int64 uses ProtoJSON decimal string encoding."
+          },
+          "assessment_id": {
+            "type": "string"
+          },
+          "calculation_id": {
+            "type": "string"
+          },
+          "policy_version": {
+            "type": "string"
+          },
+          "catalog_version": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "FRESHNESS_UNSPECIFIED",
+              "FRESHNESS_CURRENT",
+              "FRESHNESS_PENDING",
+              "FRESHNESS_STALE"
+            ]
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Target"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Statement"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          }
+        },
+        "required": [],
+        "description": "Backend-generated authorized context, valid for at most 60 seconds. ProtoJSON enums retain their full prefixed names. Source revision includes assessment generation via snapshot version/hash."
+      },
+      "HelpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "context": {
+            "$ref": "#/components/schemas/HelpContext"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "HELP_MODE_UNSPECIFIED",
+              "HELP_MODE_NEXT_STEP",
+              "HELP_MODE_REQUIREMENT",
+              "HELP_MODE_ASSESSMENT",
+              "HELP_MODE_COMPARE_OPTIONS",
+              "HELP_MODE_DECISION",
+              "HELP_MODE_CASE_SUMMARY",
+              "HELP_MODE_CHANGES",
+              "HELP_MODE_QUESTION"
+            ]
+          },
+          "target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "question": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "DETAIL_UNSPECIFIED",
+              "DETAIL_CONCISE",
+              "DETAIL_DETAILED"
+            ]
+          },
+          "locale": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "Selection": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "statement_id": {
+            "type": "string"
+          },
+          "variant_id": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "PlanBlock": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "BLOCK_KIND_UNSPECIFIED",
+              "BLOCK_KIND_SUMMARY",
+              "BLOCK_KIND_DETAILS",
+              "BLOCK_KIND_LIMITATIONS",
+              "BLOCK_KIND_NEXT_STEPS",
+              "BLOCK_KIND_CHANGES",
+              "BLOCK_KIND_COMPARISON"
+            ]
+          },
+          "selections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Selection"
+            }
+          }
+        },
+        "required": []
+      },
+      "AnswerPlan": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ANSWER_STATUS_UNSPECIFIED",
+              "ANSWER_STATUS_ANSWERED",
+              "ANSWER_STATUS_PARTIAL",
+              "ANSWER_STATUS_INSUFFICIENT_DATA",
+              "ANSWER_STATUS_OUT_OF_SCOPE",
+              "ANSWER_STATUS_CLARIFY"
+            ]
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanBlock"
+            }
+          },
+          "action_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "clarify_target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": []
+      },
+      "BlockItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "statement_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": []
+      },
+      "Block": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "BLOCK_KIND_UNSPECIFIED",
+              "BLOCK_KIND_SUMMARY",
+              "BLOCK_KIND_DETAILS",
+              "BLOCK_KIND_LIMITATIONS",
+              "BLOCK_KIND_NEXT_STEPS",
+              "BLOCK_KIND_CHANGES",
+              "BLOCK_KIND_COMPARISON"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlockItem"
+            }
+          }
+        },
+        "required": []
+      },
+      "HelpResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "context_id": {
+            "type": "string"
+          },
+          "source_revision": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ANSWER_STATUS_UNSPECIFIED",
+              "ANSWER_STATUS_ANSWERED",
+              "ANSWER_STATUS_PARTIAL",
+              "ANSWER_STATUS_INSUFFICIENT_DATA",
+              "ANSWER_STATUS_OUT_OF_SCOPE",
+              "ANSWER_STATUS_CLARIFY"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "RESPONSE_SOURCE_UNSPECIFIED",
+              "RESPONSE_SOURCE_MODEL",
+              "RESPONSE_SOURCE_TEMPLATE"
+            ]
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "prompt_version": {
+            "type": "string"
+          },
+          "catalog_version": {
+            "type": "string"
+          },
+          "fallback_reason": {
+            "type": "string",
+            "enum": [
+              "FALLBACK_REASON_UNSPECIFIED",
+              "FALLBACK_REASON_NONE",
+              "FALLBACK_REASON_MODEL_UNAVAILABLE",
+              "FALLBACK_REASON_MODEL_TIMEOUT",
+              "FALLBACK_REASON_INVALID_MODEL_OUTPUT",
+              "FALLBACK_REASON_QUEUE_FULL",
+              "FALLBACK_REASON_INPUT_TOO_LARGE",
+              "FALLBACK_REASON_NO_SUPPORTED_CONTEXT"
+            ]
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          },
+          "clarify_targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Target"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "plan": {
+            "$ref": "#/components/schemas/AnswerPlan"
+          }
+        },
+        "required": [],
+        "description": "Only backend-owned text. Treat all text as plain text. Actions are navigation only; model content never authorizes a business command. Unknown catalog is HTTP 409."
+      },
+      "Descriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "application_id": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "AUDIENCE_UNSPECIFIED",
+              "AUDIENCE_CLIENT",
+              "AUDIENCE_ANALYST"
+            ]
+          },
+          "context_id": {
+            "type": "string"
+          },
+          "source_revision": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "FRESHNESS_UNSPECIFIED",
+              "FRESHNESS_CURRENT",
+              "FRESHNESS_PENDING",
+              "FRESHNESS_STALE"
+            ]
+          },
+          "available_modes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "HELP_MODE_UNSPECIFIED",
+                "HELP_MODE_NEXT_STEP",
+                "HELP_MODE_REQUIREMENT",
+                "HELP_MODE_ASSESSMENT",
+                "HELP_MODE_COMPARE_OPTIONS",
+                "HELP_MODE_DECISION",
+                "HELP_MODE_CASE_SUMMARY",
+                "HELP_MODE_CHANGES",
+                "HELP_MODE_QUESTION"
+              ]
+            }
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Target"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          }
+        },
+        "required": []
+      },
+      "PublicAssistantSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "application_id": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "AUDIENCE_UNSPECIFIED",
+              "AUDIENCE_CLIENT",
+              "AUDIENCE_ANALYST"
+            ]
+          },
+          "source_revision": {
+            "type": "string"
+          },
+          "input_revision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "assessment_id": {
+            "type": "string"
+          },
+          "calculation_id": {
+            "type": "string"
+          },
+          "policy_version": {
+            "type": "string"
+          },
+          "catalog_version": {
+            "type": "string"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Target"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Statement"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          }
+        },
+        "required": []
+      },
+      "SelectionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "context_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_revision": {
+            "type": "string"
+          },
+          "catalog_version": {
+            "type": "string",
+            "enum": [
+              "smart-credit-help-v1"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "NEXT_STEP",
+              "REQUIREMENT",
+              "ASSESSMENT",
+              "COMPARE_OPTIONS",
+              "DECISION",
+              "CASE_SUMMARY",
+              "CHANGES",
+              "QUESTION"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "CONCISE",
+              "DETAILED"
+            ]
+          },
+          "target_ids": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "string"
+            }
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "context_id",
+          "source_revision",
+          "catalog_version",
+          "mode",
+          "detail"
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ]
+      },
+      "ClientAssessment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "bank_event_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "application_status": {
+            "type": "string"
+          },
+          "pending_action": {
+            "type": "string",
+            "nullable": true
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CURRENT",
+              "STALE"
+            ]
+          },
+          "assessment": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicResult"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "version",
+          "bank_event_version",
+          "application_status",
+          "pending_action",
+          "freshness",
+          "assessment"
+        ]
+      },
+      "BaselineV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "input_revision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "assessment_generation": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "response": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Unchanged ScoreResponse ProtoJSON; see proto/scoring/scoring.proto. Historical v1 semantics."
+          },
+          "error_code": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "attempt_id",
+          "status",
+          "input_revision",
+          "assessment_generation",
+          "as_of_date",
+          "response",
+          "error_code"
+        ]
+      },
+      "BankAssessment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "input_revision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "assessment_generation": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "case_status": {
+            "type": "string"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CURRENT",
+              "STALE"
+            ]
+          },
+          "assessment": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Result"
+              }
+            ],
+            "nullable": true
+          },
+          "baseline_v1": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BaselineV1"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "version",
+          "input_revision",
+          "assessment_generation",
+          "case_status",
+          "freshness",
+          "assessment",
+          "baseline_v1"
+        ]
+      },
+      "AssessmentHistory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Result"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              20
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "limit"
+        ]
+      },
+      "AssessmentInputEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "assessment_input": {
+            "$ref": "#/components/schemas/Submission"
+          }
+        },
+        "required": [
+          "version",
+          "assessment_input"
+        ]
+      },
+      "RecheckAccepted": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "assessment_generation": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "assessment_generation"
+        ]
+      }
+    }
+  }
+}

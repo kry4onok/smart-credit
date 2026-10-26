@@ -245,3 +245,31 @@ func TestAccountingCutoffAndStableIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestSourceFirstPeriodDoesNotDependOnLegacyFinancialFields(t *testing.T) {
+	c := &commonpb.CompanySnapshot{Inn: "9900000017", Name: "Demo", Okved: "47.11", RegisteredAt: "2020-01-01", LegalForm: commonpb.LegalForm_LEGAL_FORM_LLC, TaxPeriods: []*commonpb.TaxPeriod{{From: "2020-01-01", Regimes: []commonpb.TaxRegime{commonpb.TaxRegime_TAX_REGIME_USN_INCOME}, VatStatus: commonpb.VatStatus_VAT_STATUS_UNKNOWN}}}
+	p := &commonpb.Product{RequirementsPolicyVersion: SourceFirstPolicyVersion, MinAmount: &commonpb.Money{AmountKopecks: 1, Currency: "RUB"}, MaxAmount: &commonpb.Money{AmountKopecks: 100, Currency: "RUB"}, MinTermMonths: 1, MaxTermMonths: 12, PurposeTags: []commonpb.PurposeTag{commonpb.PurposeTag_PURPOSE_TAG_WORKING_CAPITAL}}
+	f := &commonpb.ApplicationForm{Amount: &commonpb.Money{AmountKopecks: 10, Currency: "RUB"}, TermMonths: 6, Purpose: commonpb.PurposeTag_PURPOSE_TAG_WORKING_CAPITAL}
+	ref, _ := day("2026-10-26")
+	plan, err := Build(Input{Company: c, Product: p, Form: f, ReferenceDate: ref})
+	if err != nil || !plan.CanSubmit {
+		t.Fatalf("%v %v", plan, err)
+	}
+	found := false
+	for _, r := range plan.Items {
+		if r.Code == "CASH_FLOW" {
+			found = true
+			if r.Period.From != "2025-10-01" || r.Period.To != "2026-09-30" {
+				t.Fatal(r)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("source-first policy lost document coverage")
+	}
+	p.RequirementsPolicyVersion = policyVersion
+	old, err := Build(Input{Company: c, Product: p, Form: f, ReferenceDate: ref})
+	if err != nil || old.CanSubmit {
+		t.Fatalf("legacy policy changed: %v %v", old, err)
+	}
+}

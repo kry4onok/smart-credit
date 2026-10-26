@@ -1,7 +1,7 @@
 package scoringrepository
 
 const lockCaseRevisionQuery = `
-SELECT c.scoring_input_revision, a.status
+SELECT c.scoring_input_revision, a.status, c.assessment_generation
 FROM cases AS c
 LEFT JOIN scoring_attempts AS a ON a.id = c.current_scoring_attempt_id
 WHERE c.id = $1
@@ -10,23 +10,23 @@ FOR UPDATE OF c`
 const loadInputQuery = `
 SELECT c.product_id, c.scoring_input_revision, c.company_snapshot,
        company_check.outcome, company_check.result,
-       credit_check.outcome, credit_check.result
+       credit_check.outcome, credit_check.result, c.assessment_generation, c.assessment_as_of
 FROM cases AS c
 LEFT JOIN LATERAL (
     SELECT outcome, result FROM enrichment_results
-    WHERE case_id = c.id AND source = 'COMPANY'
+    WHERE case_id = c.id AND assessment_generation=c.assessment_generation AND source = 'COMPANY'
     ORDER BY created_at DESC, id DESC LIMIT 1
 ) AS company_check ON true
 LEFT JOIN LATERAL (
     SELECT outcome, result FROM enrichment_results
-    WHERE case_id = c.id AND source = 'CREDIT_HISTORY'
+    WHERE case_id = c.id AND assessment_generation=c.assessment_generation AND source = 'CREDIT_HISTORY'
     ORDER BY created_at DESC, id DESC LIMIT 1
 ) AS credit_check ON true
 WHERE c.id = $1`
 
 const insertAttemptQuery = `
-INSERT INTO scoring_attempts (id, case_id, input_revision, as_of_date, request)
-VALUES ($1, $2, $3, $4::date, $5::jsonb)`
+INSERT INTO scoring_attempts (id, case_id, input_revision, as_of_date, request, assessment_generation)
+VALUES ($1, $2, $3, $4::date, $5::jsonb, $6)`
 
 const selectCurrentAttemptQuery = `
 UPDATE cases
@@ -38,6 +38,8 @@ WHERE id = $2`
 const invalidateInputQuery = `
 UPDATE cases
 SET scoring_input_revision = scoring_input_revision + 1,
+    assessment_generation = assessment_generation + 1,
+    assessment_as_of = now(), assessment_sources = NULL,
     current_scoring_attempt_id = NULL,
     version = version + 1,
     updated_at = now()
@@ -61,6 +63,8 @@ WHERE id = $1`
 const currentAttemptQuery = `
 SELECT COALESCE(current_scoring_attempt_id = $1, false)
     AND scoring_input_revision = $2
+    AND assessment_generation = (SELECT assessment_generation FROM scoring_attempts WHERE id=$1)
+    AND status='SCORING'
 FROM cases
 WHERE id = $3
 FOR UPDATE`

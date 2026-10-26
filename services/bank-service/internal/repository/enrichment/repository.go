@@ -21,9 +21,12 @@ type Claim struct {
 	Version       int64
 	InputRevision int64
 	LeaseUntil    time.Time
+	Generation    int64
+	AsOf          time.Time
 }
 
 type Outcome struct {
+	SourcesJSON  []byte
 	Profile      *bureaupb.CompanyProfileResponse
 	ProfileError string
 	Credit       *bureaupb.CreditHistoryResponse
@@ -42,7 +45,7 @@ func New(db transaction.Queryer, transactions *transaction.Manager) *Repository 
 func (r *Repository) ClaimNext(ctx context.Context) (Claim, bool, error) {
 	var claim Claim
 	err := r.db.QueryRow(ctx, claimNextQuery).Scan(
-		&claim.CaseID, &claim.INN, &claim.Version, &claim.InputRevision, &claim.LeaseUntil,
+		&claim.CaseID, &claim.INN, &claim.Version, &claim.InputRevision, &claim.LeaseUntil, &claim.Generation, &claim.AsOf,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Claim{}, false, nil
@@ -72,7 +75,7 @@ func (r *Repository) Complete(ctx context.Context, claim Claim, outcome Outcome)
 	status, reason := "SCORING", ""
 	var recommendation any
 	if company.errorCode != "" || credit.errorCode != "" {
-		status, reason, recommendation = "MANUAL_REVIEW", "BUREAU_UNAVAILABLE", "MANUAL_REVIEW"
+		reason = "BUREAU_UNAVAILABLE"
 	}
 	details, err := json.Marshal(map[string]string{
 		"to_status": status, "company_error_code": company.errorCode,
@@ -87,7 +90,7 @@ func (r *Repository) Complete(ctx context.Context, claim Claim, outcome Outcome)
 		var version int64
 		err := queryer.QueryRow(ctx, finishCaseQuery,
 			claim.CaseID, claim.LeaseUntil, claim.Version, claim.InputRevision,
-			status, recommendation,
+			status, recommendation, claim.Generation, nullableJSON(outcome.SourcesJSON),
 		).Scan(&version)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -103,7 +106,7 @@ func (r *Repository) Complete(ctx context.Context, claim Claim, outcome Outcome)
 			{source: "CREDIT_HISTORY", value: credit},
 		} {
 			_, err := queryer.Exec(ctx, insertResultQuery, claim.CaseID, item.source,
-				item.value.outcome, item.value.resultJSON, nullable(item.value.errorCode))
+				item.value.outcome, item.value.resultJSON, nullable(item.value.errorCode), claim.Generation)
 			if err != nil {
 				return fmt.Errorf("save %s enrichment result: %w", item.source, err)
 			}
@@ -151,4 +154,11 @@ func (r *Repository) Release(ctx context.Context, claim Claim) error {
 		return fmt.Errorf("release enrichment case: %w", err)
 	}
 	return nil
+}
+
+func nullableJSON(v []byte) any {
+	if len(v) == 0 {
+		return nil
+	}
+	return string(v)
 }

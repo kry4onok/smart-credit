@@ -147,7 +147,7 @@ func (r *Repository) Complete(ctx context.Context, claim validation.Claim, outco
 	if err != nil {
 		return fmt.Errorf("audit validation: %w", err)
 	}
-	_, err = q.Exec(ctx, insertOutboxQuery, eventID, claim.CaseID.String(), version, payload)
+	_, err = publicstate.Publish(ctx, q, eventID, claim.CaseID.String(), version, payload)
 	if err != nil {
 		return fmt.Errorf("write validation outbox: %w", err)
 	}

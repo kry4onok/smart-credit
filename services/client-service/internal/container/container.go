@@ -22,6 +22,7 @@ import (
 	applicationsubmit "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/submit"
 	applicationtimeline "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/timeline"
 	applicationupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/update"
+	assessmenthandler "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/assessment"
 	companyget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/get"
 	companyupdate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/company/update"
 	productget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/product/get"
@@ -86,6 +87,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		BankEvents: bankEvents,
 		HTTPHandler: httpapi.New(httpapi.Params{
 			DB:                      db,
+			Assessment:              assessmenthandler.New(db, cfg.AssistantTarget),
 			ReadinessTimeout:        cfg.ReadinessTimeout,
 			Verifier:                jwt.New(cfg.JWT),
 			CompanyGet:              companyget.New(getcompany.New(company.New(db))),

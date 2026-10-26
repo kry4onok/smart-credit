@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BureauService_GetCompanyProfile_FullMethodName = "/smartcredit.bureau.BureauService/GetCompanyProfile"
-	BureauService_GetCreditHistory_FullMethodName  = "/smartcredit.bureau.BureauService/GetCreditHistory"
+	BureauService_GetAssessmentSources_FullMethodName = "/smartcredit.bureau.BureauService/GetAssessmentSources"
+	BureauService_GetCompanyProfile_FullMethodName    = "/smartcredit.bureau.BureauService/GetCompanyProfile"
+	BureauService_GetCreditHistory_FullMethodName     = "/smartcredit.bureau.BureauService/GetCreditHistory"
 )
 
 // BureauServiceClient is the client API for BureauService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BureauServiceClient interface {
+	GetAssessmentSources(ctx context.Context, in *AssessmentSourcesRequest, opts ...grpc.CallOption) (*AssessmentSourcesResponse, error)
 	// Упрощённые ЕГРЮЛ/ЕГРИП и ФНС «Прозрачный бизнес».
 	GetCompanyProfile(ctx context.Context, in *CompanyProfileRequest, opts ...grpc.CallOption) (*CompanyProfileResponse, error)
 	// Упрощённое БКИ.
@@ -39,6 +41,16 @@ type bureauServiceClient struct {
 
 func NewBureauServiceClient(cc grpc.ClientConnInterface) BureauServiceClient {
 	return &bureauServiceClient{cc}
+}
+
+func (c *bureauServiceClient) GetAssessmentSources(ctx context.Context, in *AssessmentSourcesRequest, opts ...grpc.CallOption) (*AssessmentSourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssessmentSourcesResponse)
+	err := c.cc.Invoke(ctx, BureauService_GetAssessmentSources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *bureauServiceClient) GetCompanyProfile(ctx context.Context, in *CompanyProfileRequest, opts ...grpc.CallOption) (*CompanyProfileResponse, error) {
@@ -65,6 +77,7 @@ func (c *bureauServiceClient) GetCreditHistory(ctx context.Context, in *CreditHi
 // All implementations must embed UnimplementedBureauServiceServer
 // for forward compatibility.
 type BureauServiceServer interface {
+	GetAssessmentSources(context.Context, *AssessmentSourcesRequest) (*AssessmentSourcesResponse, error)
 	// Упрощённые ЕГРЮЛ/ЕГРИП и ФНС «Прозрачный бизнес».
 	GetCompanyProfile(context.Context, *CompanyProfileRequest) (*CompanyProfileResponse, error)
 	// Упрощённое БКИ.
@@ -79,6 +92,9 @@ type BureauServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedBureauServiceServer struct{}
 
+func (UnimplementedBureauServiceServer) GetAssessmentSources(context.Context, *AssessmentSourcesRequest) (*AssessmentSourcesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAssessmentSources not implemented")
+}
 func (UnimplementedBureauServiceServer) GetCompanyProfile(context.Context, *CompanyProfileRequest) (*CompanyProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCompanyProfile not implemented")
 }
@@ -104,6 +120,24 @@ func RegisterBureauServiceServer(s grpc.ServiceRegistrar, srv BureauServiceServe
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&BureauService_ServiceDesc, srv)
+}
+
+func _BureauService_GetAssessmentSources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssessmentSourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BureauServiceServer).GetAssessmentSources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BureauService_GetAssessmentSources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BureauServiceServer).GetAssessmentSources(ctx, req.(*AssessmentSourcesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _BureauService_GetCompanyProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -149,6 +183,10 @@ var BureauService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "smartcredit.bureau.BureauService",
 	HandlerType: (*BureauServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetAssessmentSources",
+			Handler:    _BureauService_GetAssessmentSources_Handler,
+		},
 		{
 			MethodName: "GetCompanyProfile",
 			Handler:    _BureauService_GetCompanyProfile_Handler,

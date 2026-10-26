@@ -191,6 +191,13 @@ func (r *Repository) applyV2InfoProvided(ctx context.Context, q transaction.Quer
 	if err != nil {
 		return false, fmt.Errorf("load pinned product: %w", err)
 	}
+	filtered := make([]*commonpb.Requirement, 0, len(request))
+	for _, item := range request {
+		if item.Id != "assessment_input" {
+			filtered = append(filtered, item)
+		}
+	}
+	request = filtered
 	plan, buildErr := requirements.Build(requirements.Input{Company: company, Product: product, Form: form, Documents: documents, ReferenceDate: referenceDate})
 	status, reason, publicReason := "VALIDATION", "", ""
 	var pending []*commonpb.Requirement
@@ -258,7 +265,7 @@ func (r *Repository) applyV2InfoProvided(ctx context.Context, q transaction.Quer
 			return false, err
 		}
 	}
-	if _, err := q.Exec(ctx, insertOfferResponseOutboxQuery, eventID, input.ApplicationID.String(), version, payload); err != nil {
+	if _, err := publicstate.Publish(ctx, q, eventID, input.ApplicationID.String(), version, payload); err != nil {
 		return false, fmt.Errorf("publish v2 info outcome: %w", err)
 	}
 	return true, nil
@@ -295,7 +302,7 @@ func (r *Repository) manualV2Info(ctx context.Context, q transaction.Queryer, in
 	if err != nil {
 		return false, err
 	}
-	if _, err := q.Exec(ctx, insertOfferResponseOutboxQuery, eventID, input.ApplicationID.String(), version, payload); err != nil {
+	if _, err := publicstate.Publish(ctx, q, eventID, input.ApplicationID.String(), version, payload); err != nil {
 		return false, err
 	}
 	return true, nil

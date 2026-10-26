@@ -40,6 +40,7 @@ message ApplicationSubmitted {
   smartcredit.common.CompanySnapshot company = 5;
   smartcredit.common.ApplicationForm form = 6;
   repeated smartcredit.common.DocumentMetadata documents = 7;
+  bytes assessment_input_json = 9; // UTF-8 Submission schema v1; strict DTO validation, max 256 KiB.
   string requirements_reference_date = 8; // pinned at draft creation, YYYY-MM-DD
 }
 
@@ -49,6 +50,7 @@ message InfoProvided {
   smartcredit.common.ApplicationForm form = 2;
   repeated smartcredit.common.DocumentMetadata documents = 3;
   smartcredit.common.CompanySnapshot company = 4;
+  bytes assessment_input_json = 6; // Complete Submission v1, never a partial merge.
   repeated string answered_requirement_ids = 5; // explicitly supplied FIELD answers for v2
 }
 
@@ -70,6 +72,7 @@ message ApplicationPublicStatePublished {
   smartcredit.common.Offer active_offer = 5;
   string public_reason = 6;
   smartcredit.common.RequirementsPlan requirements_plan = 7;
+  bytes assessment_json = 9; // PublicResult v1 allowlist. Omission clears previous assessment.
 }
 
 enum ClientStatus {

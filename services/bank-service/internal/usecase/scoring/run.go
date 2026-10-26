@@ -41,14 +41,17 @@ func (r *Runner) Run(ctx context.Context, caseID uuid.UUID) (uuid.UUID, bool, er
 	if err != nil {
 		return uuid.Nil, false, err
 	}
-	saved.Input.AsOfDate = r.now().UTC().Truncate(24 * time.Hour)
+	saved.Input.AsOfDate = saved.AsOf
+	if saved.Input.AsOfDate.IsZero() {
+		saved.Input.AsOfDate = r.now().UTC().Truncate(24 * time.Hour)
+	}
 	request, err := scoringclient.BuildRequest(saved.Input)
 	if err != nil {
 		return uuid.Nil, false, fmt.Errorf("%w: %w", ErrInvalidInput, err)
 	}
 	attemptID := uuid.New()
 	if err := r.attempts.Start(ctx, scoringrepository.Attempt{
-		ID: attemptID, CaseID: caseID, InputRevision: saved.Revision,
+		ID: attemptID, CaseID: caseID, InputRevision: saved.Revision, Generation: saved.Generation,
 		AsOfDate: saved.Input.AsOfDate, Request: request,
 	}); err != nil {
 		return uuid.Nil, false, err

@@ -58,10 +58,6 @@ const insertAuditLog = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, actor_id)
 VALUES ($1, $2, $3, 'TAKE', 'ANALYST', $4)`
 
-const insertOutbox = `
-INSERT INTO outbox (event_id, aggregate_id, aggregate_version, event_type, payload)
-VALUES ($1, $2, $3, 'ApplicationPublicStatePublished', $4)`
-
 const updateIdempotencyKeys = `
 UPDATE idempotency_keys
 SET response_body=$4,
@@ -154,7 +150,7 @@ func (r *Repository) Take(ctx context.Context, input take.Input) (model.Case, er
 	}
 	eventID := uuid.New()
 	payload := publicstate.UnderReview(eventID, input.CaseID, input.IdempotencyKey, version+1, time.Now().UTC())
-	_, err = q.Exec(ctx, insertOutbox, eventID, input.CaseID.String(), version+1, payload)
+	_, err = publicstate.Publish(ctx, q, eventID, input.CaseID.String(), version+1, payload)
 	if err != nil {
 		return model.Case{}, fmt.Errorf("write take outbox event: %w", err)
 	}

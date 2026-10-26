@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from proto.common import common_pb2 as proto_dot_common_dot_common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19proto/bureau/bureau.proto\x12\x12smartcredit.bureau\x1a\x19proto/common/common.proto\"$\n\x15\x43ompanyProfileRequest\x12\x0b\n\x03inn\x18\x01 \x01(\t\"\xe3\x01\n\x16\x43ompanyProfileResponse\x12\x31\n\x06status\x18\x01 \x01(\x0e\x32!.smartcredit.bureau.CompanyStatus\x12\x15\n\rregistered_at\x18\x02 \x01(\t\x12\r\n\x05okved\x18\x03 \x01(\t\x12\x15\n\rdirector_name\x18\x04 \x01(\t\x12\x15\n\rfounder_names\x18\x05 \x03(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x06 \x01(\t\x12\x31\n\nlegal_form\x18\x07 \x01(\x0e\x32\x1d.smartcredit.common.LegalForm\"#\n\x14\x43reditHistoryRequest\x12\x0b\n\x03inn\x18\x01 \x01(\t\"\xe5\x01\n\x15\x43reditHistoryResponse\x12-\n\ntotal_debt\x18\x01 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x33\n\x0bobligations\x18\x02 \x03(\x0b\x32\x1e.smartcredit.bureau.Obligation\x12\x1e\n\x11overdue_count_12m\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x1d\n\x10max_overdue_days\x18\x04 \x01(\x05H\x01\x88\x01\x01\x42\x14\n\x12_overdue_count_12mB\x13\n\x11_max_overdue_days\"J\n\nObligation\x12\x0c\n\x04kind\x18\x01 \x01(\t\x12.\n\x0boutstanding\x18\x02 \x01(\x0b\x32\x19.smartcredit.common.Money*\x89\x01\n\rCompanyStatus\x12\x1e\n\x1a\x43OMPANY_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15\x43OMPANY_STATUS_ACTIVE\x10\x01\x12\x1e\n\x1a\x43OMPANY_STATUS_LIQUIDATING\x10\x02\x12\x1d\n\x19\x43OMPANY_STATUS_LIQUIDATED\x10\x03\x32\xe4\x01\n\rBureauService\x12j\n\x11GetCompanyProfile\x12).smartcredit.bureau.CompanyProfileRequest\x1a*.smartcredit.bureau.CompanyProfileResponse\x12g\n\x10GetCreditHistory\x12(.smartcredit.bureau.CreditHistoryRequest\x1a).smartcredit.bureau.CreditHistoryResponseBNZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau;bureaupbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19proto/bureau/bureau.proto\x12\x12smartcredit.bureau\x1a\x19proto/common/common.proto\"$\n\x15\x43ompanyProfileRequest\x12\x0b\n\x03inn\x18\x01 \x01(\t\"\xe3\x01\n\x16\x43ompanyProfileResponse\x12\x31\n\x06status\x18\x01 \x01(\x0e\x32!.smartcredit.bureau.CompanyStatus\x12\x15\n\rregistered_at\x18\x02 \x01(\t\x12\r\n\x05okved\x18\x03 \x01(\t\x12\x15\n\rdirector_name\x18\x04 \x01(\t\x12\x15\n\rfounder_names\x18\x05 \x03(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x06 \x01(\t\x12\x31\n\nlegal_form\x18\x07 \x01(\x0e\x32\x1d.smartcredit.common.LegalForm\"#\n\x14\x43reditHistoryRequest\x12\x0b\n\x03inn\x18\x01 \x01(\t\"\xe5\x01\n\x15\x43reditHistoryResponse\x12-\n\ntotal_debt\x18\x01 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x33\n\x0bobligations\x18\x02 \x03(\x0b\x32\x1e.smartcredit.bureau.Obligation\x12\x1e\n\x11overdue_count_12m\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x1d\n\x10max_overdue_days\x18\x04 \x01(\x05H\x01\x88\x01\x01\x42\x14\n\x12_overdue_count_12mB\x13\n\x11_max_overdue_days\"J\n\nObligation\x12\x0c\n\x04kind\x18\x01 \x01(\t\x12.\n\x0boutstanding\x18\x02 \x01(\x0b\x32\x19.smartcredit.common.Money\"6\n\x18\x41ssessmentSourcesRequest\x12\x0b\n\x03inn\x18\x01 \x01(\t\x12\r\n\x05\x61s_of\x18\x02 \x01(\t\"1\n\x19\x41ssessmentSourcesResponse\x12\x14\n\x0csources_json\x18\x01 \x01(\x0c*\x89\x01\n\rCompanyStatus\x12\x1e\n\x1a\x43OMPANY_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15\x43OMPANY_STATUS_ACTIVE\x10\x01\x12\x1e\n\x1a\x43OMPANY_STATUS_LIQUIDATING\x10\x02\x12\x1d\n\x19\x43OMPANY_STATUS_LIQUIDATED\x10\x03\x32\xd9\x02\n\rBureauService\x12s\n\x14GetAssessmentSources\x12,.smartcredit.bureau.AssessmentSourcesRequest\x1a-.smartcredit.bureau.AssessmentSourcesResponse\x12j\n\x11GetCompanyProfile\x12).smartcredit.bureau.CompanyProfileRequest\x1a*.smartcredit.bureau.CompanyProfileResponse\x12g\n\x10GetCreditHistory\x12(.smartcredit.bureau.CreditHistoryRequest\x1a).smartcredit.bureau.CreditHistoryResponseBNZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau;bureaupbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,8 +33,8 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'proto.bureau.bureau_pb2', _
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'ZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau;bureaupb'
-  _globals['_COMPANYSTATUS']._serialized_start=690
-  _globals['_COMPANYSTATUS']._serialized_end=827
+  _globals['_COMPANYSTATUS']._serialized_start=797
+  _globals['_COMPANYSTATUS']._serialized_end=934
   _globals['_COMPANYPROFILEREQUEST']._serialized_start=76
   _globals['_COMPANYPROFILEREQUEST']._serialized_end=112
   _globals['_COMPANYPROFILERESPONSE']._serialized_start=115
@@ -45,6 +45,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CREDITHISTORYRESPONSE']._serialized_end=611
   _globals['_OBLIGATION']._serialized_start=613
   _globals['_OBLIGATION']._serialized_end=687
-  _globals['_BUREAUSERVICE']._serialized_start=830
-  _globals['_BUREAUSERVICE']._serialized_end=1058
+  _globals['_ASSESSMENTSOURCESREQUEST']._serialized_start=689
+  _globals['_ASSESSMENTSOURCESREQUEST']._serialized_end=743
+  _globals['_ASSESSMENTSOURCESRESPONSE']._serialized_start=745
+  _globals['_ASSESSMENTSOURCESRESPONSE']._serialized_end=794
+  _globals['_BUREAUSERVICE']._serialized_start=937
+  _globals['_BUREAUSERVICE']._serialized_end=1282
 # @@protoc_insertion_point(module_scope)

@@ -13,6 +13,7 @@ import (
 )
 
 type Config struct {
+	AssistantTarget     string `env:"CLIENT_ASSISTANT_TARGET" env-default:""`
 	JWT                 JWTConfig
 	HTTP                HTTPConfig
 	Database            DatabaseConfig

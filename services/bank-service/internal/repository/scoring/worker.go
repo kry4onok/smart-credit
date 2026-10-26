@@ -112,28 +112,22 @@ func (r *Repository) Finish(ctx context.Context, claim Claim, inputErrorCode str
 	return finished, err
 }
 
+// The legacy score is a comparison baseline. Its absence cannot replace or
+// prevent the independent v2 assessment; all errors remain stored in the attempt.
 func scoringDestination(status, storedError *string, inputErrorCode string) (string, string) {
 	if inputErrorCode != "" {
-		return "MANUAL_REVIEW", inputErrorCode
+		return "DECISION", inputErrorCode
 	}
 	if status == nil {
-		return "MANUAL_REVIEW", "SCORING_MISSING_ATTEMPT"
+		return "DECISION", "BASELINE_MISSING_ATTEMPT"
 	}
-	switch *status {
-	case "ASSESSED":
+	if *status == "ASSESSED" {
 		return "DECISION", ""
-	case "TECHNICAL_ERROR":
-		if storedError != nil {
-			return "MANUAL_REVIEW", *storedError
-		}
-		return "MANUAL_REVIEW", "SCORING_ERROR"
-	case "INSUFFICIENT_DATA":
-		return "MANUAL_REVIEW", "SCORING_INSUFFICIENT_DATA"
-	case "UNSUPPORTED_INPUT":
-		return "MANUAL_REVIEW", "SCORING_UNSUPPORTED_INPUT"
-	default:
-		return "MANUAL_REVIEW", "SCORING_UNKNOWN_OUTCOME"
 	}
+	if storedError != nil && *storedError != "" {
+		return "DECISION", *storedError
+	}
+	return "DECISION", "BASELINE_" + *status
 }
 
 func (r *Repository) Release(ctx context.Context, claim Claim) error {
