@@ -150,13 +150,14 @@ func (r *Repository) infoRequest(ctx context.Context, applicationID uuid.UUID) (
 
 func (r *Repository) offer(ctx context.Context, applicationID uuid.UUID, status string) (*model.ApplicationOffer, error) {
 	var offer model.ApplicationOffer
-	// Acceptance deactivates the offer, but signing still needs its ID and terms.
-	// In FORMALIZING select the latest offer, as SignContract does.
+	// Acceptance deactivates the offer, but signing still needs its ID and terms, and after
+	// disbursement the card shows the issued terms. In FORMALIZING and DISBURSED select the
+	// latest offer, as SignContract does.
 	err := r.db.QueryRow(ctx, `
 		SELECT id, kind, product_id, product_version, product_name,
 		       amount_kopecks, term_months, rate_bps, explanation, expires_at
 		FROM offers
-		WHERE application_id = $1 AND (is_active OR $2 = 'FORMALIZING')
+		WHERE application_id = $1 AND (is_active OR $2 IN ('FORMALIZING', 'DISBURSED'))
 		ORDER BY received_at DESC, id DESC
 		LIMIT 1`, applicationID, status).Scan(
 		&offer.ID, &offer.Kind, &offer.ProductID, &offer.ProductVersion,
