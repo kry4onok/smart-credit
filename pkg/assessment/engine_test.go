@@ -229,3 +229,26 @@ func TestRelatedNegativeUnavailableAndConflictNeverBecomeBorrowerRejection(t *te
 		}
 	}
 }
+
+func TestDemoDebtScheduleOnLateMonthDays(t *testing.T) {
+	for _, day := range []string{"2026-10-29", "2026-10-31", "2027-01-30", "2026-08-31"} {
+		asOf, _ := time.Parse(time.DateOnly, day)
+		start := periodStart(asOf)
+		c := CreditHistory{HistoricalMaxDPD: ptr(0), CurrentDPD: ptr(0), OverdueEpisodes: ptr(0), TotalDebtKopecks: ptr(int64(120_000_000)), PeriodFrom: start.Format(time.DateOnly), PeriodTo: start.AddDate(1, 0, -1).Format(time.DateOnly)}
+		in := demoInput()
+		in.AsOf = asOf
+		in.Sources = DemoSources("7707083893", "2020-01-01", "ACTIVE", c, asOf)
+		seen := map[string]bool{}
+		for _, p := range in.Sources.Financials.DebtPayments {
+			if seen[p.Period] {
+				t.Fatalf("%s: two demo debt payments in %s", day, p.Period)
+			}
+			seen[p.Period] = true
+		}
+		for _, issue := range Evaluate(in).Issues {
+			if issue.Code == "INVALID_DEBT_PAYMENT" {
+				t.Fatalf("%s: demo schedule rejected: %+v", day, issue)
+			}
+		}
+	}
+}

@@ -30,11 +30,14 @@ func DemoSources(inn, registered, status string, credit CreditHistory, asOf time
 	}
 	if credit.TotalDebtKopecks != nil && *credit.TotalDebtKopecks > 0 {
 		balance := *credit.TotalDebtKopecks
+		// Step from the first day: AddDate on the 29th–31st skips short months and
+		// would put two payments into one period.
+		month := time.Date(asOf.Year(), asOf.Month(), 1, 0, 0, 0, 0, time.UTC)
 		for i := 1; i <= 24; i++ {
 			principal := balance / int64(25-i)
 			interest := scale(balance, 150)
 			balance -= principal
-			f.DebtPayments = append(f.DebtPayments, DebtPayment{ObligationID: "demo-existing", Period: asOf.AddDate(0, i, 0).Format("2006-01"), AmountKopecks: principal + interest})
+			f.DebtPayments = append(f.DebtPayments, DebtPayment{ObligationID: "demo-existing", Period: month.AddDate(0, i, 0).Format("2006-01"), AmountKopecks: principal + interest})
 		}
 	}
 	s.Financials = f
