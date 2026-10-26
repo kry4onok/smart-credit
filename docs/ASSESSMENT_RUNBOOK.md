@@ -17,6 +17,8 @@ Swagger: `http://localhost:8000/docs/`, выбрать **Assessment and Help API
 
 ## Qwen и автономная работа
 
+Для Qwen 2.5-7B на CPU задайте `OLLAMA_MODEL=qwen2.5:7b`, `BANK_ASSISTANT_TIMEOUT=25s` и `ASSISTANT_HELP_TIMEOUT=45s`. Последняя настройка применяется к Help API обоих backend; по умолчанию остаётся `5s`. Допустим положительный Go duration не больше `45s`; неверное значение возвращает лимит `5s`. Внутренний вызов модели в Help ограничен 40 секундами. Задайте `BANK_HTTP_WRITE_TIMEOUT=60s` и `CLIENT_HTTP_WRITE_TIMEOUT=60s`; timeout прокси тоже должен быть больше RPC timeout. После изменения выполните реальный прогон модели и проверьте поле `source`: доступность контейнера не доказывает, что ответ получен от Qwen.
+
 Банковский `BANK_ASSISTANT_GRPC_ADDR` и клиентский `CLIENT_ASSISTANT_TARGET` указывают на `assistant:50052` в Compose. У assistant используется существующий Ollama HTTP API и настройки `OLLAMA_URL`, `OLLAMA_MODEL` из `.env.example`. Модель должна быть заранее доступна на выбранном Ollama сервере. Сервис не обучает и не скачивает модель автоматически.
 
 Новый RPC `smartcredit.assistant.v2.AssistantHelpService/Help` сосуществует с прежним сервисом. Контракт: `proto/assistant/help.proto`. Каталог: `pkg/assistanthelp/catalog.json`, версия `smart-credit-help-v1`. Контекст формируется backend после авторизации; Qwen выбирает только разрешённые statement/variant/action IDs. Go заново рендерит текст из доверенного контекста и проверяет актуальность после RPC. Действия являются навигацией и не исполняют команды банка.

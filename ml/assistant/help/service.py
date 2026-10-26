@@ -38,7 +38,7 @@ class HelpService(help_pb2_grpc.AssistantHelpServiceServicer):
         if not request.context.statements or fallback_plan(request)["status"] == "INSUFFICIENT_DATA":
             return self._fallback(request, context, "NO_SUPPORTED_CONTEXT")
         remaining = context.time_remaining()
-        timeout = max(0.0, min(20.0, remaining - 0.3)) if remaining is not None else 4.7
+        timeout = max(0.0, min(40.0, remaining - 0.3)) if remaining is not None else 4.7
         if timeout <= 0:
             return self._fallback(request, context, "MODEL_TIMEOUT")
         if not self.slots.acquire(timeout=min(0.1, timeout)):

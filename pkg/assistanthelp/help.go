@@ -584,7 +584,7 @@ func Call(ctx context.Context, target string, r *pb.HelpRequest) (*pb.HelpRespon
 		conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err == nil {
 			defer func() { _ = conn.Close() }()
-			callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			callCtx, cancel := context.WithTimeout(ctx, rpcTimeout())
 			defer cancel()
 			response, e := pb.NewAssistantHelpServiceClient(conn).Help(callCtx, r)
 			if status.Code(e) == codes.FailedPrecondition {
