@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { assessmentApi, clientApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
 import type { AssessmentPreferences, ApplicationFormPatch, DocumentMetadata, Requirement, ClientApplication, CompanyProfile, InfoField, Offer, Product, PurposeTag, TimelineEntry } from "../../api/types";
@@ -9,10 +9,10 @@ import { CompareBars, offerRows } from "../../components/Compare";
 import { ClientPipeline } from "../../components/Pipeline";
 import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useNow, useTitle } from "../../components/ui";
 import { date, dateTime, money, moneyShort, monthlyPayment, months, rate, rub, timeLeft } from "../../lib/format";
-import { clientStatusLabel, clientStatusTone, documentLabel, infoFieldLabel, legalFormLabel, purposeLabel, taxRegimeLabel } from "../../lib/labels";
-import { latestDocuments, validateInfoValue } from "../../lib/applicationValidation";
+import { clientStatusLabel, clientStatusTone, documentLabel, infoFieldLabel, legalFormLabel, purposeLabel, purposeOrder, taxRegimeLabel } from "../../lib/labels";
+import { PURPOSE_DESCRIPTION_MAX, latestDocuments, validateInfoValue, validatePurposeDescription } from "../../lib/applicationValidation";
 import { usePolling, useIntent } from "../../lib/util";
-import { loadProducts, recallDraft, recallOffer, rememberDraft, rememberOffer } from "./products";
+import { forgetDraft, loadProducts, recallDraft, recallOffer, rememberDraft, rememberOffer } from "./products";
 import { HintsPanel, PreferencesSection, RequirementsSection } from "./DraftExtras";
 import { AssessmentView } from "./AssessmentView";
 import { loanHints, monthsBetween } from "../../lib/hints";
@@ -165,7 +165,7 @@ function Pending({ action }: { action: string }) {
   );
 }
 
-type FormState = { amount: number | null | undefined; term: number | undefined; purpose: PurposeTag | undefined };
+type FormState = { amount: number | null | undefined; term: number | undefined; purpose: PurposeTag | undefined; description: string | undefined };
 
 function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "reload">) {
   const { user } = useSession();
@@ -175,9 +175,13 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
       amount: app.form?.amount?.amount_kopecks ?? saved.amount ?? undefined,
       term: app.form?.term_months ?? saved.term,
       purpose: app.form?.purpose ?? saved.purpose ?? (product?.purpose_tags.length === 1 ? product.purpose_tags[0] : undefined),
+      // An incomplete draft has no form yet; the explanation then comes from the top level.
+      description: app.form?.purpose_description ?? app.purpose_description ?? saved.description,
     };
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const navigate = useNavigate();
   const [saveError, setSaveError] = useState<unknown>(null);
   const submit = useAction();
   const submitIntent = useIntent();
@@ -227,6 +231,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
         latest.current = next;
         onChange(next);
         setSaveState("saved");
+        setSavedAt(new Date());
         setSaveError(null);
         return true;
       } catch (e) {
@@ -266,6 +271,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
         latest.current = { ...latest.current, version: saved.version };
         onChange(latest.current);
         setSaveState("saved");
+        setSavedAt(new Date());
         setSaveError(null);
         return true;
       } catch (e) {
@@ -344,7 +350,14 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
     timer.current = window.setTimeout(() => void flush(), 700);
   }
 
-  const purposes = product?.purpose_tags ?? (["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION"] as PurposeTag[]);
+  // The product's purpose_tags are restrictions: only they can be chosen, and a purpose saved
+  // earlier that the product no longer finances blocks submission until it is changed.
+  const purposes = product ? purposeOrder.filter((p) => product.purpose_tags.includes(p)) : purposeOrder;
+  const purposeError =
+    form.purpose && product && !product.purpose_tags.includes(form.purpose)
+      ? `Продукт «${product.name}» не финансирует цель «${purposeLabel[form.purpose]}». Выберите одну из доступных целей.`
+      : null;
+  const descriptionError = validatePurposeDescription(form.purpose, form.description);
   const amountError =
     form.amount === null
       ? "Введите сумму числом, например 1 500 000."
@@ -359,10 +372,47 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
       : null;
   const required = product?.required_document_types ?? [];
   const missingDocs = required.filter((t) => !app.documents.some((d) => d.document_type === t));
-  const missingFields = [form.amount == null && "сумма", form.term === undefined && "срок", form.purpose === undefined && "цель кредита"].filter(Boolean);
-  const formReady = form.amount != null && form.term !== undefined && form.purpose !== undefined && !amountError && !termError;
+  const missingFields = [
+    form.amount == null && "сумма",
+    form.term === undefined && "срок",
+    form.purpose === undefined && "цель кредита",
+    form.purpose === "OTHER" && !form.description?.trim() && "пояснение, на что пойдут деньги",
+  ].filter(Boolean);
+  const formReady = form.amount != null && form.term !== undefined && form.purpose !== undefined && !amountError && !termError && !purposeError && !descriptionError;
   const canSubmit =
     !!product && app.allowed_actions.includes("SUBMIT") && formReady && missingDocs.length === 0 && user?.can_submit !== false && saveState !== "error";
+
+  // Deleting waits for autosave so If-Match carries the version the server has. Conflicts reload
+  // the card and are reported; the delete is never retried automatically.
+  async function remove(): Promise<string | null> {
+    if (!(await flush())) await refresh().catch(() => undefined);
+    try {
+      await call(
+        clientApi.DELETE("/client/applications/{application_id}", {
+          params: { path: { application_id: latest.current.id }, header: { "If-Match": `"${latest.current.version}"` } },
+        }),
+      );
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        forgetDraft(app.id);
+        navigate("/cabinet", { replace: true });
+        return null;
+      }
+      if (e instanceof ApiError && e.status === 409) {
+        await refresh().catch(() => undefined);
+        return e.code === "APPLICATION_STATE_CONFLICT"
+          ? "Заявка уже не черновик, удалить её нельзя. Карточка обновлена."
+          : "Черновик успел измениться. Карточка обновлена — проверьте её и удалите ещё раз, если нужно.";
+      }
+      throw e;
+    }
+    window.clearTimeout(timer.current);
+    queue.current = null;
+    prefsQueue.current = null;
+    forgetDraft(app.id);
+    navigate("/cabinet", { replace: true });
+    return null;
+  }
 
   async function send() {
     const result = await submit.run(async () => {
@@ -405,7 +455,16 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
 
   return (
     <div className="draft">
-      <fieldset className="draft-step">
+      <DraftToolbar
+        canEdit={app.allowed_actions.includes("EDIT_DRAFT")}
+        canDelete={app.allowed_actions.includes("DELETE_DRAFT")}
+        saveState={saveState}
+        savedAt={savedAt}
+        saveError={saveError}
+        onRetry={retry}
+        onDelete={remove}
+      />
+      <fieldset className="draft-step" id="draft-terms">
         <legend>
           <span className="step-no">{no()}</span> Условия кредита
         </legend>
@@ -433,7 +492,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
               }}
             />
           </Field>
-          <Field label="Цель" group>
+          <Field label="Цель" group error={purposeError}>
             <Choices
               name="purpose"
               className="segmented"
@@ -444,6 +503,22 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             />
           </Field>
         </div>
+        <Field
+          label="На что планируете потратить деньги"
+          htmlFor="purpose-description"
+          error={form.purpose === "OTHER" || (form.description?.length ?? 0) > 0 ? descriptionError : null}
+          hint={`${form.purpose === "OTHER" ? "Обязательно для цели «Несколько целей или другая цель»" : "Необязательно"}. ${[...(form.description ?? "")].length} из ${PURPOSE_DESCRIPTION_MAX} символов.`}
+        >
+          <textarea
+            id="purpose-description"
+            rows={3}
+            maxLength={PURPOSE_DESCRIPTION_MAX}
+            value={form.description ?? ""}
+            aria-invalid={form.purpose === "OTHER" && !!descriptionError}
+            placeholder="Например: ремонт помещения, покупка оборудования и закупка сырья"
+            onChange={(e) => update({ description: e.target.value }, { purpose_description: e.target.value })}
+          />
+        </Field>
         {formReady && product?.indicative_rate_bps !== undefined && (
           <p className="estimate">
             Ориентировочный платёж — {money(monthlyPayment(rub(form.amount!), form.term!, product.indicative_rate_bps))} в месяц при ставке{" "}
@@ -457,10 +532,6 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             if (fix.termMonths) update({ term: fix.termMonths }, { term_months: fix.termMonths });
           }}
         />
-        <p className={`autosave autosave-${saveState}`} aria-live="polite">
-          {saveState === "saving" ? "Сохраняем…" : saveState === "saved" ? "Черновик сохранён" : saveState === "error" ? "" : "Изменения сохраняются автоматически"}
-        </p>
-        {saveState === "error" && <ErrorNote error={saveError} onRetry={retry} />}
       </fieldset>
 
       {prefs && (
@@ -519,7 +590,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
           <span className="step-no">{no()}</span> Отправка в банк
         </legend>
         <ul className="checklist">
-          <li className={formReady ? "ok" : ""}>Сумма, срок и цель заполнены</li>
+          <li className={formReady ? "ok" : ""}>{form.purpose === "OTHER" ? "Сумма, срок, цель и её пояснение заполнены" : "Сумма, срок и цель заполнены"}</li>
           <li className={docsReady ? "ok" : ""}>{plan ? "Документы для отправки приложены" : "Документы приложены"}</li>
           {plan && <li className={plan.can_submit ? "ok" : ""}>{plan.can_submit ? "Банк готов принять заявку" : "Заполните недостающие сведения"}</li>}
           <li className={user?.can_submit !== false ? "ok" : ""}>
@@ -534,6 +605,92 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
           {submit.busy ? "Отправляем…" : "Отправить заявку"}
         </button>
       </fieldset>
+    </div>
+  );
+}
+
+type ToolbarProps = {
+  canEdit: boolean;
+  canDelete: boolean;
+  saveState: "idle" | "saving" | "saved" | "error";
+  savedAt: Date | null;
+  saveError: unknown;
+  onRetry: () => void;
+  // Resolves to a message when the draft was not deleted (it changed meanwhile).
+  onDelete: () => Promise<string | null>;
+};
+
+// DraftToolbar keeps draft-level actions in one place: where to edit, whether edits are saved,
+// and deletion behind an explicit confirmation.
+function DraftToolbar({ canEdit, canDelete, saveState, savedAt, saveError, onRetry, onDelete }: ToolbarProps) {
+  const [confirming, setConfirming] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const del = useAction();
+  const status =
+    saveState === "saving"
+      ? "Сохраняем…"
+      : saveState === "error"
+        ? "Изменения не сохранились"
+        : savedAt
+          ? `Сохранено в ${savedAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`
+          : "Изменения сохраняются автоматически";
+
+  async function confirmDelete() {
+    const message = await del.run(onDelete);
+    if (message) {
+      setNotice(message);
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <div className="draft-toolbar panel">
+      <div className="draft-toolbar-row">
+        <p className={`autosave autosave-${saveState}`} role="status" aria-live="polite">
+          {status}
+        </p>
+        <div className="draft-toolbar-actions">
+          {canEdit && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                document.getElementById("draft-terms")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                document.getElementById("amount")?.focus({ preventScroll: true });
+              }}
+            >
+              Редактировать черновик
+            </button>
+          )}
+          {canDelete && !confirming && (
+            <button type="button" className="btn btn-quiet btn-sm" onClick={() => setConfirming(true)}>
+              Удалить черновик
+            </button>
+          )}
+        </div>
+      </div>
+      {saveState === "error" && <ErrorNote error={saveError} onRetry={onRetry} />}
+      {confirming && (
+        <div className="note note-danger" role="alertdialog" aria-labelledby="delete-draft-title">
+          <p id="delete-draft-title">
+            <strong>Удалить черновик?</strong> Заявка и все приложенные к ней файлы будут удалены. Восстановить их не получится.
+          </p>
+          <div className="draft-toolbar-actions">
+            <button type="button" className="btn btn-danger btn-sm" disabled={del.busy} onClick={() => void confirmDelete()}>
+              {del.busy ? "Удаляем…" : "Удалить"}
+            </button>
+            <button type="button" className="btn btn-quiet btn-sm" disabled={del.busy} onClick={() => setConfirming(false)}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+      <ErrorNote error={del.error} />
+      {notice && (
+        <p className="note note-attention" role="status">
+          {notice}
+        </p>
+      )}
     </div>
   );
 }
@@ -584,6 +741,7 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
     APPLICATION_TERM_MONTHS: app.form?.term_months,
     APPLICATION_PURPOSE: app.form?.purpose,
   }));
+  const [description, setDescription] = useState(app.form?.purpose_description ?? app.purpose_description ?? "");
   const documents = latestDocuments(app.documents);
   const send = useAction();
   const intent = useIntent();
@@ -598,7 +756,9 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
   const attachedFor = (r: Requirement) => app.documents.filter((d) => d.requirement_id === r.id || r.document_ids.includes(d.id));
 
   const fieldErrors = Object.fromEntries(requestedFields.map((field) => [field, validateInfoValue(field, values[field])])) as Partial<Record<InfoField, string | null>>;
-  const invalidFields = requestedFields.filter((field) => fieldErrors[field]);
+  const asksPurpose = requestedFields.includes("APPLICATION_PURPOSE");
+  const descriptionError = asksPurpose ? validatePurposeDescription(values.APPLICATION_PURPOSE as string | undefined, description) : null;
+  const invalidFields = requestedFields.filter((field) => fieldErrors[field] || (field === "APPLICATION_PURPOSE" && descriptionError));
   const missingDocuments = v2
     ? docRequirements.filter((r) => attachedFor(r).length === 0).map((r) => r.label)
     : request.required_document_types.filter((type) => !documents.some((document) => document.document_type === type)).map((t) => documentLabel[t]);
@@ -612,7 +772,11 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
       if (key) company[key] = rub(values[f] as number);
       if (f === "APPLICATION_AMOUNT") fields.amount = rub(values[f] as number);
       if (f === "APPLICATION_TERM_MONTHS") fields.term_months = Number(values[f]);
-      if (f === "APPLICATION_PURPOSE") fields.purpose = values[f] as PurposeTag;
+      if (f === "APPLICATION_PURPOSE") {
+        fields.purpose = values[f] as PurposeTag;
+        // The explanation travels with the purpose; an empty string clears a previous one.
+        fields.purpose_description = description;
+      }
     }
     // The button stays busy until the refreshed card arrives, so a second click cannot resend.
     await send.run(async () => {
@@ -645,7 +809,7 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
             {f === "APPLICATION_PURPOSE" ? (
               <select id={`info-${f}`} aria-invalid={!!fieldErrors[f]} value={(values[f] as string) ?? ""} onChange={(e) => setValues({ ...values, [f]: e.target.value })}>
                 <option value="">Выберите цель кредита</option>
-                {(["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION"] as PurposeTag[]).map((p) => (
+                {purposeOrder.map((p) => (
                   <option key={p} value={p}>
                     {purposeLabel[p]}
                   </option>
@@ -659,6 +823,16 @@ function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onCha
           </Field>
         ))}
       </div>
+      {asksPurpose && (
+        <Field
+          label="На что планируете потратить деньги"
+          htmlFor="info-purpose-description"
+          error={values.APPLICATION_PURPOSE === "OTHER" || description.length > 0 ? descriptionError : null}
+          hint={`${values.APPLICATION_PURPOSE === "OTHER" ? "Обязательно для цели «Несколько целей или другая цель»" : "Необязательно"}. ${[...description].length} из ${PURPOSE_DESCRIPTION_MAX} символов.`}
+        >
+          <textarea id="info-purpose-description" rows={3} maxLength={PURPOSE_DESCRIPTION_MAX} value={description} onChange={(e) => setDescription(e.target.value)} />
+        </Field>
+      )}
       {otherFields.length > 0 && (
         <p className="note note-attention">
           Банк просит уточнить: {otherFields.map((r) => r.label.toLowerCase()).join(", ")}. Обновите их в <Link to="/cabinet/company">сведениях о бизнесе</Link>.
@@ -869,6 +1043,7 @@ function Summary({ app }: { app: ClientApplication }) {
           ["Сумма", money(app.form?.amount)],
           ["Срок", months(app.form?.term_months)],
           ["Цель", app.form?.purpose ? purposeLabel[app.form.purpose] : "—"],
+          ["На что потратить", app.form?.purpose_description || app.purpose_description || "—"],
           ["Документы", app.documents.length ? app.documents.map((d) => d.file_name).join(", ") : "нет"],
           ["Создана", dateTime(app.created_at)],
         ]}

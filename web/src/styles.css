@@ -615,9 +615,16 @@ legend {
 
 .purpose-options {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Four purposes: one row on wide screens, two by two on narrower ones. */
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 20px;
+}
+
+@media (max-width: 960px) {
+  .purpose-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .purpose {
@@ -1044,6 +1051,39 @@ legend {
 
 .autosave-saved {
   color: var(--ok);
+}
+
+.autosave-error {
+  color: var(--danger);
+}
+
+.draft-toolbar {
+  display: grid;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.draft-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.draft-toolbar-row .autosave {
+  margin: 0;
+}
+
+.draft-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#purpose-description {
+  width: 100%;
+  resize: vertical;
 }
 
 .doc-slot {
@@ -3547,4 +3587,13 @@ fieldset.panel > legend + *,
 .rules code,
 .rule code {
   overflow-wrap: anywhere;
+}
+
+.purpose-note {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--line-strong);
+  background: var(--bg);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
 }

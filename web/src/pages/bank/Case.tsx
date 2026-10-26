@@ -95,6 +95,11 @@ export function CasePage() {
                 на {months(kase.application.term_months)}, {purposeLabel[kase.application.purpose].toLowerCase()}
               </span>
             </div>
+            {kase.application.purpose_description && (
+              <blockquote className="purpose-note">
+                <strong>На что клиент потратит деньги:</strong> {kase.application.purpose_description}
+              </blockquote>
+            )}
             <Dl
               items={[
                 ["Продукт", `${kase.product_name}, версия ${kase.product_version}`],
