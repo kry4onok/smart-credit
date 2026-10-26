@@ -39,6 +39,7 @@ type personaSeed struct {
 }
 
 type profileSeed struct {
+	LegalForm    string   `yaml:"legal_form"`
 	Status       string   `yaml:"status"`
 	RegisteredAt string   `yaml:"registered_at"`
 	OKVED        string   `yaml:"okved"`
@@ -120,6 +121,23 @@ func (c *Catalog) Lookup(inn string) (Scenario, bool) {
 }
 
 func convert(item personaSeed) (Scenario, error) {
+	legalForm := commonpb.LegalForm_LEGAL_FORM_UNSPECIFIED
+	switch item.Profile.LegalForm {
+	case "":
+	case "IP":
+		if len(item.INN) != 12 {
+			return Scenario{}, errors.New("IP requires a 12-digit INN")
+		}
+		legalForm = commonpb.LegalForm_LEGAL_FORM_IP
+	case "LLC":
+		if len(item.INN) != 10 {
+			return Scenario{}, errors.New("LLC requires a 10-digit INN")
+		}
+		legalForm = commonpb.LegalForm_LEGAL_FORM_LLC
+	default:
+		return Scenario{}, errors.New("unknown legal form")
+	}
+
 	statuses := map[string]bureaupb.CompanyStatus{
 		"ACTIVE":      bureaupb.CompanyStatus_COMPANY_STATUS_ACTIVE,
 		"LIQUIDATING": bureaupb.CompanyStatus_COMPANY_STATUS_LIQUIDATING,
@@ -169,7 +187,7 @@ func convert(item personaSeed) (Scenario, error) {
 
 	return Scenario{
 		Profile: &bureaupb.CompanyProfileResponse{
-			Status: companyStatus, RegisteredAt: item.Profile.RegisteredAt,
+			LegalForm: legalForm, Status: companyStatus, RegisteredAt: item.Profile.RegisteredAt,
 			Okved: item.Profile.OKVED, DirectorName: item.Profile.DirectorName,
 			FounderNames: item.Profile.Founders, Address: item.Profile.Address,
 		},

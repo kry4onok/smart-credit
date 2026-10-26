@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/internal/client/applications/{application_id}/documents/{document_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Скачать оригинал документа отправленной заявки
+         * @description Требует Bearer JWT с ролью ANALYST или ADMIN. Документ должен принадлежать указанной заявке; заявка должна иметь submitted_at и не быть DRAFT. Возвращает исходные байты с Content-Type формата файла, без storage_key. Отсутствующий документ, несовпадающая заявка, черновик или отсутствующий файл в хранилище возвращают 404 DOCUMENT_NOT_FOUND.
+         */
+        get: operations["getInternalApplicationDocumentContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -145,7 +165,7 @@ export interface paths {
         put?: never;
         /**
          * Приложить демо-документ
-         * @description Доступно в DRAFT и при активном NEEDS_INFO. Тип должен входить в список документов продукта или в актуальный запрос банка. Файл до 5 MiB.
+         * @description Доступно в DRAFT и при активном NEEDS_INFO. Тип должен входить в список документов продукта или в актуальный запрос банка. Непустой файл до 5 MiB. Поддерживаются PDF, PNG, JPG/JPEG, DOC/DOCX, XLS/XLSX, CSV и TXT. Проверяются расширение и признаки формата в содержимом; TXT/CSV — UTF-8, CSV — таблица минимум из двух колонок с запятой, точкой с запятой или табуляцией в качестве разделителя. Несоответствие возвращает 422 INVALID_DOCUMENT. Содержимое сохраняется без изменений; извлечение финансовых данных и проверка подлинности не выполняются. For v2, requirement_id and both coverage dates are required. Server validates membership, document type and coverage against current plan or active request. Upload alone is not a response to the bank.
          */
         post: operations["addApplicationDocument"];
         delete?: never;
@@ -290,10 +310,12 @@ export interface components {
             term_months: number;
             purpose: components["schemas"]["PurposeTag"];
         };
+        /** @description Partial loan fields plus optional full company snapshot, DRAFT only. Identity must match organization and existing snapshot. Omitted company preserves snapshot. Financial omission inside supplied company means unknown. */
         ApplicationFormPatch: {
             amount?: components["schemas"]["Money"];
             term_months?: number;
             purpose?: components["schemas"]["PurposeTag"];
+            company?: components["schemas"]["CompanyProfile"];
         };
         ClientApplication: {
             id: components["schemas"]["Id"];
@@ -318,6 +340,7 @@ export interface components {
             updated_at: components["schemas"]["Timestamp"];
             /** Format: int64 */
             version: number;
+            requirements_plan?: components["schemas"]["RequirementsPlan"];
         };
         ApplicationListItem: {
             id: components["schemas"]["Id"];
@@ -335,7 +358,7 @@ export interface components {
             request_id: components["schemas"]["Id"];
             /** @description Полный уточнённый снимок компании для этой заявки. */
             company?: components["schemas"]["CompanyProfile"];
-            fields?: components["schemas"]["ApplicationFormPatch"];
+            fields?: components["schemas"]["LoanFieldsPatch"];
             document_ids?: components["schemas"]["Id"][];
         };
         OfferActionRequest: {
@@ -351,28 +374,13 @@ export interface components {
             message: string;
             occurred_at: components["schemas"]["Timestamp"];
         };
-        Money: {
-            /** Format: int64 */
-            amount_kopecks: number;
-            /** @constant */
-            currency: "RUB";
+        LoanFieldsPatch: {
+            amount?: components["schemas"]["Money"];
+            term_months?: number;
+            purpose?: components["schemas"]["PurposeTag"];
         };
-        SignedMoney: {
-            /** Format: int64 */
-            amount_kopecks: number;
-            /** @constant */
-            currency: "RUB";
-        };
-        CompanyProfile: {
-            inn: string;
-            name: string;
-            okved: string;
-            /** Format: date */
-            registered_at: string;
-            revenue_12m: components["schemas"]["Money"];
-            profit_12m: components["schemas"]["SignedMoney"];
-            obligations: components["schemas"]["Money"];
-        };
+        /** Format: uuid */
+        Id: string;
         Problem: {
             /**
              * Format: uri-reference
@@ -386,12 +394,61 @@ export interface components {
             code: string;
             trace_id: string;
         };
+        Money: {
+            /** Format: int64 */
+            amount_kopecks: number;
+            /** @constant */
+            currency: "RUB";
+        };
+        SignedMoney: {
+            /** Format: int64 */
+            amount_kopecks: number;
+            /** @constant */
+            currency: "RUB";
+        };
+        /** @enum {string} */
+        LegalForm: "IP" | "LLC";
+        /** @enum {string} */
+        TaxRegime: "OSNO" | "USN_INCOME" | "USN_INCOME_EXPENSE" | "PSN" | "AUSN_INCOME" | "AUSN_INCOME_EXPENSE" | "ESHN" | "NPD" | "OTHER" | "UNKNOWN";
+        TaxPeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to?: string;
+            regimes: components["schemas"]["TaxRegime"][];
+            /** @enum {string} */
+            vat_status: "UNKNOWN" | "EXEMPT" | "PAYER";
+        };
+        DatePeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        /** @description Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified. */
+        CompanyProfile: {
+            inn: string;
+            name: string;
+            okved: string;
+            /** Format: date */
+            registered_at: string;
+            revenue_12m?: components["schemas"]["Money"];
+            profit_12m?: components["schemas"]["SignedMoney"];
+            obligations?: components["schemas"]["Money"];
+            /** @constant */
+            profile_schema_version?: 2;
+            legal_form?: components["schemas"]["LegalForm"];
+            tax_periods?: components["schemas"]["TaxPeriod"][];
+            financial_period?: components["schemas"]["DatePeriod"];
+            /** @enum {string} */
+            financial_basis?: "MANAGEMENT" | "ACCOUNTING" | "TAX" | "UNKNOWN";
+            /** Format: date */
+            obligations_as_of?: string;
+        };
         /** @enum {string} */
         PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION";
-        /** Format: uuid */
-        Id: string;
         /** @enum {string} */
-        DocumentType: "BANK_STATEMENT" | "BUSINESS_PLAN";
+        DocumentType: "BANK_STATEMENT" | "BUSINESS_PLAN" | "ACCOUNTING_REPORT" | "MANAGEMENT_REPORT" | "TAX_DECLARATION_USN" | "TAX_DECLARATION_3NDFL" | "INCOME_LEDGER" | "PATENT" | "RECEIVABLES_PAYABLES";
         Product: {
             id: components["schemas"]["Id"];
             code: string;
@@ -407,6 +464,11 @@ export interface components {
             required_document_types: components["schemas"]["DocumentType"][];
             /** Format: int64 */
             version: number;
+            /**
+             * @description Absent means legacy required_document_types. Versioned with product. v2 requires required_document_types=[]; never combine both policies.
+             * @enum {string}
+             */
+            requirements_policy_version?: "sme-profile-v1";
         };
         /** @enum {string} */
         ClientStatus: "DRAFT" | "SUBMITTED" | "UNDER_REVIEW" | "NEEDS_INFO" | "OFFER_AVAILABLE" | "FORMALIZING" | "DISBURSED" | "REJECTED" | "CLOSED";
@@ -422,18 +484,39 @@ export interface components {
             sha256: string;
             uploaded_at: components["schemas"]["Timestamp"];
             is_mock: boolean;
+            requirement_id?: string;
+            coverage_period?: components["schemas"]["DatePeriod"];
         };
         /**
          * @description Поле снимка конкретной заявки, которое банк просит уточнить.
          * @enum {string}
          */
         InfoField: "COMPANY_REVENUE_12M" | "COMPANY_PROFIT_12M" | "COMPANY_OBLIGATIONS" | "APPLICATION_AMOUNT" | "APPLICATION_TERM_MONTHS" | "APPLICATION_PURPOSE";
+        Requirement: {
+            id: string;
+            code: string;
+            label: string;
+            reason: string;
+            /** @enum {string} */
+            kind: "FIELD" | "DOCUMENT";
+            /** @enum {string} */
+            required_at: "SUBMIT" | "ASSESSMENT" | "ON_REQUEST";
+            /** @enum {string} */
+            status: "MISSING" | "PROVIDED";
+            field_path?: string;
+            accepted_document_types: components["schemas"]["DocumentType"][];
+            period?: components["schemas"]["DatePeriod"];
+            tax_regime?: components["schemas"]["TaxRegime"];
+            document_ids: components["schemas"]["Id"][];
+        };
+        /** @description Legacy uses required_fields/document_types; v2 uses nonempty requirements and both legacy arrays empty. PROVIDED means supplied, never verified. */
         InfoRequest: {
             id: components["schemas"]["Id"];
             message: string;
             required_fields: components["schemas"]["InfoField"][];
             required_document_types: components["schemas"]["DocumentType"][];
             created_at: components["schemas"]["Timestamp"];
+            requirements?: components["schemas"]["Requirement"][];
         };
         Offer: {
             id: components["schemas"]["Id"];
@@ -449,6 +532,17 @@ export interface components {
             rate_bps: number;
             expires_at: components["schemas"]["Timestamp"];
             explanation: string;
+        };
+        RequirementsPlan: {
+            /** @enum {string} */
+            policy_version: "sme-profile-v1";
+            /** Format: date */
+            reference_date: string;
+            can_submit: boolean;
+            /** @enum {string} */
+            route: "STANDARD" | "MANUAL_REVIEW";
+            reason_codes: string[];
+            items: components["schemas"]["Requirement"][];
         };
     };
     responses: {
@@ -508,13 +602,13 @@ export interface components {
         };
     };
     parameters: {
+        ApplicationId: components["schemas"]["Id"];
         ProductId: components["schemas"]["Id"];
         /** @description Непрозрачный курсор из предыдущего ответа. */
         Cursor: string;
         Limit: number;
         /** @description UUID действия. Повтор с другим телом возвращает 409. */
         IdempotencyKey: components["schemas"]["Id"];
-        ApplicationId: components["schemas"]["Id"];
         /** @description ETag из GET, равный версии ресурса в двойных кавычках. */
         IfMatch: string;
     };
@@ -524,6 +618,45 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getInternalApplicationDocumentContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: components["parameters"]["ApplicationId"];
+                document_id: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Исходное содержимое файла. Content-Type соответствует формату (PDF, изображение, Office, CSV или TXT); для неизвестного формата — application/octet-stream. Ответ не кешируется. */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    "Cache-Control"?: string;
+                    "X-Content-Type-Options"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Не удалось прочитать файл из хранилища. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     clientHealth: {
         parameters: {
             query?: never;
@@ -821,6 +954,11 @@ export interface operations {
                     document_type: components["schemas"]["DocumentType"];
                     /** Format: binary */
                     file: string;
+                    requirement_id?: string;
+                    /** Format: date */
+                    coverage_from?: string;
+                    /** Format: date */
+                    coverage_to?: string;
                 };
             };
         };

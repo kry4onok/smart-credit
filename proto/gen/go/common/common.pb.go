@@ -77,9 +77,16 @@ func (PurposeTag) EnumDescriptor() ([]byte, []int) {
 type DocumentType int32
 
 const (
-	DocumentType_DOCUMENT_TYPE_UNSPECIFIED    DocumentType = 0
-	DocumentType_DOCUMENT_TYPE_BANK_STATEMENT DocumentType = 1
-	DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN  DocumentType = 2
+	DocumentType_DOCUMENT_TYPE_UNSPECIFIED           DocumentType = 0
+	DocumentType_DOCUMENT_TYPE_BANK_STATEMENT        DocumentType = 1
+	DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN         DocumentType = 2
+	DocumentType_DOCUMENT_TYPE_ACCOUNTING_REPORT     DocumentType = 3
+	DocumentType_DOCUMENT_TYPE_MANAGEMENT_REPORT     DocumentType = 4
+	DocumentType_DOCUMENT_TYPE_TAX_DECLARATION_USN   DocumentType = 5
+	DocumentType_DOCUMENT_TYPE_TAX_DECLARATION_3NDFL DocumentType = 6
+	DocumentType_DOCUMENT_TYPE_INCOME_LEDGER         DocumentType = 7
+	DocumentType_DOCUMENT_TYPE_PATENT                DocumentType = 8
+	DocumentType_DOCUMENT_TYPE_RECEIVABLES_PAYABLES  DocumentType = 9
 )
 
 // Enum value maps for DocumentType.
@@ -88,11 +95,25 @@ var (
 		0: "DOCUMENT_TYPE_UNSPECIFIED",
 		1: "DOCUMENT_TYPE_BANK_STATEMENT",
 		2: "DOCUMENT_TYPE_BUSINESS_PLAN",
+		3: "DOCUMENT_TYPE_ACCOUNTING_REPORT",
+		4: "DOCUMENT_TYPE_MANAGEMENT_REPORT",
+		5: "DOCUMENT_TYPE_TAX_DECLARATION_USN",
+		6: "DOCUMENT_TYPE_TAX_DECLARATION_3NDFL",
+		7: "DOCUMENT_TYPE_INCOME_LEDGER",
+		8: "DOCUMENT_TYPE_PATENT",
+		9: "DOCUMENT_TYPE_RECEIVABLES_PAYABLES",
 	}
 	DocumentType_value = map[string]int32{
-		"DOCUMENT_TYPE_UNSPECIFIED":    0,
-		"DOCUMENT_TYPE_BANK_STATEMENT": 1,
-		"DOCUMENT_TYPE_BUSINESS_PLAN":  2,
+		"DOCUMENT_TYPE_UNSPECIFIED":           0,
+		"DOCUMENT_TYPE_BANK_STATEMENT":        1,
+		"DOCUMENT_TYPE_BUSINESS_PLAN":         2,
+		"DOCUMENT_TYPE_ACCOUNTING_REPORT":     3,
+		"DOCUMENT_TYPE_MANAGEMENT_REPORT":     4,
+		"DOCUMENT_TYPE_TAX_DECLARATION_USN":   5,
+		"DOCUMENT_TYPE_TAX_DECLARATION_3NDFL": 6,
+		"DOCUMENT_TYPE_INCOME_LEDGER":         7,
+		"DOCUMENT_TYPE_PATENT":                8,
+		"DOCUMENT_TYPE_RECEIVABLES_PAYABLES":  9,
 	}
 )
 
@@ -233,6 +254,434 @@ func (InfoField) EnumDescriptor() ([]byte, []int) {
 	return file_proto_common_common_proto_rawDescGZIP(), []int{3}
 }
 
+type LegalForm int32
+
+const (
+	LegalForm_LEGAL_FORM_UNSPECIFIED LegalForm = 0
+	LegalForm_LEGAL_FORM_IP          LegalForm = 1
+	LegalForm_LEGAL_FORM_LLC         LegalForm = 2
+)
+
+// Enum value maps for LegalForm.
+var (
+	LegalForm_name = map[int32]string{
+		0: "LEGAL_FORM_UNSPECIFIED",
+		1: "LEGAL_FORM_IP",
+		2: "LEGAL_FORM_LLC",
+	}
+	LegalForm_value = map[string]int32{
+		"LEGAL_FORM_UNSPECIFIED": 0,
+		"LEGAL_FORM_IP":          1,
+		"LEGAL_FORM_LLC":         2,
+	}
+)
+
+func (x LegalForm) Enum() *LegalForm {
+	p := new(LegalForm)
+	*p = x
+	return p
+}
+
+func (x LegalForm) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (LegalForm) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[4].Descriptor()
+}
+
+func (LegalForm) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[4]
+}
+
+func (x LegalForm) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use LegalForm.Descriptor instead.
+func (LegalForm) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{4}
+}
+
+type TaxRegime int32
+
+const (
+	TaxRegime_TAX_REGIME_UNSPECIFIED         TaxRegime = 0
+	TaxRegime_TAX_REGIME_OSNO                TaxRegime = 1
+	TaxRegime_TAX_REGIME_USN_INCOME          TaxRegime = 2
+	TaxRegime_TAX_REGIME_USN_INCOME_EXPENSE  TaxRegime = 3
+	TaxRegime_TAX_REGIME_PSN                 TaxRegime = 4
+	TaxRegime_TAX_REGIME_AUSN_INCOME         TaxRegime = 5
+	TaxRegime_TAX_REGIME_AUSN_INCOME_EXPENSE TaxRegime = 6
+	TaxRegime_TAX_REGIME_ESHN                TaxRegime = 7
+	TaxRegime_TAX_REGIME_NPD                 TaxRegime = 8
+	TaxRegime_TAX_REGIME_OTHER               TaxRegime = 9
+	TaxRegime_TAX_REGIME_UNKNOWN             TaxRegime = 10
+)
+
+// Enum value maps for TaxRegime.
+var (
+	TaxRegime_name = map[int32]string{
+		0:  "TAX_REGIME_UNSPECIFIED",
+		1:  "TAX_REGIME_OSNO",
+		2:  "TAX_REGIME_USN_INCOME",
+		3:  "TAX_REGIME_USN_INCOME_EXPENSE",
+		4:  "TAX_REGIME_PSN",
+		5:  "TAX_REGIME_AUSN_INCOME",
+		6:  "TAX_REGIME_AUSN_INCOME_EXPENSE",
+		7:  "TAX_REGIME_ESHN",
+		8:  "TAX_REGIME_NPD",
+		9:  "TAX_REGIME_OTHER",
+		10: "TAX_REGIME_UNKNOWN",
+	}
+	TaxRegime_value = map[string]int32{
+		"TAX_REGIME_UNSPECIFIED":         0,
+		"TAX_REGIME_OSNO":                1,
+		"TAX_REGIME_USN_INCOME":          2,
+		"TAX_REGIME_USN_INCOME_EXPENSE":  3,
+		"TAX_REGIME_PSN":                 4,
+		"TAX_REGIME_AUSN_INCOME":         5,
+		"TAX_REGIME_AUSN_INCOME_EXPENSE": 6,
+		"TAX_REGIME_ESHN":                7,
+		"TAX_REGIME_NPD":                 8,
+		"TAX_REGIME_OTHER":               9,
+		"TAX_REGIME_UNKNOWN":             10,
+	}
+)
+
+func (x TaxRegime) Enum() *TaxRegime {
+	p := new(TaxRegime)
+	*p = x
+	return p
+}
+
+func (x TaxRegime) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaxRegime) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[5].Descriptor()
+}
+
+func (TaxRegime) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[5]
+}
+
+func (x TaxRegime) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaxRegime.Descriptor instead.
+func (TaxRegime) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{5}
+}
+
+type VatStatus int32
+
+const (
+	VatStatus_VAT_STATUS_UNSPECIFIED VatStatus = 0
+	VatStatus_VAT_STATUS_UNKNOWN     VatStatus = 1
+	VatStatus_VAT_STATUS_EXEMPT      VatStatus = 2
+	VatStatus_VAT_STATUS_PAYER       VatStatus = 3
+)
+
+// Enum value maps for VatStatus.
+var (
+	VatStatus_name = map[int32]string{
+		0: "VAT_STATUS_UNSPECIFIED",
+		1: "VAT_STATUS_UNKNOWN",
+		2: "VAT_STATUS_EXEMPT",
+		3: "VAT_STATUS_PAYER",
+	}
+	VatStatus_value = map[string]int32{
+		"VAT_STATUS_UNSPECIFIED": 0,
+		"VAT_STATUS_UNKNOWN":     1,
+		"VAT_STATUS_EXEMPT":      2,
+		"VAT_STATUS_PAYER":       3,
+	}
+)
+
+func (x VatStatus) Enum() *VatStatus {
+	p := new(VatStatus)
+	*p = x
+	return p
+}
+
+func (x VatStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VatStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[6].Descriptor()
+}
+
+func (VatStatus) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[6]
+}
+
+func (x VatStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VatStatus.Descriptor instead.
+func (VatStatus) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{6}
+}
+
+type FinancialBasis int32
+
+const (
+	FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED FinancialBasis = 0
+	FinancialBasis_FINANCIAL_BASIS_MANAGEMENT  FinancialBasis = 1
+	FinancialBasis_FINANCIAL_BASIS_ACCOUNTING  FinancialBasis = 2
+	FinancialBasis_FINANCIAL_BASIS_TAX         FinancialBasis = 3
+	FinancialBasis_FINANCIAL_BASIS_UNKNOWN     FinancialBasis = 4
+)
+
+// Enum value maps for FinancialBasis.
+var (
+	FinancialBasis_name = map[int32]string{
+		0: "FINANCIAL_BASIS_UNSPECIFIED",
+		1: "FINANCIAL_BASIS_MANAGEMENT",
+		2: "FINANCIAL_BASIS_ACCOUNTING",
+		3: "FINANCIAL_BASIS_TAX",
+		4: "FINANCIAL_BASIS_UNKNOWN",
+	}
+	FinancialBasis_value = map[string]int32{
+		"FINANCIAL_BASIS_UNSPECIFIED": 0,
+		"FINANCIAL_BASIS_MANAGEMENT":  1,
+		"FINANCIAL_BASIS_ACCOUNTING":  2,
+		"FINANCIAL_BASIS_TAX":         3,
+		"FINANCIAL_BASIS_UNKNOWN":     4,
+	}
+)
+
+func (x FinancialBasis) Enum() *FinancialBasis {
+	p := new(FinancialBasis)
+	*p = x
+	return p
+}
+
+func (x FinancialBasis) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FinancialBasis) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[7].Descriptor()
+}
+
+func (FinancialBasis) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[7]
+}
+
+func (x FinancialBasis) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FinancialBasis.Descriptor instead.
+func (FinancialBasis) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{7}
+}
+
+type RequirementKind int32
+
+const (
+	RequirementKind_REQUIREMENT_KIND_UNSPECIFIED RequirementKind = 0
+	RequirementKind_REQUIREMENT_KIND_FIELD       RequirementKind = 1
+	RequirementKind_REQUIREMENT_KIND_DOCUMENT    RequirementKind = 2
+)
+
+// Enum value maps for RequirementKind.
+var (
+	RequirementKind_name = map[int32]string{
+		0: "REQUIREMENT_KIND_UNSPECIFIED",
+		1: "REQUIREMENT_KIND_FIELD",
+		2: "REQUIREMENT_KIND_DOCUMENT",
+	}
+	RequirementKind_value = map[string]int32{
+		"REQUIREMENT_KIND_UNSPECIFIED": 0,
+		"REQUIREMENT_KIND_FIELD":       1,
+		"REQUIREMENT_KIND_DOCUMENT":    2,
+	}
+)
+
+func (x RequirementKind) Enum() *RequirementKind {
+	p := new(RequirementKind)
+	*p = x
+	return p
+}
+
+func (x RequirementKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RequirementKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[8].Descriptor()
+}
+
+func (RequirementKind) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[8]
+}
+
+func (x RequirementKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RequirementKind.Descriptor instead.
+func (RequirementKind) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{8}
+}
+
+type RequirementStage int32
+
+const (
+	RequirementStage_REQUIREMENT_STAGE_UNSPECIFIED RequirementStage = 0
+	RequirementStage_REQUIREMENT_STAGE_SUBMIT      RequirementStage = 1
+	RequirementStage_REQUIREMENT_STAGE_ASSESSMENT  RequirementStage = 2
+	RequirementStage_REQUIREMENT_STAGE_ON_REQUEST  RequirementStage = 3
+)
+
+// Enum value maps for RequirementStage.
+var (
+	RequirementStage_name = map[int32]string{
+		0: "REQUIREMENT_STAGE_UNSPECIFIED",
+		1: "REQUIREMENT_STAGE_SUBMIT",
+		2: "REQUIREMENT_STAGE_ASSESSMENT",
+		3: "REQUIREMENT_STAGE_ON_REQUEST",
+	}
+	RequirementStage_value = map[string]int32{
+		"REQUIREMENT_STAGE_UNSPECIFIED": 0,
+		"REQUIREMENT_STAGE_SUBMIT":      1,
+		"REQUIREMENT_STAGE_ASSESSMENT":  2,
+		"REQUIREMENT_STAGE_ON_REQUEST":  3,
+	}
+)
+
+func (x RequirementStage) Enum() *RequirementStage {
+	p := new(RequirementStage)
+	*p = x
+	return p
+}
+
+func (x RequirementStage) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RequirementStage) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[9].Descriptor()
+}
+
+func (RequirementStage) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[9]
+}
+
+func (x RequirementStage) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RequirementStage.Descriptor instead.
+func (RequirementStage) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{9}
+}
+
+type RequirementStatus int32
+
+const (
+	RequirementStatus_REQUIREMENT_STATUS_UNSPECIFIED RequirementStatus = 0
+	RequirementStatus_REQUIREMENT_STATUS_MISSING     RequirementStatus = 1
+	RequirementStatus_REQUIREMENT_STATUS_PROVIDED    RequirementStatus = 2
+)
+
+// Enum value maps for RequirementStatus.
+var (
+	RequirementStatus_name = map[int32]string{
+		0: "REQUIREMENT_STATUS_UNSPECIFIED",
+		1: "REQUIREMENT_STATUS_MISSING",
+		2: "REQUIREMENT_STATUS_PROVIDED",
+	}
+	RequirementStatus_value = map[string]int32{
+		"REQUIREMENT_STATUS_UNSPECIFIED": 0,
+		"REQUIREMENT_STATUS_MISSING":     1,
+		"REQUIREMENT_STATUS_PROVIDED":    2,
+	}
+)
+
+func (x RequirementStatus) Enum() *RequirementStatus {
+	p := new(RequirementStatus)
+	*p = x
+	return p
+}
+
+func (x RequirementStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RequirementStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[10].Descriptor()
+}
+
+func (RequirementStatus) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[10]
+}
+
+func (x RequirementStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RequirementStatus.Descriptor instead.
+func (RequirementStatus) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{10}
+}
+
+type RequirementsRoute int32
+
+const (
+	RequirementsRoute_REQUIREMENTS_ROUTE_UNSPECIFIED   RequirementsRoute = 0
+	RequirementsRoute_REQUIREMENTS_ROUTE_STANDARD      RequirementsRoute = 1
+	RequirementsRoute_REQUIREMENTS_ROUTE_MANUAL_REVIEW RequirementsRoute = 2
+)
+
+// Enum value maps for RequirementsRoute.
+var (
+	RequirementsRoute_name = map[int32]string{
+		0: "REQUIREMENTS_ROUTE_UNSPECIFIED",
+		1: "REQUIREMENTS_ROUTE_STANDARD",
+		2: "REQUIREMENTS_ROUTE_MANUAL_REVIEW",
+	}
+	RequirementsRoute_value = map[string]int32{
+		"REQUIREMENTS_ROUTE_UNSPECIFIED":   0,
+		"REQUIREMENTS_ROUTE_STANDARD":      1,
+		"REQUIREMENTS_ROUTE_MANUAL_REVIEW": 2,
+	}
+)
+
+func (x RequirementsRoute) Enum() *RequirementsRoute {
+	p := new(RequirementsRoute)
+	*p = x
+	return p
+}
+
+func (x RequirementsRoute) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RequirementsRoute) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_common_common_proto_enumTypes[11].Descriptor()
+}
+
+func (RequirementsRoute) Type() protoreflect.EnumType {
+	return &file_proto_common_common_proto_enumTypes[11]
+}
+
+func (x RequirementsRoute) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RequirementsRoute.Descriptor instead.
+func (RequirementsRoute) EnumDescriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{11}
+}
+
 // Денежные значения передаются целыми копейками. currency всегда RUB.
 type Money struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -287,16 +736,22 @@ func (x *Money) GetCurrency() string {
 }
 
 type CompanySnapshot struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Inn           string                 `protobuf:"bytes,1,opt,name=inn,proto3" json:"inn,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Okved         string                 `protobuf:"bytes,3,opt,name=okved,proto3" json:"okved,omitempty"`
-	RegisteredAt  string                 `protobuf:"bytes,4,opt,name=registered_at,json=registeredAt,proto3" json:"registered_at,omitempty"` // YYYY-MM-DD
-	Revenue_12M   *Money                 `protobuf:"bytes,5,opt,name=revenue_12m,json=revenue12m,proto3" json:"revenue_12m,omitempty"`
-	Profit_12M    *Money                 `protobuf:"bytes,6,opt,name=profit_12m,json=profit12m,proto3" json:"profit_12m,omitempty"` // Может быть отрицательной.
-	Obligations   *Money                 `protobuf:"bytes,7,opt,name=obligations,proto3" json:"obligations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Inn                  string                 `protobuf:"bytes,1,opt,name=inn,proto3" json:"inn,omitempty"`
+	Name                 string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Okved                string                 `protobuf:"bytes,3,opt,name=okved,proto3" json:"okved,omitempty"`
+	RegisteredAt         string                 `protobuf:"bytes,4,opt,name=registered_at,json=registeredAt,proto3" json:"registered_at,omitempty"` // YYYY-MM-DD
+	Revenue_12M          *Money                 `protobuf:"bytes,5,opt,name=revenue_12m,json=revenue12m,proto3" json:"revenue_12m,omitempty"`
+	Profit_12M           *Money                 `protobuf:"bytes,6,opt,name=profit_12m,json=profit12m,proto3" json:"profit_12m,omitempty"` // Может быть отрицательной.
+	Obligations          *Money                 `protobuf:"bytes,7,opt,name=obligations,proto3" json:"obligations,omitempty"`
+	ProfileSchemaVersion *int32                 `protobuf:"varint,8,opt,name=profile_schema_version,json=profileSchemaVersion,proto3,oneof" json:"profile_schema_version,omitempty"`
+	LegalForm            LegalForm              `protobuf:"varint,9,opt,name=legal_form,json=legalForm,proto3,enum=smartcredit.common.LegalForm" json:"legal_form,omitempty"`
+	TaxPeriods           []*TaxPeriod           `protobuf:"bytes,10,rep,name=tax_periods,json=taxPeriods,proto3" json:"tax_periods,omitempty"`
+	FinancialPeriod      *DatePeriod            `protobuf:"bytes,11,opt,name=financial_period,json=financialPeriod,proto3" json:"financial_period,omitempty"`
+	FinancialBasis       FinancialBasis         `protobuf:"varint,12,opt,name=financial_basis,json=financialBasis,proto3,enum=smartcredit.common.FinancialBasis" json:"financial_basis,omitempty"`
+	ObligationsAsOf      string                 `protobuf:"bytes,13,opt,name=obligations_as_of,json=obligationsAsOf,proto3" json:"obligations_as_of,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CompanySnapshot) Reset() {
@@ -378,16 +833,60 @@ func (x *CompanySnapshot) GetObligations() *Money {
 	return nil
 }
 
+func (x *CompanySnapshot) GetProfileSchemaVersion() int32 {
+	if x != nil && x.ProfileSchemaVersion != nil {
+		return *x.ProfileSchemaVersion
+	}
+	return 0
+}
+
+func (x *CompanySnapshot) GetLegalForm() LegalForm {
+	if x != nil {
+		return x.LegalForm
+	}
+	return LegalForm_LEGAL_FORM_UNSPECIFIED
+}
+
+func (x *CompanySnapshot) GetTaxPeriods() []*TaxPeriod {
+	if x != nil {
+		return x.TaxPeriods
+	}
+	return nil
+}
+
+func (x *CompanySnapshot) GetFinancialPeriod() *DatePeriod {
+	if x != nil {
+		return x.FinancialPeriod
+	}
+	return nil
+}
+
+func (x *CompanySnapshot) GetFinancialBasis() FinancialBasis {
+	if x != nil {
+		return x.FinancialBasis
+	}
+	return FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED
+}
+
+func (x *CompanySnapshot) GetObligationsAsOf() string {
+	if x != nil {
+		return x.ObligationsAsOf
+	}
+	return ""
+}
+
 type DocumentMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DocumentId    string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"` // UUID
-	DocumentType  DocumentType           `protobuf:"varint,2,opt,name=document_type,json=documentType,proto3,enum=smartcredit.common.DocumentType" json:"document_type,omitempty"`
-	FileName      string                 `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
-	Sha256        string                 `protobuf:"bytes,4,opt,name=sha256,proto3" json:"sha256,omitempty"`
-	UploadedAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=uploaded_at,json=uploadedAt,proto3" json:"uploaded_at,omitempty"`
-	IsMock        bool                   `protobuf:"varint,6,opt,name=is_mock,json=isMock,proto3" json:"is_mock,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	DocumentId     string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"` // UUID
+	DocumentType   DocumentType           `protobuf:"varint,2,opt,name=document_type,json=documentType,proto3,enum=smartcredit.common.DocumentType" json:"document_type,omitempty"`
+	FileName       string                 `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	Sha256         string                 `protobuf:"bytes,4,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	UploadedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=uploaded_at,json=uploadedAt,proto3" json:"uploaded_at,omitempty"`
+	IsMock         bool                   `protobuf:"varint,6,opt,name=is_mock,json=isMock,proto3" json:"is_mock,omitempty"`
+	RequirementId  string                 `protobuf:"bytes,7,opt,name=requirement_id,json=requirementId,proto3" json:"requirement_id,omitempty"`
+	CoveragePeriod *DatePeriod            `protobuf:"bytes,8,opt,name=coverage_period,json=coveragePeriod,proto3" json:"coverage_period,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *DocumentMetadata) Reset() {
@@ -460,6 +959,20 @@ func (x *DocumentMetadata) GetIsMock() bool {
 		return x.IsMock
 	}
 	return false
+}
+
+func (x *DocumentMetadata) GetRequirementId() string {
+	if x != nil {
+		return x.RequirementId
+	}
+	return ""
+}
+
+func (x *DocumentMetadata) GetCoveragePeriod() *DatePeriod {
+	if x != nil {
+		return x.CoveragePeriod
+	}
+	return nil
 }
 
 type ApplicationForm struct {
@@ -645,6 +1158,7 @@ type InfoRequest struct {
 	RequiredFields        []InfoField            `protobuf:"varint,3,rep,packed,name=required_fields,json=requiredFields,proto3,enum=smartcredit.common.InfoField" json:"required_fields,omitempty"`
 	RequiredDocumentTypes []DocumentType         `protobuf:"varint,4,rep,packed,name=required_document_types,json=requiredDocumentTypes,proto3,enum=smartcredit.common.DocumentType" json:"required_document_types,omitempty"`
 	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Requirements          []*Requirement         `protobuf:"bytes,6,rep,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -714,22 +1228,30 @@ func (x *InfoRequest) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *InfoRequest) GetRequirements() []*Requirement {
+	if x != nil {
+		return x.Requirements
+	}
+	return nil
+}
+
 type Product struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	ProductId             string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"` // UUID
-	Code                  string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
-	Name                  string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description           string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	PurposeTags           []PurposeTag           `protobuf:"varint,5,rep,packed,name=purpose_tags,json=purposeTags,proto3,enum=smartcredit.common.PurposeTag" json:"purpose_tags,omitempty"`
-	MinAmount             *Money                 `protobuf:"bytes,6,opt,name=min_amount,json=minAmount,proto3" json:"min_amount,omitempty"`
-	MaxAmount             *Money                 `protobuf:"bytes,7,opt,name=max_amount,json=maxAmount,proto3" json:"max_amount,omitempty"`
-	MinTermMonths         int32                  `protobuf:"varint,8,opt,name=min_term_months,json=minTermMonths,proto3" json:"min_term_months,omitempty"`
-	MaxTermMonths         int32                  `protobuf:"varint,9,opt,name=max_term_months,json=maxTermMonths,proto3" json:"max_term_months,omitempty"`
-	IndicativeRateBps     int32                  `protobuf:"varint,10,opt,name=indicative_rate_bps,json=indicativeRateBps,proto3" json:"indicative_rate_bps,omitempty"`
-	RequiredDocumentTypes []DocumentType         `protobuf:"varint,11,rep,packed,name=required_document_types,json=requiredDocumentTypes,proto3,enum=smartcredit.common.DocumentType" json:"required_document_types,omitempty"`
-	Version               int64                  `protobuf:"varint,12,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	ProductId                 string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"` // UUID
+	Code                      string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Name                      string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description               string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	PurposeTags               []PurposeTag           `protobuf:"varint,5,rep,packed,name=purpose_tags,json=purposeTags,proto3,enum=smartcredit.common.PurposeTag" json:"purpose_tags,omitempty"`
+	MinAmount                 *Money                 `protobuf:"bytes,6,opt,name=min_amount,json=minAmount,proto3" json:"min_amount,omitempty"`
+	MaxAmount                 *Money                 `protobuf:"bytes,7,opt,name=max_amount,json=maxAmount,proto3" json:"max_amount,omitempty"`
+	MinTermMonths             int32                  `protobuf:"varint,8,opt,name=min_term_months,json=minTermMonths,proto3" json:"min_term_months,omitempty"`
+	MaxTermMonths             int32                  `protobuf:"varint,9,opt,name=max_term_months,json=maxTermMonths,proto3" json:"max_term_months,omitempty"`
+	IndicativeRateBps         int32                  `protobuf:"varint,10,opt,name=indicative_rate_bps,json=indicativeRateBps,proto3" json:"indicative_rate_bps,omitempty"`
+	RequiredDocumentTypes     []DocumentType         `protobuf:"varint,11,rep,packed,name=required_document_types,json=requiredDocumentTypes,proto3,enum=smartcredit.common.DocumentType" json:"required_document_types,omitempty"`
+	Version                   int64                  `protobuf:"varint,12,opt,name=version,proto3" json:"version,omitempty"`
+	RequirementsPolicyVersion string                 `protobuf:"bytes,13,opt,name=requirements_policy_version,json=requirementsPolicyVersion,proto3" json:"requirements_policy_version,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *Product) Reset() {
@@ -846,6 +1368,349 @@ func (x *Product) GetVersion() int64 {
 	return 0
 }
 
+func (x *Product) GetRequirementsPolicyVersion() string {
+	if x != nil {
+		return x.RequirementsPolicyVersion
+	}
+	return ""
+}
+
+type DatePeriod struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	From          string                 `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	To            string                 `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DatePeriod) Reset() {
+	*x = DatePeriod{}
+	mi := &file_proto_common_common_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DatePeriod) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DatePeriod) ProtoMessage() {}
+
+func (x *DatePeriod) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_common_common_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DatePeriod.ProtoReflect.Descriptor instead.
+func (*DatePeriod) Descriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DatePeriod) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *DatePeriod) GetTo() string {
+	if x != nil {
+		return x.To
+	}
+	return ""
+}
+
+type TaxPeriod struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	From          string                 `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	To            *string                `protobuf:"bytes,2,opt,name=to,proto3,oneof" json:"to,omitempty"` // inclusive; absent means still active
+	Regimes       []TaxRegime            `protobuf:"varint,3,rep,packed,name=regimes,proto3,enum=smartcredit.common.TaxRegime" json:"regimes,omitempty"`
+	VatStatus     VatStatus              `protobuf:"varint,4,opt,name=vat_status,json=vatStatus,proto3,enum=smartcredit.common.VatStatus" json:"vat_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaxPeriod) Reset() {
+	*x = TaxPeriod{}
+	mi := &file_proto_common_common_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxPeriod) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxPeriod) ProtoMessage() {}
+
+func (x *TaxPeriod) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_common_common_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxPeriod.ProtoReflect.Descriptor instead.
+func (*TaxPeriod) Descriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TaxPeriod) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *TaxPeriod) GetTo() string {
+	if x != nil && x.To != nil {
+		return *x.To
+	}
+	return ""
+}
+
+func (x *TaxPeriod) GetRegimes() []TaxRegime {
+	if x != nil {
+		return x.Regimes
+	}
+	return nil
+}
+
+func (x *TaxPeriod) GetVatStatus() VatStatus {
+	if x != nil {
+		return x.VatStatus
+	}
+	return VatStatus_VAT_STATUS_UNSPECIFIED
+}
+
+type Requirement struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code                  string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Label                 string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	Reason                string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Kind                  RequirementKind        `protobuf:"varint,5,opt,name=kind,proto3,enum=smartcredit.common.RequirementKind" json:"kind,omitempty"`
+	RequiredAt            RequirementStage       `protobuf:"varint,6,opt,name=required_at,json=requiredAt,proto3,enum=smartcredit.common.RequirementStage" json:"required_at,omitempty"`
+	Status                RequirementStatus      `protobuf:"varint,7,opt,name=status,proto3,enum=smartcredit.common.RequirementStatus" json:"status,omitempty"`
+	FieldPath             string                 `protobuf:"bytes,8,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	AcceptedDocumentTypes []DocumentType         `protobuf:"varint,9,rep,packed,name=accepted_document_types,json=acceptedDocumentTypes,proto3,enum=smartcredit.common.DocumentType" json:"accepted_document_types,omitempty"`
+	Period                *DatePeriod            `protobuf:"bytes,10,opt,name=period,proto3" json:"period,omitempty"`
+	TaxRegime             TaxRegime              `protobuf:"varint,11,opt,name=tax_regime,json=taxRegime,proto3,enum=smartcredit.common.TaxRegime" json:"tax_regime,omitempty"`
+	DocumentIds           []string               `protobuf:"bytes,12,rep,name=document_ids,json=documentIds,proto3" json:"document_ids,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *Requirement) Reset() {
+	*x = Requirement{}
+	mi := &file_proto_common_common_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Requirement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Requirement) ProtoMessage() {}
+
+func (x *Requirement) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_common_common_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Requirement.ProtoReflect.Descriptor instead.
+func (*Requirement) Descriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Requirement) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Requirement) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *Requirement) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *Requirement) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *Requirement) GetKind() RequirementKind {
+	if x != nil {
+		return x.Kind
+	}
+	return RequirementKind_REQUIREMENT_KIND_UNSPECIFIED
+}
+
+func (x *Requirement) GetRequiredAt() RequirementStage {
+	if x != nil {
+		return x.RequiredAt
+	}
+	return RequirementStage_REQUIREMENT_STAGE_UNSPECIFIED
+}
+
+func (x *Requirement) GetStatus() RequirementStatus {
+	if x != nil {
+		return x.Status
+	}
+	return RequirementStatus_REQUIREMENT_STATUS_UNSPECIFIED
+}
+
+func (x *Requirement) GetFieldPath() string {
+	if x != nil {
+		return x.FieldPath
+	}
+	return ""
+}
+
+func (x *Requirement) GetAcceptedDocumentTypes() []DocumentType {
+	if x != nil {
+		return x.AcceptedDocumentTypes
+	}
+	return nil
+}
+
+func (x *Requirement) GetPeriod() *DatePeriod {
+	if x != nil {
+		return x.Period
+	}
+	return nil
+}
+
+func (x *Requirement) GetTaxRegime() TaxRegime {
+	if x != nil {
+		return x.TaxRegime
+	}
+	return TaxRegime_TAX_REGIME_UNSPECIFIED
+}
+
+func (x *Requirement) GetDocumentIds() []string {
+	if x != nil {
+		return x.DocumentIds
+	}
+	return nil
+}
+
+type RequirementsPlan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PolicyVersion string                 `protobuf:"bytes,1,opt,name=policy_version,json=policyVersion,proto3" json:"policy_version,omitempty"`
+	ReferenceDate string                 `protobuf:"bytes,2,opt,name=reference_date,json=referenceDate,proto3" json:"reference_date,omitempty"`
+	CanSubmit     bool                   `protobuf:"varint,3,opt,name=can_submit,json=canSubmit,proto3" json:"can_submit,omitempty"`
+	Route         RequirementsRoute      `protobuf:"varint,4,opt,name=route,proto3,enum=smartcredit.common.RequirementsRoute" json:"route,omitempty"`
+	ReasonCodes   []string               `protobuf:"bytes,5,rep,name=reason_codes,json=reasonCodes,proto3" json:"reason_codes,omitempty"`
+	Items         []*Requirement         `protobuf:"bytes,6,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequirementsPlan) Reset() {
+	*x = RequirementsPlan{}
+	mi := &file_proto_common_common_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequirementsPlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequirementsPlan) ProtoMessage() {}
+
+func (x *RequirementsPlan) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_common_common_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequirementsPlan.ProtoReflect.Descriptor instead.
+func (*RequirementsPlan) Descriptor() ([]byte, []int) {
+	return file_proto_common_common_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *RequirementsPlan) GetPolicyVersion() string {
+	if x != nil {
+		return x.PolicyVersion
+	}
+	return ""
+}
+
+func (x *RequirementsPlan) GetReferenceDate() string {
+	if x != nil {
+		return x.ReferenceDate
+	}
+	return ""
+}
+
+func (x *RequirementsPlan) GetCanSubmit() bool {
+	if x != nil {
+		return x.CanSubmit
+	}
+	return false
+}
+
+func (x *RequirementsPlan) GetRoute() RequirementsRoute {
+	if x != nil {
+		return x.Route
+	}
+	return RequirementsRoute_REQUIREMENTS_ROUTE_UNSPECIFIED
+}
+
+func (x *RequirementsPlan) GetReasonCodes() []string {
+	if x != nil {
+		return x.ReasonCodes
+	}
+	return nil
+}
+
+func (x *RequirementsPlan) GetItems() []*Requirement {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_proto_common_common_proto protoreflect.FileDescriptor
 
 const file_proto_common_common_proto_rawDesc = "" +
@@ -853,7 +1718,7 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"\x19proto/common/common.proto\x12\x12smartcredit.common\x1a\x1fgoogle/protobuf/timestamp.proto\"J\n" +
 	"\x05Money\x12%\n" +
 	"\x0eamount_kopecks\x18\x01 \x01(\x03R\ramountKopecks\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"\xa5\x02\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"\xbd\x05\n" +
 	"\x0fCompanySnapshot\x12\x10\n" +
 	"\x03inn\x18\x01 \x01(\tR\x03inn\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -863,7 +1728,17 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"revenue12m\x128\n" +
 	"\n" +
 	"profit_12m\x18\x06 \x01(\v2\x19.smartcredit.common.MoneyR\tprofit12m\x12;\n" +
-	"\vobligations\x18\a \x01(\v2\x19.smartcredit.common.MoneyR\vobligations\"\x85\x02\n" +
+	"\vobligations\x18\a \x01(\v2\x19.smartcredit.common.MoneyR\vobligations\x129\n" +
+	"\x16profile_schema_version\x18\b \x01(\x05H\x00R\x14profileSchemaVersion\x88\x01\x01\x12<\n" +
+	"\n" +
+	"legal_form\x18\t \x01(\x0e2\x1d.smartcredit.common.LegalFormR\tlegalForm\x12>\n" +
+	"\vtax_periods\x18\n" +
+	" \x03(\v2\x1d.smartcredit.common.TaxPeriodR\n" +
+	"taxPeriods\x12I\n" +
+	"\x10financial_period\x18\v \x01(\v2\x1e.smartcredit.common.DatePeriodR\x0ffinancialPeriod\x12K\n" +
+	"\x0ffinancial_basis\x18\f \x01(\x0e2\".smartcredit.common.FinancialBasisR\x0efinancialBasis\x12*\n" +
+	"\x11obligations_as_of\x18\r \x01(\tR\x0fobligationsAsOfB\x19\n" +
+	"\x17_profile_schema_version\"\xf5\x02\n" +
 	"\x10DocumentMetadata\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\tR\n" +
 	"documentId\x12E\n" +
@@ -872,7 +1747,9 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"\x06sha256\x18\x04 \x01(\tR\x06sha256\x12;\n" +
 	"\vuploaded_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"uploadedAt\x12\x17\n" +
-	"\ais_mock\x18\x06 \x01(\bR\x06isMock\"\x9f\x01\n" +
+	"\ais_mock\x18\x06 \x01(\bR\x06isMock\x12%\n" +
+	"\x0erequirement_id\x18\a \x01(\tR\rrequirementId\x12G\n" +
+	"\x0fcoverage_period\x18\b \x01(\v2\x1e.smartcredit.common.DatePeriodR\x0ecoveragePeriod\"\x9f\x01\n" +
 	"\x0fApplicationForm\x121\n" +
 	"\x06amount\x18\x01 \x01(\v2\x19.smartcredit.common.MoneyR\x06amount\x12\x1f\n" +
 	"\vterm_months\x18\x02 \x01(\x05R\n" +
@@ -892,7 +1769,7 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"product_id\x18\b \x01(\tR\tproductId\x12'\n" +
 	"\x0fproduct_version\x18\t \x01(\x03R\x0eproductVersion\x12!\n" +
 	"\fproduct_name\x18\n" +
-	" \x01(\tR\vproductName\"\xa3\x02\n" +
+	" \x01(\tR\vproductName\"\xe8\x02\n" +
 	"\vInfoRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x18\n" +
@@ -900,7 +1777,8 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"\x0frequired_fields\x18\x03 \x03(\x0e2\x1d.smartcredit.common.InfoFieldR\x0erequiredFields\x12X\n" +
 	"\x17required_document_types\x18\x04 \x03(\x0e2 .smartcredit.common.DocumentTypeR\x15requiredDocumentTypes\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x9d\x04\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12C\n" +
+	"\frequirements\x18\x06 \x03(\v2\x1f.smartcredit.common.RequirementR\frequirements\"\xdd\x04\n" +
 	"\aProduct\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x12\n" +
@@ -917,17 +1795,61 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"\x13indicative_rate_bps\x18\n" +
 	" \x01(\x05R\x11indicativeRateBps\x12X\n" +
 	"\x17required_document_types\x18\v \x03(\x0e2 .smartcredit.common.DocumentTypeR\x15requiredDocumentTypes\x12\x18\n" +
-	"\aversion\x18\f \x01(\x03R\aversion*\x80\x01\n" +
+	"\aversion\x18\f \x01(\x03R\aversion\x12>\n" +
+	"\x1brequirements_policy_version\x18\r \x01(\tR\x19requirementsPolicyVersion\"0\n" +
+	"\n" +
+	"DatePeriod\x12\x12\n" +
+	"\x04from\x18\x01 \x01(\tR\x04from\x12\x0e\n" +
+	"\x02to\x18\x02 \x01(\tR\x02to\"\xb2\x01\n" +
+	"\tTaxPeriod\x12\x12\n" +
+	"\x04from\x18\x01 \x01(\tR\x04from\x12\x13\n" +
+	"\x02to\x18\x02 \x01(\tH\x00R\x02to\x88\x01\x01\x127\n" +
+	"\aregimes\x18\x03 \x03(\x0e2\x1d.smartcredit.common.TaxRegimeR\aregimes\x12<\n" +
+	"\n" +
+	"vat_status\x18\x04 \x01(\x0e2\x1d.smartcredit.common.VatStatusR\tvatStatusB\x05\n" +
+	"\x03_to\"\xb0\x04\n" +
+	"\vRequirement\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x127\n" +
+	"\x04kind\x18\x05 \x01(\x0e2#.smartcredit.common.RequirementKindR\x04kind\x12E\n" +
+	"\vrequired_at\x18\x06 \x01(\x0e2$.smartcredit.common.RequirementStageR\n" +
+	"requiredAt\x12=\n" +
+	"\x06status\x18\a \x01(\x0e2%.smartcredit.common.RequirementStatusR\x06status\x12\x1d\n" +
+	"\n" +
+	"field_path\x18\b \x01(\tR\tfieldPath\x12X\n" +
+	"\x17accepted_document_types\x18\t \x03(\x0e2 .smartcredit.common.DocumentTypeR\x15acceptedDocumentTypes\x126\n" +
+	"\x06period\x18\n" +
+	" \x01(\v2\x1e.smartcredit.common.DatePeriodR\x06period\x12<\n" +
+	"\n" +
+	"tax_regime\x18\v \x01(\x0e2\x1d.smartcredit.common.TaxRegimeR\ttaxRegime\x12!\n" +
+	"\fdocument_ids\x18\f \x03(\tR\vdocumentIds\"\x96\x02\n" +
+	"\x10RequirementsPlan\x12%\n" +
+	"\x0epolicy_version\x18\x01 \x01(\tR\rpolicyVersion\x12%\n" +
+	"\x0ereference_date\x18\x02 \x01(\tR\rreferenceDate\x12\x1d\n" +
+	"\n" +
+	"can_submit\x18\x03 \x01(\bR\tcanSubmit\x12;\n" +
+	"\x05route\x18\x04 \x01(\x0e2%.smartcredit.common.RequirementsRouteR\x05route\x12!\n" +
+	"\freason_codes\x18\x05 \x03(\tR\vreasonCodes\x125\n" +
+	"\x05items\x18\x06 \x03(\v2\x1f.smartcredit.common.RequirementR\x05items*\x80\x01\n" +
 	"\n" +
 	"PurposeTag\x12\x1b\n" +
 	"\x17PURPOSE_TAG_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bPURPOSE_TAG_WORKING_CAPITAL\x10\x01\x12\x19\n" +
 	"\x15PURPOSE_TAG_EQUIPMENT\x10\x02\x12\x19\n" +
-	"\x15PURPOSE_TAG_EXPANSION\x10\x03*p\n" +
+	"\x15PURPOSE_TAG_EXPANSION\x10\x03*\xed\x02\n" +
 	"\fDocumentType\x12\x1d\n" +
 	"\x19DOCUMENT_TYPE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cDOCUMENT_TYPE_BANK_STATEMENT\x10\x01\x12\x1f\n" +
-	"\x1bDOCUMENT_TYPE_BUSINESS_PLAN\x10\x02*[\n" +
+	"\x1bDOCUMENT_TYPE_BUSINESS_PLAN\x10\x02\x12#\n" +
+	"\x1fDOCUMENT_TYPE_ACCOUNTING_REPORT\x10\x03\x12#\n" +
+	"\x1fDOCUMENT_TYPE_MANAGEMENT_REPORT\x10\x04\x12%\n" +
+	"!DOCUMENT_TYPE_TAX_DECLARATION_USN\x10\x05\x12'\n" +
+	"#DOCUMENT_TYPE_TAX_DECLARATION_3NDFL\x10\x06\x12\x1f\n" +
+	"\x1bDOCUMENT_TYPE_INCOME_LEDGER\x10\a\x12\x18\n" +
+	"\x14DOCUMENT_TYPE_PATENT\x10\b\x12&\n" +
+	"\"DOCUMENT_TYPE_RECEIVABLES_PAYABLES\x10\t*[\n" +
 	"\tOfferKind\x12\x1a\n" +
 	"\x16OFFER_KIND_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10OFFER_KIND_OFFER\x10\x01\x12\x1c\n" +
@@ -939,7 +1861,52 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"\x1eINFO_FIELD_COMPANY_OBLIGATIONS\x10\x03\x12!\n" +
 	"\x1dINFO_FIELD_APPLICATION_AMOUNT\x10\x04\x12&\n" +
 	"\"INFO_FIELD_APPLICATION_TERM_MONTHS\x10\x05\x12\"\n" +
-	"\x1eINFO_FIELD_APPLICATION_PURPOSE\x10\x06BNZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common;commonpbb\x06proto3"
+	"\x1eINFO_FIELD_APPLICATION_PURPOSE\x10\x06*N\n" +
+	"\tLegalForm\x12\x1a\n" +
+	"\x16LEGAL_FORM_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rLEGAL_FORM_IP\x10\x01\x12\x12\n" +
+	"\x0eLEGAL_FORM_LLC\x10\x02*\xa5\x02\n" +
+	"\tTaxRegime\x12\x1a\n" +
+	"\x16TAX_REGIME_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fTAX_REGIME_OSNO\x10\x01\x12\x19\n" +
+	"\x15TAX_REGIME_USN_INCOME\x10\x02\x12!\n" +
+	"\x1dTAX_REGIME_USN_INCOME_EXPENSE\x10\x03\x12\x12\n" +
+	"\x0eTAX_REGIME_PSN\x10\x04\x12\x1a\n" +
+	"\x16TAX_REGIME_AUSN_INCOME\x10\x05\x12\"\n" +
+	"\x1eTAX_REGIME_AUSN_INCOME_EXPENSE\x10\x06\x12\x13\n" +
+	"\x0fTAX_REGIME_ESHN\x10\a\x12\x12\n" +
+	"\x0eTAX_REGIME_NPD\x10\b\x12\x14\n" +
+	"\x10TAX_REGIME_OTHER\x10\t\x12\x16\n" +
+	"\x12TAX_REGIME_UNKNOWN\x10\n" +
+	"*l\n" +
+	"\tVatStatus\x12\x1a\n" +
+	"\x16VAT_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12VAT_STATUS_UNKNOWN\x10\x01\x12\x15\n" +
+	"\x11VAT_STATUS_EXEMPT\x10\x02\x12\x14\n" +
+	"\x10VAT_STATUS_PAYER\x10\x03*\xa7\x01\n" +
+	"\x0eFinancialBasis\x12\x1f\n" +
+	"\x1bFINANCIAL_BASIS_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aFINANCIAL_BASIS_MANAGEMENT\x10\x01\x12\x1e\n" +
+	"\x1aFINANCIAL_BASIS_ACCOUNTING\x10\x02\x12\x17\n" +
+	"\x13FINANCIAL_BASIS_TAX\x10\x03\x12\x1b\n" +
+	"\x17FINANCIAL_BASIS_UNKNOWN\x10\x04*n\n" +
+	"\x0fRequirementKind\x12 \n" +
+	"\x1cREQUIREMENT_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16REQUIREMENT_KIND_FIELD\x10\x01\x12\x1d\n" +
+	"\x19REQUIREMENT_KIND_DOCUMENT\x10\x02*\x97\x01\n" +
+	"\x10RequirementStage\x12!\n" +
+	"\x1dREQUIREMENT_STAGE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18REQUIREMENT_STAGE_SUBMIT\x10\x01\x12 \n" +
+	"\x1cREQUIREMENT_STAGE_ASSESSMENT\x10\x02\x12 \n" +
+	"\x1cREQUIREMENT_STAGE_ON_REQUEST\x10\x03*x\n" +
+	"\x11RequirementStatus\x12\"\n" +
+	"\x1eREQUIREMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aREQUIREMENT_STATUS_MISSING\x10\x01\x12\x1f\n" +
+	"\x1bREQUIREMENT_STATUS_PROVIDED\x10\x02*~\n" +
+	"\x11RequirementsRoute\x12\"\n" +
+	"\x1eREQUIREMENTS_ROUTE_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bREQUIREMENTS_ROUTE_STANDARD\x10\x01\x12$\n" +
+	" REQUIREMENTS_ROUTE_MANUAL_REVIEW\x10\x02BNZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common;commonpbb\x06proto3"
 
 var (
 	file_proto_common_common_proto_rawDescOnce sync.Once
@@ -953,45 +1920,73 @@ func file_proto_common_common_proto_rawDescGZIP() []byte {
 	return file_proto_common_common_proto_rawDescData
 }
 
-var file_proto_common_common_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_proto_common_common_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_common_common_proto_enumTypes = make([]protoimpl.EnumInfo, 12)
+var file_proto_common_common_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_proto_common_common_proto_goTypes = []any{
 	(PurposeTag)(0),               // 0: smartcredit.common.PurposeTag
 	(DocumentType)(0),             // 1: smartcredit.common.DocumentType
 	(OfferKind)(0),                // 2: smartcredit.common.OfferKind
 	(InfoField)(0),                // 3: smartcredit.common.InfoField
-	(*Money)(nil),                 // 4: smartcredit.common.Money
-	(*CompanySnapshot)(nil),       // 5: smartcredit.common.CompanySnapshot
-	(*DocumentMetadata)(nil),      // 6: smartcredit.common.DocumentMetadata
-	(*ApplicationForm)(nil),       // 7: smartcredit.common.ApplicationForm
-	(*Offer)(nil),                 // 8: smartcredit.common.Offer
-	(*InfoRequest)(nil),           // 9: smartcredit.common.InfoRequest
-	(*Product)(nil),               // 10: smartcredit.common.Product
-	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(LegalForm)(0),                // 4: smartcredit.common.LegalForm
+	(TaxRegime)(0),                // 5: smartcredit.common.TaxRegime
+	(VatStatus)(0),                // 6: smartcredit.common.VatStatus
+	(FinancialBasis)(0),           // 7: smartcredit.common.FinancialBasis
+	(RequirementKind)(0),          // 8: smartcredit.common.RequirementKind
+	(RequirementStage)(0),         // 9: smartcredit.common.RequirementStage
+	(RequirementStatus)(0),        // 10: smartcredit.common.RequirementStatus
+	(RequirementsRoute)(0),        // 11: smartcredit.common.RequirementsRoute
+	(*Money)(nil),                 // 12: smartcredit.common.Money
+	(*CompanySnapshot)(nil),       // 13: smartcredit.common.CompanySnapshot
+	(*DocumentMetadata)(nil),      // 14: smartcredit.common.DocumentMetadata
+	(*ApplicationForm)(nil),       // 15: smartcredit.common.ApplicationForm
+	(*Offer)(nil),                 // 16: smartcredit.common.Offer
+	(*InfoRequest)(nil),           // 17: smartcredit.common.InfoRequest
+	(*Product)(nil),               // 18: smartcredit.common.Product
+	(*DatePeriod)(nil),            // 19: smartcredit.common.DatePeriod
+	(*TaxPeriod)(nil),             // 20: smartcredit.common.TaxPeriod
+	(*Requirement)(nil),           // 21: smartcredit.common.Requirement
+	(*RequirementsPlan)(nil),      // 22: smartcredit.common.RequirementsPlan
+	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
 }
 var file_proto_common_common_proto_depIdxs = []int32{
-	4,  // 0: smartcredit.common.CompanySnapshot.revenue_12m:type_name -> smartcredit.common.Money
-	4,  // 1: smartcredit.common.CompanySnapshot.profit_12m:type_name -> smartcredit.common.Money
-	4,  // 2: smartcredit.common.CompanySnapshot.obligations:type_name -> smartcredit.common.Money
-	1,  // 3: smartcredit.common.DocumentMetadata.document_type:type_name -> smartcredit.common.DocumentType
-	11, // 4: smartcredit.common.DocumentMetadata.uploaded_at:type_name -> google.protobuf.Timestamp
-	4,  // 5: smartcredit.common.ApplicationForm.amount:type_name -> smartcredit.common.Money
-	0,  // 6: smartcredit.common.ApplicationForm.purpose:type_name -> smartcredit.common.PurposeTag
-	2,  // 7: smartcredit.common.Offer.kind:type_name -> smartcredit.common.OfferKind
-	4,  // 8: smartcredit.common.Offer.amount:type_name -> smartcredit.common.Money
-	11, // 9: smartcredit.common.Offer.expires_at:type_name -> google.protobuf.Timestamp
-	3,  // 10: smartcredit.common.InfoRequest.required_fields:type_name -> smartcredit.common.InfoField
-	1,  // 11: smartcredit.common.InfoRequest.required_document_types:type_name -> smartcredit.common.DocumentType
-	11, // 12: smartcredit.common.InfoRequest.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 13: smartcredit.common.Product.purpose_tags:type_name -> smartcredit.common.PurposeTag
-	4,  // 14: smartcredit.common.Product.min_amount:type_name -> smartcredit.common.Money
-	4,  // 15: smartcredit.common.Product.max_amount:type_name -> smartcredit.common.Money
-	1,  // 16: smartcredit.common.Product.required_document_types:type_name -> smartcredit.common.DocumentType
-	17, // [17:17] is the sub-list for method output_type
-	17, // [17:17] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	12, // 0: smartcredit.common.CompanySnapshot.revenue_12m:type_name -> smartcredit.common.Money
+	12, // 1: smartcredit.common.CompanySnapshot.profit_12m:type_name -> smartcredit.common.Money
+	12, // 2: smartcredit.common.CompanySnapshot.obligations:type_name -> smartcredit.common.Money
+	4,  // 3: smartcredit.common.CompanySnapshot.legal_form:type_name -> smartcredit.common.LegalForm
+	20, // 4: smartcredit.common.CompanySnapshot.tax_periods:type_name -> smartcredit.common.TaxPeriod
+	19, // 5: smartcredit.common.CompanySnapshot.financial_period:type_name -> smartcredit.common.DatePeriod
+	7,  // 6: smartcredit.common.CompanySnapshot.financial_basis:type_name -> smartcredit.common.FinancialBasis
+	1,  // 7: smartcredit.common.DocumentMetadata.document_type:type_name -> smartcredit.common.DocumentType
+	23, // 8: smartcredit.common.DocumentMetadata.uploaded_at:type_name -> google.protobuf.Timestamp
+	19, // 9: smartcredit.common.DocumentMetadata.coverage_period:type_name -> smartcredit.common.DatePeriod
+	12, // 10: smartcredit.common.ApplicationForm.amount:type_name -> smartcredit.common.Money
+	0,  // 11: smartcredit.common.ApplicationForm.purpose:type_name -> smartcredit.common.PurposeTag
+	2,  // 12: smartcredit.common.Offer.kind:type_name -> smartcredit.common.OfferKind
+	12, // 13: smartcredit.common.Offer.amount:type_name -> smartcredit.common.Money
+	23, // 14: smartcredit.common.Offer.expires_at:type_name -> google.protobuf.Timestamp
+	3,  // 15: smartcredit.common.InfoRequest.required_fields:type_name -> smartcredit.common.InfoField
+	1,  // 16: smartcredit.common.InfoRequest.required_document_types:type_name -> smartcredit.common.DocumentType
+	23, // 17: smartcredit.common.InfoRequest.created_at:type_name -> google.protobuf.Timestamp
+	21, // 18: smartcredit.common.InfoRequest.requirements:type_name -> smartcredit.common.Requirement
+	0,  // 19: smartcredit.common.Product.purpose_tags:type_name -> smartcredit.common.PurposeTag
+	12, // 20: smartcredit.common.Product.min_amount:type_name -> smartcredit.common.Money
+	12, // 21: smartcredit.common.Product.max_amount:type_name -> smartcredit.common.Money
+	1,  // 22: smartcredit.common.Product.required_document_types:type_name -> smartcredit.common.DocumentType
+	5,  // 23: smartcredit.common.TaxPeriod.regimes:type_name -> smartcredit.common.TaxRegime
+	6,  // 24: smartcredit.common.TaxPeriod.vat_status:type_name -> smartcredit.common.VatStatus
+	8,  // 25: smartcredit.common.Requirement.kind:type_name -> smartcredit.common.RequirementKind
+	9,  // 26: smartcredit.common.Requirement.required_at:type_name -> smartcredit.common.RequirementStage
+	10, // 27: smartcredit.common.Requirement.status:type_name -> smartcredit.common.RequirementStatus
+	1,  // 28: smartcredit.common.Requirement.accepted_document_types:type_name -> smartcredit.common.DocumentType
+	19, // 29: smartcredit.common.Requirement.period:type_name -> smartcredit.common.DatePeriod
+	5,  // 30: smartcredit.common.Requirement.tax_regime:type_name -> smartcredit.common.TaxRegime
+	11, // 31: smartcredit.common.RequirementsPlan.route:type_name -> smartcredit.common.RequirementsRoute
+	21, // 32: smartcredit.common.RequirementsPlan.items:type_name -> smartcredit.common.Requirement
+	33, // [33:33] is the sub-list for method output_type
+	33, // [33:33] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_proto_common_common_proto_init() }
@@ -999,13 +1994,15 @@ func file_proto_common_common_proto_init() {
 	if File_proto_common_common_proto != nil {
 		return
 	}
+	file_proto_common_common_proto_msgTypes[1].OneofWrappers = []any{}
+	file_proto_common_common_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_common_common_proto_rawDesc), len(file_proto_common_common_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   7,
+			NumEnums:      12,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

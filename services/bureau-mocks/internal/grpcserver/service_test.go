@@ -8,6 +8,7 @@ import (
 	"time"
 
 	bureaupb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/bureau"
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bureau-mocks/internal/persona"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -101,5 +102,14 @@ func TestGRPCTransportAndHealth(t *testing.T) {
 	missing, err := bureaupb.NewBureauServiceClient(connection).GetCreditHistory(ctx, &bureaupb.CreditHistoryRequest{Inn: "500100732259"})
 	if err != nil || missing.TotalDebt != nil || missing.OverdueCount_12M != nil || missing.MaxOverdueDays != nil {
 		t.Fatalf("wire missing credit fields = %v, %v", missing, err)
+	}
+	for inn, want := range map[string]commonpb.LegalForm{
+		"9900000017":   commonpb.LegalForm_LEGAL_FORM_LLC,
+		"990000000115": commonpb.LegalForm_LEGAL_FORM_IP,
+	} {
+		profile, err := bureaupb.NewBureauServiceClient(connection).GetCompanyProfile(ctx, &bureaupb.CompanyProfileRequest{Inn: inn})
+		if err != nil || profile.GetLegalForm() != want {
+			t.Fatalf("wire legal form for %s = %v, %v", inn, profile, err)
+		}
 	}
 }

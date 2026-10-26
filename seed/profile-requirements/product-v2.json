@@ -1,0 +1,23 @@
+{
+  "id": "10000000-0000-4000-8000-000000000021",
+  "code": "SME_PROFILE_V2",
+  "name": "Демо: профиль ИП/ООО",
+  "description": "Тестовый продукт для v2 матрицы",
+  "purpose_tags": [
+    "WORKING_CAPITAL"
+  ],
+  "min_amount": {
+    "amount_kopecks": 10000000,
+    "currency": "RUB"
+  },
+  "max_amount": {
+    "amount_kopecks": 500000000,
+    "currency": "RUB"
+  },
+  "min_term_months": 6,
+  "max_term_months": 36,
+  "indicative_rate_bps": 1800,
+  "required_document_types": [],
+  "version": 1,
+  "requirements_policy_version": "sme-profile-v1"
+}

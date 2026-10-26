@@ -89,12 +89,12 @@ func toCompany(company model.Company) common.CompanyProfile {
 		Name:         company.Name,
 		Okved:        company.OKVED,
 		RegisteredAt: openapi_types.Date{Time: company.RegisteredAt},
-		Revenue12m:   rub(company.Revenue12MKopecks),
-		Profit12m: common.SignedMoney{
+		Revenue12m:   moneyPointer(rub(company.Revenue12MKopecks)),
+		Profit12m: &common.SignedMoney{
 			AmountKopecks: company.Profit12MKopecks,
 			Currency:      common.SignedMoneyCurrencyRUB,
 		},
-		Obligations: rub(company.ObligationsKopecks),
+		Obligations: moneyPointer(rub(company.ObligationsKopecks)),
 	}
 }
 
@@ -205,3 +205,5 @@ func rub(amountKopecks int64) common.Money {
 		Currency:      common.MoneyCurrencyRUB,
 	}
 }
+
+func moneyPointer(value common.Money) *common.Money { return &value }

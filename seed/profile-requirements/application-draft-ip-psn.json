@@ -1,0 +1,272 @@
+{
+  "id": "20000000-0000-4000-8000-000000000021",
+  "product_id": "10000000-0000-4000-8000-000000000021",
+  "product_version": 1,
+  "company": {
+    "inn": "990000000115",
+    "name": "ИП Демо Предприниматель",
+    "okved": "47.11",
+    "registered_at": "2020-01-01",
+    "profile_schema_version": 2,
+    "legal_form": "IP",
+    "tax_periods": [
+      {
+        "from": "2020-01-01",
+        "regimes": [
+          "PSN"
+        ],
+        "vat_status": "UNKNOWN"
+      }
+    ],
+    "revenue_12m": {
+      "amount_kopecks": 2400000000,
+      "currency": "RUB"
+    },
+    "profit_12m": {
+      "amount_kopecks": 240000000,
+      "currency": "RUB"
+    },
+    "obligations": {
+      "amount_kopecks": 100000000,
+      "currency": "RUB"
+    },
+    "financial_period": {
+      "from": "2025-10-01",
+      "to": "2026-09-30"
+    },
+    "financial_basis": "MANAGEMENT",
+    "obligations_as_of": "2026-10-20"
+  },
+  "status": "DRAFT",
+  "stage_label": "Черновик",
+  "next_action": "Проверьте данные и отправьте заявку",
+  "allowed_actions": [
+    "EDIT_DRAFT",
+    "UPLOAD_DOCUMENT",
+    "SUBMIT",
+    "CANCEL"
+  ],
+  "documents": [],
+  "form": {
+    "amount": {
+      "amount_kopecks": 100000000,
+      "currency": "RUB"
+    },
+    "term_months": 24,
+    "purpose": "WORKING_CAPITAL"
+  },
+  "created_at": "2026-10-26T09:00:00Z",
+  "updated_at": "2026-10-26T09:00:00Z",
+  "version": 1,
+  "requirements_plan": {
+    "policy_version": "sme-profile-v1",
+    "reference_date": "2026-10-26",
+    "can_submit": true,
+    "route": "STANDARD",
+    "reason_codes": [],
+    "items": [
+      {
+        "id": "company_financial_basis",
+        "code": "COMPANY_FINANCIAL_BASIS",
+        "label": "Основа финансовых данных",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.financial_basis",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_financial_period",
+        "code": "COMPANY_FINANCIAL_PERIOD",
+        "label": "Период финансовых данных",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.financial_period",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_legal_form",
+        "code": "COMPANY_LEGAL_FORM",
+        "label": "Форма бизнеса",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.legal_form",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_obligations",
+        "code": "COMPANY_OBLIGATIONS",
+        "label": "Остаток кредитных обязательств",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.obligations",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_obligations_as_of",
+        "code": "COMPANY_OBLIGATIONS_AS_OF",
+        "label": "Дата остатка обязательств",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.obligations_as_of",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_profit_12m",
+        "code": "COMPANY_PROFIT_12M",
+        "label": "Прибыль",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.profit_12m",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_revenue_12m",
+        "code": "COMPANY_REVENUE_12M",
+        "label": "Выручка",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.revenue_12m",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "company_tax_periods",
+        "code": "COMPANY_TAX_PERIODS",
+        "label": "Налоговые режимы",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "company.tax_periods",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "form_amount",
+        "code": "FORM_AMOUNT",
+        "label": "Сумма кредита",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "form.amount",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "form_purpose",
+        "code": "FORM_PURPOSE",
+        "label": "Цель кредита",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "form.purpose",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "form_term_months",
+        "code": "FORM_TERM_MONTHS",
+        "label": "Срок кредита",
+        "reason": "Нужно для рассмотрения заявки",
+        "kind": "FIELD",
+        "required_at": "SUBMIT",
+        "status": "PROVIDED",
+        "field_path": "form.term_months",
+        "accepted_document_types": [],
+        "document_ids": []
+      },
+      {
+        "id": "business_result:2025-10-01:2026-09-30:all",
+        "code": "BUSINESS_RESULT",
+        "label": "Доходы и расходы бизнеса",
+        "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+        "kind": "DOCUMENT",
+        "required_at": "ASSESSMENT",
+        "status": "MISSING",
+        "accepted_document_types": [
+          "MANAGEMENT_REPORT"
+        ],
+        "period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "document_ids": []
+      },
+      {
+        "id": "cash_flow:2025-10-01:2026-09-30:all",
+        "code": "CASH_FLOW",
+        "label": "Выписка по счетам бизнеса",
+        "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+        "kind": "DOCUMENT",
+        "required_at": "ASSESSMENT",
+        "status": "MISSING",
+        "accepted_document_types": [
+          "BANK_STATEMENT"
+        ],
+        "period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "document_ids": []
+      },
+      {
+        "id": "patent_right:2026-10-26:2026-10-26:psn",
+        "code": "PATENT_RIGHT",
+        "label": "Действующий патент",
+        "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+        "kind": "DOCUMENT",
+        "required_at": "ASSESSMENT",
+        "status": "MISSING",
+        "accepted_document_types": [
+          "PATENT"
+        ],
+        "period": {
+          "from": "2026-10-26",
+          "to": "2026-10-26"
+        },
+        "document_ids": [],
+        "tax_regime": "PSN"
+      },
+      {
+        "id": "income_ledger:2025-10-01:2026-09-30:psn",
+        "code": "INCOME_LEDGER",
+        "label": "INCOME_LEDGER",
+        "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+        "kind": "DOCUMENT",
+        "required_at": "ON_REQUEST",
+        "status": "MISSING",
+        "accepted_document_types": [
+          "INCOME_LEDGER"
+        ],
+        "period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "document_ids": [],
+        "tax_regime": "PSN"
+      }
+    ]
+  }
+}

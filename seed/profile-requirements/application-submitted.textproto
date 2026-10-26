@@ -1,0 +1,25 @@
+event_id: "50000000-0000-4000-8000-000000000021"
+aggregate_type: "APPLICATION"
+aggregate_id: "20000000-0000-4000-8000-000000000021"
+aggregate_version: 2
+occurred_at { seconds: 1793005200 }
+correlation_id: "20000000-0000-4000-8000-000000000021"
+application_submitted {
+ org_id: "60000000-0000-4000-8000-000000000021"
+ client_user_id: "70000000-0000-4000-8000-000000000021"
+ product_id: "10000000-0000-4000-8000-000000000021"
+ product_version: 1
+ company {
+  inn: "990000000115"
+  name: "Demo IP" okved: "47.11" registered_at: "2020-01-01"
+  revenue_12m { amount_kopecks: 2400000000 currency: "RUB" }
+  profit_12m { amount_kopecks: 240000000 currency: "RUB" }
+  obligations { amount_kopecks: 100000000 currency: "RUB" }
+  profile_schema_version: 2 legal_form: LEGAL_FORM_IP
+  tax_periods { from: "2020-01-01" regimes: TAX_REGIME_PSN vat_status: VAT_STATUS_UNKNOWN }
+  financial_period { from: "2025-10-01" to: "2026-09-30" }
+  financial_basis: FINANCIAL_BASIS_MANAGEMENT obligations_as_of: "2026-10-20"
+ }
+ form { amount { amount_kopecks: 100000000 currency: "RUB" } term_months: 24 purpose: PURPOSE_TAG_WORKING_CAPITAL }
+ requirements_reference_date: "2026-10-26"
+}

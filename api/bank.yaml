@@ -1,208 +1,263 @@
+---
 openapi: 3.1.0
 info:
   title: Smart Credit Bank API
-  version: draft
-  description: Рабочее место аналитика. Требует роль ANALYST или ADMIN, если не указано иное.
+  version: stage1-profile-v2-candidate
+  description: Рабочее место аналитика. Требует роль ANALYST или ADMIN, если не указано
+    иное.
 servers:
-  - url: /api
+- url: "/api"
 security:
-  - BearerAuth: []
+- BearerAuth: []
 tags:
-  - name: Cases
-  - name: Products
+- name: Cases
+- name: Products
 paths:
-  /healthz:
+  "/healthz":
     get:
       operationId: bankHealth
       summary: Liveness процесса
-      servers: [{ url: /internal/bank }]
+      servers:
+      - url: "/internal/bank"
       security: []
       responses:
-        '204': { description: Процесс жив. }
-  /readyz:
+        '204':
+          description: Процесс жив.
+  "/readyz":
     get:
       operationId: bankReady
       summary: Готовность обслуживать запросы, включая bank_db
-      servers: [{ url: /internal/bank }]
+      servers:
+      - url: "/internal/bank"
       security: []
       responses:
-        '204': { description: Сервис готов. }
-        '503': { description: Сервис ещё не готов. }
-  /backoffice/products:
+        '204':
+          description: Сервис готов.
+        '503':
+          description: Сервис ещё не готов.
+  "/backoffice/products":
     get:
-      tags: [Products]
+      tags:
+      - Products
       operationId: listBankProducts
       summary: Активные продукты банка для аналитика
-      description: Ориентировочная ставка не является офертой. Контроферта проверяется по банковским правилам.
+      description: Ориентировочная ставка не является офертой. Контроферта проверяется
+        по банковским правилам.
       responses:
         '200':
-          description: Активные версии продуктов из bank_db, отсортированные по коду и UUID.
+          description: Активные версии продуктов из bank_db, отсортированные по коду
+            и UUID.
           content:
             application/json:
               schema:
                 type: object
-                required: [items]
+                required:
+                - items
                 properties:
                   items:
                     type: array
-                    items: { $ref: './common.yaml#/components/schemas/Product' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /backoffice/applications:
+                    items:
+                      "$ref": "./common.yaml#/components/schemas/Product"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+  "/backoffice/applications":
     get:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: listCases
       summary: Очередь дел для сотрудников банка
       parameters:
-        - { $ref: './common.yaml#/components/parameters/Cursor' }
-        - { $ref: './common.yaml#/components/parameters/Limit' }
-        - name: status
-          in: query
-          schema: { $ref: './common.yaml#/components/schemas/BankStatus' }
-        - name: product_id
-          in: query
-          schema: { $ref: './common.yaml#/components/schemas/Id' }
-        - name: assignee
-          in: query
-          description: 'me, unassigned или UUID аналитика.'
-          schema: { type: string }
+      - "$ref": "./common.yaml#/components/parameters/Cursor"
+      - "$ref": "./common.yaml#/components/parameters/Limit"
+      - name: status
+        in: query
+        schema:
+          "$ref": "./common.yaml#/components/schemas/BankStatus"
+      - name: product_id
+        in: query
+        schema:
+          "$ref": "./common.yaml#/components/schemas/Id"
+      - name: assignee
+        in: query
+        description: me, unassigned или UUID аналитика.
+        schema:
+          type: string
       responses:
         '200':
           description: Ручные дела сортируются первыми, затем по created_at и id.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/CasePage' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /backoffice/applications/{application_id}:
+              schema:
+                "$ref": "#/components/schemas/CasePage"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+  "/backoffice/applications/{application_id}":
     get:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: getCase
       summary: Дело с данными, проверками и скорингом
       parameters:
-        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+      - "$ref": "./common.yaml#/components/parameters/ApplicationId"
       responses:
         '200':
           description: Доступные действия вычислены из роли, назначения и статуса.
           headers:
             ETag:
-              schema: { type: string }
+              schema:
+                type: string
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BankCase' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /backoffice/applications/{application_id}/documents/{document_id}/content:
+              schema:
+                "$ref": "#/components/schemas/BankCase"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+  "/backoffice/applications/{application_id}/documents/{document_id}/content":
     get:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: getCaseDocumentContent
       summary: Открыть оригинал вложения из карточки дела
-      description: >-
-        Банк проверяет право сотрудника и наличие документа в снимке дела,
-        затем запрашивает неизменённый файл у client-service. Финансовые данные
-        из содержимого не извлекаются.
+      description: Банк проверяет право сотрудника и наличие документа в снимке дела,
+        затем запрашивает неизменённый файл у client-service. Финансовые данные из
+        содержимого не извлекаются.
       parameters:
-        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
-        - name: document_id
-          in: path
-          required: true
-          schema: { $ref: './common.yaml#/components/schemas/Id' }
+      - "$ref": "./common.yaml#/components/parameters/ApplicationId"
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          "$ref": "./common.yaml#/components/schemas/Id"
       responses:
         '200':
           description: Исходные байты документа.
           content:
             application/octet-stream:
-              schema: { type: string, format: binary }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema:
+                type: string
+                format: binary
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
         '502':
           description: Client-service недоступен или содержимое не совпадает с метаданными.
           content:
             application/problem+json:
-              schema: { $ref: './common.yaml#/components/schemas/Problem' }
-  /backoffice/applications/{application_id}/take:
+              schema:
+                "$ref": "./common.yaml#/components/schemas/Problem"
+  "/backoffice/applications/{application_id}/take":
     post:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: takeCase
       summary: Атомарно назначить дело себе
       parameters:
-        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
-        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
-        - { $ref: './common.yaml#/components/parameters/IfMatch' }
+      - "$ref": "./common.yaml#/components/parameters/ApplicationId"
+      - "$ref": "./common.yaml#/components/parameters/IdempotencyKey"
+      - "$ref": "./common.yaml#/components/parameters/IfMatch"
       responses:
         '200':
           description: Дело назначено текущему аналитику, в аудит добавлена запись.
           headers:
             ETag:
-              schema: { type: string }
+              schema:
+                type: string
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BankCase' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-  /backoffice/applications/{application_id}/decision:
+              schema:
+                "$ref": "#/components/schemas/BankCase"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+  "/backoffice/applications/{application_id}/decision":
     post:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: decideCase
       summary: Решение назначенного аналитика по MANUAL_REVIEW
-      description: >-
-        Для оферты другого продукта банк проверяет его диапазоны, правила и
-        необходимые документы. Если данных не хватает, аналитик выбирает
-        REQUEST_INFO; неполную оферту выпускать нельзя.
+      description: Для оферты другого продукта банк проверяет его диапазоны, правила
+        и необходимые документы. Если данных не хватает, аналитик выбирает REQUEST_INFO;
+        неполную оферту выпускать нельзя.
       parameters:
-        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
-        - { $ref: './common.yaml#/components/parameters/IdempotencyKey' }
-        - { $ref: './common.yaml#/components/parameters/IfMatch' }
+      - "$ref": "./common.yaml#/components/parameters/ApplicationId"
+      - "$ref": "./common.yaml#/components/parameters/IdempotencyKey"
+      - "$ref": "./common.yaml#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AnalystDecisionRequest' }
+            schema:
+              "$ref": "#/components/schemas/AnalystDecisionRequest"
       responses:
         '200':
           description: Решение, аудит и публичное событие записаны в одной транзакции.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BankCase' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-  /backoffice/applications/{application_id}/audit:
+              schema:
+                "$ref": "#/components/schemas/BankCase"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+  "/backoffice/applications/{application_id}/audit":
     get:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: getCaseAudit
       summary: Неизменяемая история переходов и решений
       parameters:
-        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
-        - { $ref: './common.yaml#/components/parameters/Cursor' }
-        - { $ref: './common.yaml#/components/parameters/Limit' }
+      - "$ref": "./common.yaml#/components/parameters/ApplicationId"
+      - "$ref": "./common.yaml#/components/parameters/Cursor"
+      - "$ref": "./common.yaml#/components/parameters/Limit"
       responses:
         '200':
           description: История от старой к новой.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AuditPage' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /backoffice/applications/{application_id}/summary:
+              schema:
+                "$ref": "#/components/schemas/AuditPage"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+  "/backoffice/applications/{application_id}/summary":
     post:
-      tags: [Cases]
+      tags:
+      - Cases
       operationId: summarizeCase
       summary: Резюме дела для сотрудника с помощью assistant
-      description: >-
-        Часть MVP. Bank-service вызывает assistant с дедлайном; при сбое
+      description: Часть MVP. Bank-service вызывает assistant с дедлайном; при сбое
         возвращает шаблон. Текст не меняет состояние или кредитное решение.
       parameters:
-        - { $ref: './common.yaml#/components/parameters/ApplicationId' }
+      - "$ref": "./common.yaml#/components/parameters/ApplicationId"
       responses:
         '200':
           description: Текст и происхождение текста.
@@ -210,233 +265,506 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [text, source]
+                required:
+                - text
+                - source
                 properties:
-                  text: { type: string }
-                  source: { type: string, enum: [assistant, template] }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+                  text:
+                    type: string
+                  source:
+                    type: string
+                    enum:
+                    - assistant
+                    - template
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
 components:
   responses:
     BadRequest:
       description: Некорректный запрос.
       content:
         application/problem+json:
-          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+          schema:
+            "$ref": "./common.yaml#/components/schemas/Problem"
     Unauthorized:
       description: Нет действительной сессии.
       content:
         application/problem+json:
-          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+          schema:
+            "$ref": "./common.yaml#/components/schemas/Problem"
     Forbidden:
       description: Недостаточно прав.
       content:
         application/problem+json:
-          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+          schema:
+            "$ref": "./common.yaml#/components/schemas/Problem"
     NotFound:
       description: Ресурс не найден.
       content:
         application/problem+json:
-          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+          schema:
+            "$ref": "./common.yaml#/components/schemas/Problem"
     Conflict:
       description: Конфликт состояния, версии или идемпотентности.
       content:
         application/problem+json:
-          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+          schema:
+            "$ref": "./common.yaml#/components/schemas/Problem"
     ValidationError:
       description: Нарушено бизнес-правило.
       content:
         application/problem+json:
-          schema: { $ref: './common.yaml#/components/schemas/Problem' }
+          schema:
+            "$ref": "./common.yaml#/components/schemas/Problem"
   securitySchemes:
-    BearerAuth: { $ref: './common.yaml#/components/securitySchemes/BearerAuth' }
+    BearerAuth:
+      "$ref": "./common.yaml#/components/securitySchemes/BearerAuth"
   schemas:
     CaseListItem:
       type: object
-      required: [id, status, product_id, requested_amount, created_at, version]
+      required:
+      - id
+      - status
+      - product_id
+      - requested_amount
+      - created_at
+      - version
       properties:
-        id: { $ref: './common.yaml#/components/schemas/Id' }
-        status: { $ref: './common.yaml#/components/schemas/BankStatus' }
-        product_id: { $ref: './common.yaml#/components/schemas/Id' }
-        requested_amount: { $ref: './common.yaml#/components/schemas/Money' }
-        company_name: { type: string }
+        id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        status:
+          "$ref": "./common.yaml#/components/schemas/BankStatus"
+        product_id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        requested_amount:
+          "$ref": "./common.yaml#/components/schemas/Money"
+        company_name:
+          type: string
         assignee_id:
           oneOf:
-            - { $ref: './common.yaml#/components/schemas/Id' }
-            - { type: 'null' }
-        created_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
-        version: { type: integer, format: int64, minimum: 1 }
+          - "$ref": "./common.yaml#/components/schemas/Id"
+          - type: 'null'
+        created_at:
+          "$ref": "./common.yaml#/components/schemas/Timestamp"
+        version:
+          type: integer
+          format: int64
+          minimum: 1
     CasePage:
       type: object
-      required: [items]
+      required:
+      - items
       properties:
         items:
           type: array
-          items: { $ref: '#/components/schemas/CaseListItem' }
-        next_cursor: { type: [string, 'null'] }
+          items:
+            "$ref": "#/components/schemas/CaseListItem"
+        next_cursor:
+          type:
+          - string
+          - 'null'
     BankCase:
       type: object
-      required: [id, status, product_id, product_name, product_version, company, application, documents, audit_version, allowed_actions, created_at, updated_at, version]
+      required:
+      - id
+      - status
+      - product_id
+      - product_name
+      - product_version
+      - company
+      - application
+      - documents
+      - audit_version
+      - allowed_actions
+      - created_at
+      - updated_at
+      - version
       properties:
-        id: { $ref: './common.yaml#/components/schemas/Id' }
-        status: { $ref: './common.yaml#/components/schemas/BankStatus' }
-        product_id: { $ref: './common.yaml#/components/schemas/Id' }
-        product_name: { type: string, description: Снимок исходного продукта заявки. }
-        product_version: { type: integer, format: int64, minimum: 1 }
-        company: { $ref: './common.yaml#/components/schemas/CompanyProfile' }
-        application: { $ref: '#/components/schemas/SubmittedApplication' }
+        id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        status:
+          "$ref": "./common.yaml#/components/schemas/BankStatus"
+        product_id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        product_name:
+          type: string
+          description: Снимок исходного продукта заявки.
+        product_version:
+          type: integer
+          format: int64
+          minimum: 1
+        company:
+          "$ref": "./common.yaml#/components/schemas/CompanyProfile"
+        application:
+          "$ref": "#/components/schemas/SubmittedApplication"
         documents:
           type: array
           description: Метаданные вложений, полученные банком в событиях заявки.
-          items: { $ref: './common.yaml#/components/schemas/DocumentMetadata' }
-        checks: { $ref: '#/components/schemas/Checks' }
-        score: { $ref: '#/components/schemas/ScoreResult' }
+          items:
+            "$ref": "./common.yaml#/components/schemas/DocumentMetadata"
+        checks:
+          "$ref": "#/components/schemas/Checks"
+        score:
+          "$ref": "#/components/schemas/ScoreResult"
         triggered_rules:
           type: array
-          items: { type: string }
-        recommendation: { type: string, enum: [APPROVE, COUNTER, REQUEST_INFO, MANUAL_REVIEW, REJECT] }
-        assignee_id: { $ref: './common.yaml#/components/schemas/Id' }
-        info_request: { $ref: './common.yaml#/components/schemas/InfoRequest' }
-        offer: { $ref: './common.yaml#/components/schemas/Offer' }
-        public_reason: { type: string, description: Текст результата, опубликованный клиенту. }
+          items:
+            type: string
+        recommendation:
+          type: string
+          enum:
+          - APPROVE
+          - COUNTER
+          - REQUEST_INFO
+          - MANUAL_REVIEW
+          - REJECT
+        assignee_id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        info_request:
+          "$ref": "./common.yaml#/components/schemas/InfoRequest"
+        offer:
+          "$ref": "./common.yaml#/components/schemas/Offer"
+        public_reason:
+          type: string
+          description: Текст результата, опубликованный клиенту.
         allowed_actions:
           type: array
-          items: { type: string, enum: [TAKE, DECIDE, VIEW] }
-        audit_version: { type: integer, format: int64, minimum: 0 }
-        created_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
-        updated_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
-        version: { type: integer, format: int64, minimum: 1 }
+          items:
+            type: string
+            enum:
+            - TAKE
+            - DECIDE
+            - VIEW
+        audit_version:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          "$ref": "./common.yaml#/components/schemas/Timestamp"
+        updated_at:
+          "$ref": "./common.yaml#/components/schemas/Timestamp"
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        requirements_plan:
+          "$ref": "./common.yaml#/components/schemas/RequirementsPlan"
     SubmittedApplication:
       type: object
-      required: [amount, term_months, purpose, document_types]
+      required:
+      - amount
+      - term_months
+      - purpose
+      - document_types
       properties:
-        amount: { $ref: './common.yaml#/components/schemas/Money' }
-        term_months: { type: integer, minimum: 1 }
-        purpose: { $ref: './common.yaml#/components/schemas/PurposeTag' }
+        amount:
+          "$ref": "./common.yaml#/components/schemas/Money"
+        term_months:
+          type: integer
+          minimum: 1
+        purpose:
+          "$ref": "./common.yaml#/components/schemas/PurposeTag"
         document_types:
           type: array
-          items: { $ref: './common.yaml#/components/schemas/DocumentType' }
+          items:
+            "$ref": "./common.yaml#/components/schemas/DocumentType"
     Checks:
       type: object
-      required: [company_status, total_debt, overdue_count_12m, max_overdue_days]
+      required:
+      - company_status
+      - total_debt
+      - overdue_count_12m
+      - max_overdue_days
       properties:
-        company_status: { type: string, enum: [UNKNOWN, ACTIVE, LIQUIDATING, LIQUIDATED] }
-        registered_at: { type: string, format: date }
-        okved: { type: string }
-        total_debt: { $ref: './common.yaml#/components/schemas/Money' }
-        overdue_count_12m: { type: integer, minimum: 0 }
-        max_overdue_days: { type: integer, minimum: 0 }
-        bureau_error: { type: [string, 'null'] }
+        company_status:
+          type: string
+          enum:
+          - UNKNOWN
+          - ACTIVE
+          - LIQUIDATING
+          - LIQUIDATED
+        registered_at:
+          type: string
+          format: date
+        okved:
+          type: string
+        total_debt:
+          "$ref": "./common.yaml#/components/schemas/Money"
+        overdue_count_12m:
+          type: integer
+          minimum: 0
+        max_overdue_days:
+          type: integer
+          minimum: 0
+        bureau_error:
+          type:
+          - string
+          - 'null'
     ScoreResult:
       type: object
-      description: >-
-        Целевой контракт: последний завершённый доменный ответ scoring для текущих
-        input_revision и attempt_id. При новой попытке прежний результат
-        скрывается; при технической ошибке scoring поле отсутствует, а причина
-        остаётся в аудите.
-        При ASSESSED поле score обязательно, в том числе если score равен 0;
-        grade — A..E, data_issues пуст. При INSUFFICIENT_DATA или
-        UNSUPPORTED_INPUT score отсутствует, grade=UNSPECIFIED, reasons и
-        factor_contributions пусты. UNSPECIFIED assessment_status не является
-        допустимым результатом. Технические gRPC-ошибки не кодируются здесь.
-      required: [assessment_status, grade, reasons, model_version, feature_schema_version, data_issues]
+      description: 'Целевой контракт: последний завершённый доменный ответ scoring
+        для текущих input_revision и attempt_id. При новой попытке прежний результат
+        скрывается; при технической ошибке scoring поле отсутствует, а причина остаётся
+        в аудите. При ASSESSED поле score обязательно, в том числе если score равен
+        0; grade — A..E, data_issues пуст. При INSUFFICIENT_DATA или UNSUPPORTED_INPUT
+        score отсутствует, grade=UNSPECIFIED, reasons и factor_contributions пусты.
+        UNSPECIFIED assessment_status не является допустимым результатом. Технические
+        gRPC-ошибки не кодируются здесь.'
+      required:
+      - assessment_status
+      - grade
+      - reasons
+      - model_version
+      - feature_schema_version
+      - data_issues
       properties:
-        assessment_status: { type: string, enum: [ASSESSED, INSUFFICIENT_DATA, UNSUPPORTED_INPUT] }
-        score: { type: integer, minimum: 0, maximum: 1000, description: Присутствует только при ASSESSED; чем выше значение, тем ниже риск. }
-        grade: { type: string, enum: [UNSPECIFIED, A, B, C, D, E] }
+        assessment_status:
+          type: string
+          enum:
+          - ASSESSED
+          - INSUFFICIENT_DATA
+          - UNSUPPORTED_INPUT
+        score:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          description: Присутствует только при ASSESSED; чем выше значение, тем ниже риск.
+        grade:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - A
+          - B
+          - C
+          - D
+          - E
         reasons:
           type: array
           maxItems: 3
-          items: { $ref: '#/components/schemas/ScoreReason' }
-        model_version: { type: string }
-        feature_schema_version: { type: string }
+          items:
+            "$ref": "#/components/schemas/ScoreReason"
+        model_version:
+          type: string
+        feature_schema_version:
+          type: string
         data_issues:
           type: array
-          items: { $ref: '#/components/schemas/ScoreDataIssue' }
+          items:
+            "$ref": "#/components/schemas/ScoreDataIssue"
         factor_contributions:
           type: array
-          description: Полное разложение score; для v1 четыре группы, 500 + сумма points = score.
-          items: { $ref: '#/components/schemas/ScoreFactorContribution' }
-        baseline_score: { type: integer, description: Базовый score модели; для v1 равен 500. }
-        config_checksum: { type: string, pattern: '^[0-9a-f]{64}$', description: SHA-256 использованного конфигурационного артефакта. }
-        attempt_id: { $ref: './common.yaml#/components/schemas/Id' }
-        input_revision: { type: integer, format: int64, minimum: 1, description: Версия входных данных оценки, отдельная от version дела. }
-        as_of_date: { type: string, format: date, description: Зафиксированная UTC-дата начала попытки оценки. }
+          description: Полное разложение score; для v1 четыре группы, 500 + сумма
+            points = score.
+          items:
+            "$ref": "#/components/schemas/ScoreFactorContribution"
+        baseline_score:
+          type: integer
+          description: Базовый score модели; для v1 равен 500.
+        config_checksum:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: SHA-256 использованного конфигурационного артефакта.
+        attempt_id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        input_revision:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Версия входных данных оценки, отдельная от version дела.
+        as_of_date:
+          type: string
+          format: date
+          description: Зафиксированная UTC-дата начала попытки оценки.
     ScoreDataIssue:
       type: object
-      required: [code, field_path]
+      required:
+      - code
+      - field_path
       properties:
-        code: { type: string, enum: [MISSING_VALUE, ZERO_REVENUE, INCONSISTENT_OVERDUE] }
-        field_path: { type: string, minLength: 1 }
+        code:
+          type: string
+          enum:
+          - MISSING_VALUE
+          - ZERO_REVENUE
+          - INCONSISTENT_OVERDUE
+        field_path:
+          type: string
+          minLength: 1
     ScoreFactorContribution:
       type: object
-      required: [factor_name, points, description]
+      required:
+      - factor_name
+      - points
+      - description
       properties:
-        factor_name: { type: string, enum: [business_age, profit_margin, bureau_debt_load, payment_discipline] }
-        points: { type: integer, description: Вклад со знаком относительно baseline_score. }
-        description: { type: string }
+        factor_name:
+          type: string
+          enum:
+          - business_age
+          - profit_margin
+          - bureau_debt_load
+          - payment_discipline
+        points:
+          type: integer
+          description: Вклад со знаком относительно baseline_score.
+        description:
+          type: string
     ScoreReason:
       type: object
-      required: [code, description, direction, contribution]
+      required:
+      - code
+      - description
+      - direction
+      - contribution
       properties:
-        code: { type: string, enum: [SHORT_HISTORY, LOW_PROFIT_MARGIN, HIGH_OBLIGATIONS, HIGH_BUREAU_DEBT, RECENT_OVERDUE, LARGE_REQUEST, STABLE_BUSINESS, NO_OVERDUE, HEALTHY_PROFIT_MARGIN, MANAGEABLE_BUREAU_DEBT, GOOD_PAYMENT_DISCIPLINE] }
-        description: { type: string }
-        direction: { type: string, enum: [INCREASES_RISK, DECREASES_RISK] }
-        contribution: { type: integer, minimum: 0, description: Абсолютная величина вклада; направление задаёт direction. }
+        code:
+          type: string
+          enum:
+          - SHORT_HISTORY
+          - LOW_PROFIT_MARGIN
+          - HIGH_OBLIGATIONS
+          - HIGH_BUREAU_DEBT
+          - RECENT_OVERDUE
+          - LARGE_REQUEST
+          - STABLE_BUSINESS
+          - NO_OVERDUE
+          - HEALTHY_PROFIT_MARGIN
+          - MANAGEABLE_BUREAU_DEBT
+          - GOOD_PAYMENT_DISCIPLINE
+        description:
+          type: string
+        direction:
+          type: string
+          enum:
+          - INCREASES_RISK
+          - DECREASES_RISK
+        contribution:
+          type: integer
+          minimum: 0
+          description: Абсолютная величина вклада; направление задаёт direction.
     AnalystDecisionRequest:
       type: object
       additionalProperties: false
-      required: [outcome, comment]
+      required:
+      - outcome
+      - comment
       properties:
-        outcome: { type: string, enum: [APPROVE, COUNTER, REQUEST_INFO, REJECT] }
-        comment: { type: string, minLength: 1, maxLength: 2000, description: Внутренний комментарий; клиент его не видит. }
-        public_reason: { type: string, minLength: 1, maxLength: 500, description: Безопасное основание для объяснения клиенту. }
-        offer: { $ref: '#/components/schemas/OfferTerms' }
-        info_request: { $ref: '#/components/schemas/InfoRequestDraft' }
-      description: >-
-        APPROVE/COUNTER требуют offer; REQUEST_INFO требует info_request;
+        outcome:
+          type: string
+          enum:
+          - APPROVE
+          - COUNTER
+          - REQUEST_INFO
+          - REJECT
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Внутренний комментарий; клиент его не видит.
+        public_reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Безопасное основание для объяснения клиенту.
+        offer:
+          "$ref": "#/components/schemas/OfferTerms"
+        info_request:
+          "$ref": "#/components/schemas/InfoRequestDraft"
+      description: APPROVE/COUNTER требуют offer; REQUEST_INFO требует info_request;
         REJECT запрещает оба поля. Для REJECT и COUNTER обязателен public_reason;
         comment остаётся только во внутреннем аудите. Проверяется usecase.
     OfferTerms:
       type: object
       additionalProperties: false
-      required: [product_id, amount, term_months, rate_bps]
+      required:
+      - product_id
+      - amount
+      - term_months
+      - rate_bps
       properties:
-        product_id: { $ref: './common.yaml#/components/schemas/Id', description: Продукт оферты; может отличаться от продукта исходной заявки. }
-        amount: { $ref: './common.yaml#/components/schemas/Money' }
-        term_months: { type: integer, minimum: 1 }
-        rate_bps: { type: integer, minimum: 0 }
+        product_id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+          description: Продукт оферты; может отличаться от продукта исходной заявки.
+        amount:
+          "$ref": "./common.yaml#/components/schemas/Money"
+        term_months:
+          type: integer
+          minimum: 1
+        rate_bps:
+          type: integer
+          minimum: 0
     InfoRequestDraft:
       type: object
       additionalProperties: false
-      required: [message, required_fields, required_document_types]
+      required:
+      - message
+      - required_fields
+      - required_document_types
       properties:
-        message: { type: string, minLength: 1 }
+        message:
+          type: string
+          minLength: 1
         required_fields:
           type: array
-          items: { $ref: './common.yaml#/components/schemas/InfoField' }
+          items:
+            "$ref": "./common.yaml#/components/schemas/InfoField"
         required_document_types:
           type: array
-          items: { $ref: './common.yaml#/components/schemas/DocumentType' }
+          items:
+            "$ref": "./common.yaml#/components/schemas/DocumentType"
+        requirement_ids:
+          type: array
+          items:
+            type: string
+            maxLength: 160
+      description: For v2 send selected requirement_ids from current server plan and
+        empty legacy arrays. Server resolves complete definitions; no client-supplied
+        requirement definitions. Both formats together rejected.
     AuditEntry:
       type: object
-      required: [id, action, actor_type, occurred_at, reason]
+      required:
+      - id
+      - action
+      - actor_type
+      - occurred_at
+      - reason
       properties:
-        id: { $ref: './common.yaml#/components/schemas/Id' }
-        action: { type: string }
-        actor_type: { type: string, enum: [SYSTEM, ANALYST, CLIENT] }
-        actor_id: { $ref: './common.yaml#/components/schemas/Id' }
-        from_status: { $ref: './common.yaml#/components/schemas/BankStatus' }
-        to_status: { $ref: './common.yaml#/components/schemas/BankStatus' }
-        reason: { type: string }
-        occurred_at: { $ref: './common.yaml#/components/schemas/Timestamp' }
+        id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        action:
+          type: string
+        actor_type:
+          type: string
+          enum:
+          - SYSTEM
+          - ANALYST
+          - CLIENT
+        actor_id:
+          "$ref": "./common.yaml#/components/schemas/Id"
+        from_status:
+          "$ref": "./common.yaml#/components/schemas/BankStatus"
+        to_status:
+          "$ref": "./common.yaml#/components/schemas/BankStatus"
+        reason:
+          type: string
+        occurred_at:
+          "$ref": "./common.yaml#/components/schemas/Timestamp"
     AuditPage:
       type: object
-      required: [items]
+      required:
+      - items
       properties:
         items:
           type: array
-          items: { $ref: '#/components/schemas/AuditEntry' }
-        next_cursor: { type: [string, 'null'] }
+          items:
+            "$ref": "#/components/schemas/AuditEntry"
+        next_cursor:
+          type:
+          - string
+          - 'null'

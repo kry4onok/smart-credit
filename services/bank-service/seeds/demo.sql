@@ -1,4 +1,4 @@
--- Demo data for bank_db. Run after 00001_bank_init.sql, never as a migration.
+-- Demo data for bank_db. Run after all bank migrations, never as a migration.
 -- Fixed UUIDs make list/detail examples repeatable. Re-running keeps existing cases;
 -- the demo offer expiry is renewed so it remains visible in case detail.
 BEGIN;
@@ -17,6 +17,19 @@ INSERT INTO products (
      ARRAY['WORKING_CAPITAL', 'EXPANSION'], ARRAY['BANK_STATEMENT'],
      100000000, 3000000000, 6, 24, 1850, true)
 ON CONFLICT (id, version) DO NOTHING;
+
+
+-- Profile-v2 contract fixture. Not published until the requirements engine is enabled.
+INSERT INTO products (
+ id, version, code, name, description, purpose_tags, required_document_types,
+ min_amount_kopecks, max_amount_kopecks, min_term_months, max_term_months,
+ indicative_rate_bps, is_active, requirements_policy_version
+) VALUES (
+ '10000000-0000-4000-8000-000000000021', 1, 'SME_PROFILE_V2',
+ 'Демо: профиль ИП/ООО', 'Тестовый продукт для v2 матрицы',
+ ARRAY['WORKING_CAPITAL'], ARRAY[]::text[], 10000000, 500000000, 6, 36, 1800,
+ false, 'sme-profile-v1'
+) ON CONFLICT (id, version) DO NOTHING;
 
 INSERT INTO product_rules (
     product_id, product_version, min_company_age_months,

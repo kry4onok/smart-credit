@@ -17,6 +17,13 @@ enum DocumentType {
   DOCUMENT_TYPE_UNSPECIFIED = 0;
   DOCUMENT_TYPE_BANK_STATEMENT = 1;
   DOCUMENT_TYPE_BUSINESS_PLAN = 2;
+  DOCUMENT_TYPE_ACCOUNTING_REPORT = 3;
+  DOCUMENT_TYPE_MANAGEMENT_REPORT = 4;
+  DOCUMENT_TYPE_TAX_DECLARATION_USN = 5;
+  DOCUMENT_TYPE_TAX_DECLARATION_3NDFL = 6;
+  DOCUMENT_TYPE_INCOME_LEDGER = 7;
+  DOCUMENT_TYPE_PATENT = 8;
+  DOCUMENT_TYPE_RECEIVABLES_PAYABLES = 9;
 }
 
 // Денежные значения передаются целыми копейками. currency всегда RUB.
@@ -33,6 +40,12 @@ message CompanySnapshot {
   Money revenue_12m = 5;
   Money profit_12m = 6; // Может быть отрицательной.
   Money obligations = 7;
+  optional int32 profile_schema_version = 8;
+  LegalForm legal_form = 9;
+  repeated TaxPeriod tax_periods = 10;
+  DatePeriod financial_period = 11;
+  FinancialBasis financial_basis = 12;
+  string obligations_as_of = 13;
 }
 
 message DocumentMetadata {
@@ -42,6 +55,8 @@ message DocumentMetadata {
   string sha256 = 4;
   google.protobuf.Timestamp uploaded_at = 5;
   bool is_mock = 6;
+  string requirement_id = 7;
+  DatePeriod coverage_period = 8;
 }
 
 message ApplicationForm {
@@ -75,6 +90,7 @@ message InfoRequest {
   repeated InfoField required_fields = 3;
   repeated DocumentType required_document_types = 4;
   google.protobuf.Timestamp created_at = 5;
+  repeated Requirement requirements = 6;
 }
 
 enum InfoField {
@@ -100,4 +116,95 @@ message Product {
   int32 indicative_rate_bps = 10;
   repeated DocumentType required_document_types = 11;
   int64 version = 12;
+  string requirements_policy_version = 13;
+}
+
+enum LegalForm {
+  LEGAL_FORM_UNSPECIFIED = 0;
+  LEGAL_FORM_IP = 1;
+  LEGAL_FORM_LLC = 2;
+}
+
+enum TaxRegime {
+  TAX_REGIME_UNSPECIFIED = 0;
+  TAX_REGIME_OSNO = 1;
+  TAX_REGIME_USN_INCOME = 2;
+  TAX_REGIME_USN_INCOME_EXPENSE = 3;
+  TAX_REGIME_PSN = 4;
+  TAX_REGIME_AUSN_INCOME = 5;
+  TAX_REGIME_AUSN_INCOME_EXPENSE = 6;
+  TAX_REGIME_ESHN = 7;
+  TAX_REGIME_NPD = 8;
+  TAX_REGIME_OTHER = 9;
+  TAX_REGIME_UNKNOWN = 10;
+}
+
+enum VatStatus {
+  VAT_STATUS_UNSPECIFIED = 0;
+  VAT_STATUS_UNKNOWN = 1;
+  VAT_STATUS_EXEMPT = 2;
+  VAT_STATUS_PAYER = 3;
+}
+
+enum FinancialBasis {
+  FINANCIAL_BASIS_UNSPECIFIED = 0;
+  FINANCIAL_BASIS_MANAGEMENT = 1;
+  FINANCIAL_BASIS_ACCOUNTING = 2;
+  FINANCIAL_BASIS_TAX = 3;
+  FINANCIAL_BASIS_UNKNOWN = 4;
+}
+
+enum RequirementKind {
+  REQUIREMENT_KIND_UNSPECIFIED = 0;
+  REQUIREMENT_KIND_FIELD = 1;
+  REQUIREMENT_KIND_DOCUMENT = 2;
+}
+
+enum RequirementStage {
+  REQUIREMENT_STAGE_UNSPECIFIED = 0;
+  REQUIREMENT_STAGE_SUBMIT = 1;
+  REQUIREMENT_STAGE_ASSESSMENT = 2;
+  REQUIREMENT_STAGE_ON_REQUEST = 3;
+}
+
+enum RequirementStatus {
+  REQUIREMENT_STATUS_UNSPECIFIED = 0;
+  REQUIREMENT_STATUS_MISSING = 1;
+  REQUIREMENT_STATUS_PROVIDED = 2;
+}
+
+enum RequirementsRoute {
+  REQUIREMENTS_ROUTE_UNSPECIFIED = 0;
+  REQUIREMENTS_ROUTE_STANDARD = 1;
+  REQUIREMENTS_ROUTE_MANUAL_REVIEW = 2;
+}
+
+message DatePeriod { string from = 1; string to = 2; }
+message TaxPeriod {
+  string from = 1;
+  optional string to = 2; // inclusive; absent means still active
+  repeated TaxRegime regimes = 3;
+  VatStatus vat_status = 4;
+}
+message Requirement {
+  string id = 1;
+  string code = 2;
+  string label = 3;
+  string reason = 4;
+  RequirementKind kind = 5;
+  RequirementStage required_at = 6;
+  RequirementStatus status = 7;
+  string field_path = 8;
+  repeated DocumentType accepted_document_types = 9;
+  DatePeriod period = 10;
+  TaxRegime tax_regime = 11;
+  repeated string document_ids = 12;
+}
+message RequirementsPlan {
+  string policy_version = 1;
+  string reference_date = 2;
+  bool can_submit = 3;
+  RequirementsRoute route = 4;
+  repeated string reason_codes = 5;
+  repeated Requirement items = 6;
 }

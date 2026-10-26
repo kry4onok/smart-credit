@@ -315,7 +315,9 @@ func (e SummarizeCase200JSONResponseBodySource) Valid() bool {
 // AnalystDecisionRequest APPROVE/COUNTER требуют offer; REQUEST_INFO требует info_request; REJECT запрещает оба поля. Для REJECT и COUNTER обязателен public_reason; comment остаётся только во внутреннем аудите. Проверяется usecase.
 type AnalystDecisionRequest struct {
 	// Comment Внутренний комментарий; клиент его не видит.
-	Comment     string                        `json:"comment"`
+	Comment string `json:"comment"`
+
+	// InfoRequest For v2 send selected requirement_ids from current server plan and empty legacy arrays. Server resolves complete definitions; no client-supplied requirement definitions. Both formats together rejected.
 	InfoRequest *InfoRequestDraft             `json:"info_request,omitempty"`
 	Offer       *OfferTerms                   `json:"offer,omitempty"`
 	Outcome     AnalystDecisionRequestOutcome `json:"outcome"`
@@ -352,30 +354,35 @@ type AuditPage struct {
 
 // BankCase defines model for BankCase.
 type BankCase struct {
-	AllowedActions []BankCaseAllowedActions    `json:"allowed_actions"`
-	Application    SubmittedApplication        `json:"application"`
-	AssigneeId     *externalRef0.Id            `json:"assignee_id,omitempty"`
-	AuditVersion   int64                       `json:"audit_version"`
-	Checks         *Checks                     `json:"checks,omitempty"`
-	Company        externalRef0.CompanyProfile `json:"company"`
+	AllowedActions []BankCaseAllowedActions `json:"allowed_actions"`
+	Application    SubmittedApplication     `json:"application"`
+	AssigneeId     *externalRef0.Id         `json:"assignee_id,omitempty"`
+	AuditVersion   int64                    `json:"audit_version"`
+	Checks         *Checks                  `json:"checks,omitempty"`
+
+	// Company Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified.
+	Company externalRef0.CompanyProfile `json:"company"`
 
 	// CreatedAt RFC 3339, UTC.
 	CreatedAt externalRef0.Timestamp `json:"created_at"`
 
 	// Documents Метаданные вложений, полученные банком в событиях заявки.
-	Documents   []externalRef0.DocumentMetadata `json:"documents"`
-	Id          externalRef0.Id                 `json:"id"`
-	InfoRequest *externalRef0.InfoRequest       `json:"info_request,omitempty"`
-	Offer       *externalRef0.Offer             `json:"offer,omitempty"`
-	ProductId   externalRef0.Id                 `json:"product_id"`
+	Documents []externalRef0.DocumentMetadata `json:"documents"`
+	Id        externalRef0.Id                 `json:"id"`
+
+	// InfoRequest Legacy uses required_fields/document_types; v2 uses nonempty requirements and both legacy arrays empty. PROVIDED means supplied, never verified.
+	InfoRequest *externalRef0.InfoRequest `json:"info_request,omitempty"`
+	Offer       *externalRef0.Offer       `json:"offer,omitempty"`
+	ProductId   externalRef0.Id           `json:"product_id"`
 
 	// ProductName Снимок исходного продукта заявки.
 	ProductName    string `json:"product_name"`
 	ProductVersion int64  `json:"product_version"`
 
-	// PublicReason Текст результата
-	PublicReason   *string                 `json:"public_reason,omitempty"`
-	Recommendation *BankCaseRecommendation `json:"recommendation,omitempty"`
+	// PublicReason Текст результата, опубликованный клиенту.
+	PublicReason     *string                        `json:"public_reason,omitempty"`
+	Recommendation   *BankCaseRecommendation        `json:"recommendation,omitempty"`
+	RequirementsPlan *externalRef0.RequirementsPlan `json:"requirements_plan,omitempty"`
 
 	// Score Целевой контракт: последний завершённый доменный ответ scoring для текущих input_revision и attempt_id. При новой попытке прежний результат скрывается; при технической ошибке scoring поле отсутствует, а причина остаётся в аудите. При ASSESSED поле score обязательно, в том числе если score равен 0; grade — A..E, data_issues пуст. При INSUFFICIENT_DATA или UNSUPPORTED_INPUT score отсутствует, grade=UNSPECIFIED, reasons и factor_contributions пусты. UNSPECIFIED assessment_status не является допустимым результатом. Технические gRPC-ошибки не кодируются здесь.
 	Score          *ScoreResult            `json:"score,omitempty"`
@@ -427,11 +434,12 @@ type Checks struct {
 // ChecksCompanyStatus defines model for Checks.CompanyStatus.
 type ChecksCompanyStatus string
 
-// InfoRequestDraft defines model for InfoRequestDraft.
+// InfoRequestDraft For v2 send selected requirement_ids from current server plan and empty legacy arrays. Server resolves complete definitions; no client-supplied requirement definitions. Both formats together rejected.
 type InfoRequestDraft struct {
 	Message               string                      `json:"message"`
 	RequiredDocumentTypes []externalRef0.DocumentType `json:"required_document_types"`
 	RequiredFields        []externalRef0.InfoField    `json:"required_fields"`
+	RequirementIds        *[]string                   `json:"requirement_ids,omitempty"`
 }
 
 // OfferTerms defines model for OfferTerms.
@@ -500,12 +508,12 @@ type ScoreResult struct {
 	FeatureSchemaVersion string                     `json:"feature_schema_version"`
 	Grade                ScoreResultGrade           `json:"grade"`
 
-	// InputRevision Версия входных данных оценки
+	// InputRevision Версия входных данных оценки, отдельная от version дела.
 	InputRevision *int64        `json:"input_revision,omitempty"`
 	ModelVersion  string        `json:"model_version"`
 	Reasons       []ScoreReason `json:"reasons"`
 
-	// Score Присутствует только при ASSESSED; чем выше значение
+	// Score Присутствует только при ASSESSED; чем выше значение, тем ниже риск.
 	Score *int `json:"score,omitempty"`
 }
 

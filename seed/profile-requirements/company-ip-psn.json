@@ -1,0 +1,35 @@
+{
+  "inn": "990000000115",
+  "name": "ИП Демо Предприниматель",
+  "okved": "47.11",
+  "registered_at": "2020-01-01",
+  "profile_schema_version": 2,
+  "legal_form": "IP",
+  "tax_periods": [
+    {
+      "from": "2020-01-01",
+      "regimes": [
+        "PSN"
+      ],
+      "vat_status": "UNKNOWN"
+    }
+  ],
+  "revenue_12m": {
+    "amount_kopecks": 2400000000,
+    "currency": "RUB"
+  },
+  "profit_12m": {
+    "amount_kopecks": 240000000,
+    "currency": "RUB"
+  },
+  "obligations": {
+    "amount_kopecks": 100000000,
+    "currency": "RUB"
+  },
+  "financial_period": {
+    "from": "2025-10-01",
+    "to": "2026-09-30"
+  },
+  "financial_basis": "MANAGEMENT",
+  "obligations_as_of": "2026-10-20"
+}

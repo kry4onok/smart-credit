@@ -3,6 +3,7 @@
 // conveyor with timers so both roles can be clicked through without backend services.
 // The real decision logic lives in bank-service; the rules here are a simplified copy for the demo.
 import type {
+  AnalystDecisionRequest,
   AuditEntry,
   BankCase,
   BankStatus,
@@ -12,7 +13,6 @@ import type {
   CurrentUser,
   DocumentMetadata,
   DocumentType,
-  InfoRequest,
   Offer,
   Product,
   ScoreResult,
@@ -20,6 +20,7 @@ import type {
 } from "../api/types";
 import { clientStatusLabel } from "../lib/labels";
 import { uuid } from "../lib/util";
+import { hasLegacyFinancials, hasProfileV2Fields, type FinancialCompany } from "../lib/profileCompatibility";
 
 const STEP_MS = 1500;
 const KEY = "smart-credit-mock-v1";
@@ -143,7 +144,7 @@ function scoreFor(p: Persona): ScoreResult {
   };
 }
 
-function personaFor(company: CompanyProfile): Persona {
+function personaFor(company: FinancialCompany): Persona {
   const known = personas[company.inn];
   if (known) return known;
   const age = monthsSince(company.registered_at);
@@ -307,6 +308,12 @@ function step(m: MockApp, now: number) {
   }
   if (b.nextAt === null || b.nextAt > now) return false;
   const product = productOf(m);
+  if (!hasLegacyFinancials(m.app.company) || hasProfileV2Fields(m.app.company)) {
+    b.recommendation = "MANUAL_REVIEW";
+    b.public_reason = "Нужна проверка данных сотрудником банка.";
+    move(m, "MANUAL_REVIEW", "Профиль не поддерживается текущим демо-конвейером");
+    return true;
+  }
   const persona = personaFor(m.app.company);
   switch (b.status) {
     case "SUBMITTED":
@@ -366,6 +373,10 @@ function decide(m: MockApp, persona: Persona, product: (typeof PRODUCTS)[number]
     b.triggered_rules = ["GRADE_REQUIRES_REVIEW"];
     b.recommendation = "MANUAL_REVIEW";
     return move(m, "MANUAL_REVIEW", `Grade ${persona.grade}: нужен ручной разбор`);
+  }
+  if (!hasLegacyFinancials(m.app.company)) {
+    b.recommendation = "MANUAL_REVIEW";
+    return move(m, "MANUAL_REVIEW", "Не хватает финансовых данных");
   }
   const rules: string[] = [];
   if (form.amount.amount_kopecks * 10000 > m.app.company.revenue_12m.amount_kopecks * product.maxShareBps) rules.push("LARGE_REQUEST");
@@ -538,6 +549,7 @@ function caseView(m: MockApp, me: User): BankCase {
     product_name: productOf(m).name,
     product_version: m.app.product_version,
     company: m.app.company,
+    documents: m.app.documents,
     application: { amount: form.amount, term_months: form.term_months, purpose: form.purpose, document_types: [...new Set(m.app.documents.map((d) => d.document_type))] },
     checks: b.checks,
     score: b.score,
@@ -663,6 +675,8 @@ const routes: [string, RegExp, Handler][] = [
     async (r) => {
       const u = requireClient(r);
       const body = (await r.json()) as CompanyProfile;
+      if (hasProfileV2Fields(body)) return problem(422, "PROFILE_V2_NOT_ENABLED", "Сохранение профиля v2 будет доступно после подключения этапа 1.");
+      if (!hasLegacyFinancials(body)) return problem(422, "INVALID_COMPANY_PROFILE", "Укажите выручку, прибыль и обязательства.");
       const existing = state.companies[u.orgId!];
       if (existing) checkVersion(r, existing.version);
       const next = { version: (existing?.version ?? 0) + 1, profile: body };
@@ -731,7 +745,8 @@ const routes: [string, RegExp, Handler][] = [
       const m = ownApp(requireClient(r), id);
       if (!m.draft) return problem(409, "NOT_DRAFT", "Заявка уже отправлена, её нельзя изменить.");
       checkVersion(r, m.app.version);
-      const patch = (await r.json()) as Partial<NonNullable<ClientApplication["form"]>>;
+      const patch = (await r.json()) as Partial<NonNullable<ClientApplication["form"]>> & { company?: CompanyProfile };
+      if (patch.company !== undefined) return problem(422, "PROFILE_V2_NOT_ENABLED", "Этап 1 ещё не подключён.");
       // A draft may be filled field by field; missing fields stay missing.
       const current = m.app.form ?? ({} as NonNullable<ClientApplication["form"]>);
       m.app.form = { ...current, ...patch } as ClientApplication["form"];
@@ -786,6 +801,8 @@ const routes: [string, RegExp, Handler][] = [
       const m = ownApp(requireClient(r), id);
       const body = (await r.json()) as { request_id: string; company?: CompanyProfile; fields?: Partial<NonNullable<ClientApplication["form"]>> };
       if (m.bank?.status !== "NEEDS_INFO" || m.app.info_request?.id !== body.request_id) return problem(409, "INFO_REQUEST_MISMATCH", "Запрос банка уже закрыт или изменился.");
+      if (body.company && hasProfileV2Fields(body.company)) return problem(422, "PROFILE_V2_NOT_ENABLED", "Этап 1 ещё не подключён.");
+      if (body.company && !hasLegacyFinancials(body.company)) return problem(422, "INVALID_COMPANY_PROFILE", "Укажите финансовые показатели.");
       if (body.company) m.app.company = body.company;
       if (body.fields) m.app.form = { ...m.app.form!, ...body.fields };
       m.event = { type: "INFO", at: later() };
@@ -889,13 +906,8 @@ const routes: [string, RegExp, Handler][] = [
       const b = m.bank!;
       checkVersion(r, b.version);
       if (b.status !== "MANUAL_REVIEW" || b.assignee !== me.id) return problem(409, "NOT_ASSIGNED", "Решение может принять только назначенный аналитик.");
-      const d = (await r.json()) as {
-        outcome: "APPROVE" | "COUNTER" | "REQUEST_INFO" | "REJECT";
-        comment: string;
-        public_reason?: string;
-        offer?: { product_id: string; amount: Offer["amount"]; term_months: number; rate_bps: number };
-        info_request?: Omit<InfoRequest, "id" | "created_at">;
-      };
+      const d = (await r.json()) as AnalystDecisionRequest;
+      if (d.info_request?.requirement_ids !== undefined) return problem(422, "PROFILE_V2_NOT_ENABLED", "Этап 1 ещё не подключён.");
       if ((d.outcome === "REJECT" || d.outcome === "COUNTER") && !d.public_reason) return problem(422, "PUBLIC_REASON_REQUIRED", "Нужна причина для клиента.");
       if (d.outcome === "APPROVE" || d.outcome === "COUNTER") {
         const product = PRODUCTS.find((p) => p.id === d.offer?.product_id);

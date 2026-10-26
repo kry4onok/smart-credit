@@ -22,6 +22,7 @@ message CompanyProfileResponse {
   string director_name = 4;
   repeated string founder_names = 5;
   string address = 6;
+  smartcredit.common.LegalForm legal_form = 7;
 }
 
 enum CompanyStatus {

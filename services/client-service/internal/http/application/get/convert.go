@@ -49,9 +49,9 @@ func companyProfile(value model.Company) common.CompanyProfile {
 	return common.CompanyProfile{
 		Inn: value.INN, Name: value.Name, Okved: value.OKVED,
 		RegisteredAt: openapi_types.Date{Time: value.RegisteredAt},
-		Revenue12m:   common.Money{AmountKopecks: value.Revenue12mKopecks, Currency: common.MoneyCurrencyRUB},
-		Profit12m:    common.SignedMoney{AmountKopecks: value.Profit12mKopecks, Currency: common.SignedMoneyCurrencyRUB},
-		Obligations:  common.Money{AmountKopecks: value.ObligationsKopecks, Currency: common.MoneyCurrencyRUB},
+		Revenue12m:   &common.Money{AmountKopecks: value.Revenue12mKopecks, Currency: common.MoneyCurrencyRUB},
+		Profit12m:    &common.SignedMoney{AmountKopecks: value.Profit12mKopecks, Currency: common.SignedMoneyCurrencyRUB},
+		Obligations:  &common.Money{AmountKopecks: value.ObligationsKopecks, Currency: common.MoneyCurrencyRUB},
 	}
 }
 

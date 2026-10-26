@@ -58,7 +58,7 @@ export function CasePage() {
     setCase(next);
     setAuditKey((k) => k + 1);
   };
-  const amountToRevenue = kase.company.revenue_12m.amount_kopecks > 0 ? (kase.application.amount.amount_kopecks / kase.company.revenue_12m.amount_kopecks) * 100 : null;
+  const amountToRevenue = kase.company.revenue_12m && kase.company.revenue_12m.amount_kopecks > 0 ? (kase.application.amount.amount_kopecks / kase.company.revenue_12m.amount_kopecks) * 100 : null;
 
   return (
     <>
@@ -374,7 +374,8 @@ const outcomes: { value: Outcome; label: string; hint: string }[] = [
 ];
 
 const infoFields = Object.keys(infoFieldLabel) as InfoField[];
-const documentTypes = Object.keys(documentLabel) as DocumentType[];
+// The legacy request flow supports these types until the requirements engine is enabled.
+const documentTypes: DocumentType[] = ["BANK_STATEMENT", "BUSINESS_PLAN"];
 
 function parsePercent(text: string): number | null {
   const m = /^(\d{1,3})(?:[.,](\d{1,2}))?$/.exec(text.trim());

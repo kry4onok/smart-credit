@@ -1,0 +1,8 @@
+{
+  "message": "Уточните сведения о доходах за указанный период",
+  "required_fields": [],
+  "required_document_types": [],
+  "requirement_ids": [
+    "income_ledger:2025-10-01:2026-09-30:psn"
+  ]
+}

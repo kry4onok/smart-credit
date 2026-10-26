@@ -23,7 +23,7 @@ func TestHandleAcceptsInfoResponse(t *testing.T) {
 		Params:        generated.ProvideInfoParams{IdempotencyKey: common.IdempotencyKey(uuid.New())},
 		Body: &generated.ProvideInfoJSONRequestBody{
 			RequestId: common.Id(requestID),
-			Fields:    &generated.ApplicationFormPatch{TermMonths: &term},
+			Fields:    &generated.LoanFieldsPatch{TermMonths: &term},
 		},
 	})
 	if err != nil {

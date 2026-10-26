@@ -26,7 +26,7 @@ from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__
 from proto.common import common_pb2 as proto_dot_common_dot_common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19proto/events/events.proto\x12\x12smartcredit.events\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19proto/common/common.proto\"\xf5\x05\n\x05\x45vent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\x16\n\x0e\x61ggregate_type\x18\x02 \x01(\t\x12\x14\n\x0c\x61ggregate_id\x18\x03 \x01(\t\x12\x19\n\x11\x61ggregate_version\x18\x04 \x01(\x03\x12/\n\x0boccurred_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0e\x63orrelation_id\x18\x06 \x01(\t\x12I\n\x15\x61pplication_submitted\x18\n \x01(\x0b\x32(.smartcredit.events.ApplicationSubmittedH\x00\x12\x39\n\rinfo_provided\x18\x0b \x01(\x0b\x32 .smartcredit.events.InfoProvidedH\x00\x12;\n\x0eoffer_accepted\x18\x0c \x01(\x0b\x32!.smartcredit.events.OfferAcceptedH\x00\x12;\n\x0eoffer_declined\x18\r \x01(\x0b\x32!.smartcredit.events.OfferDeclinedH\x00\x12=\n\x0f\x63ontract_signed\x18\x0e \x01(\x0b\x32\".smartcredit.events.ContractSignedH\x00\x12I\n\x15\x61pplication_cancelled\x18\x0f \x01(\x0b\x32(.smartcredit.events.ApplicationCancelledH\x00\x12\x61\n\"application_public_state_published\x18\x10 \x01(\x0b\x32\x33.smartcredit.events.ApplicationPublicStatePublishedH\x00\x12P\n\x19product_catalog_published\x18\x11 \x01(\x0b\x32+.smartcredit.events.ProductCatalogPublishedH\x00\x42\t\n\x07payload\"\x8d\x02\n\x14\x41pplicationSubmitted\x12\x0e\n\x06org_id\x18\x01 \x01(\t\x12\x16\n\x0e\x63lient_user_id\x18\x02 \x01(\t\x12\x12\n\nproduct_id\x18\x03 \x01(\t\x12\x17\n\x0fproduct_version\x18\x04 \x01(\x03\x12\x34\n\x07\x63ompany\x18\x05 \x01(\x0b\x32#.smartcredit.common.CompanySnapshot\x12\x31\n\x04\x66orm\x18\x06 \x01(\x0b\x32#.smartcredit.common.ApplicationForm\x12\x37\n\tdocuments\x18\x07 \x03(\x0b\x32$.smartcredit.common.DocumentMetadata\"\xc4\x01\n\x0cInfoProvided\x12\x12\n\nrequest_id\x18\x01 \x01(\t\x12\x31\n\x04\x66orm\x18\x02 \x01(\x0b\x32#.smartcredit.common.ApplicationForm\x12\x37\n\tdocuments\x18\x03 \x03(\x0b\x32$.smartcredit.common.DocumentMetadata\x12\x34\n\x07\x63ompany\x18\x04 \x01(\x0b\x32#.smartcredit.common.CompanySnapshot\"!\n\rOfferAccepted\x12\x10\n\x08offer_id\x18\x01 \x01(\t\"!\n\rOfferDeclined\x12\x10\n\x08offer_id\x18\x01 \x01(\t\"Q\n\x0e\x43ontractSigned\x12\x10\n\x08offer_id\x18\x01 \x01(\t\x12-\n\tsigned_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"&\n\x14\x41pplicationCancelled\x12\x0e\n\x06reason\x18\x01 \x01(\t\"\x83\x02\n\x1f\x41pplicationPublicStatePublished\x12\x30\n\x06status\x18\x01 \x01(\x0e\x32 .smartcredit.events.ClientStatus\x12\x13\n\x0bstage_label\x18\x02 \x01(\t\x12\x13\n\x0bnext_action\x18\x03 \x01(\t\x12<\n\x13\x61\x63tive_info_request\x18\x04 \x01(\x0b\x32\x1f.smartcredit.common.InfoRequest\x12/\n\x0c\x61\x63tive_offer\x18\x05 \x01(\x0b\x32\x19.smartcredit.common.Offer\x12\x15\n\rpublic_reason\x18\x06 \x01(\t\"H\n\x17ProductCatalogPublished\x12-\n\x08products\x18\x01 \x03(\x0b\x32\x1b.smartcredit.common.Product*\x9d\x02\n\x0c\x43lientStatus\x12\x1d\n\x19\x43LIENT_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17\x43LIENT_STATUS_SUBMITTED\x10\x01\x12\x1e\n\x1a\x43LIENT_STATUS_UNDER_REVIEW\x10\x02\x12\x1c\n\x18\x43LIENT_STATUS_NEEDS_INFO\x10\x03\x12!\n\x1d\x43LIENT_STATUS_OFFER_AVAILABLE\x10\x04\x12\x1d\n\x19\x43LIENT_STATUS_FORMALIZING\x10\x05\x12\x1b\n\x17\x43LIENT_STATUS_DISBURSED\x10\x06\x12\x1a\n\x16\x43LIENT_STATUS_REJECTED\x10\x07\x12\x18\n\x14\x43LIENT_STATUS_CLOSED\x10\x08\x42NZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events;eventspbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19proto/events/events.proto\x12\x12smartcredit.events\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19proto/common/common.proto\"\xf5\x05\n\x05\x45vent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\x16\n\x0e\x61ggregate_type\x18\x02 \x01(\t\x12\x14\n\x0c\x61ggregate_id\x18\x03 \x01(\t\x12\x19\n\x11\x61ggregate_version\x18\x04 \x01(\x03\x12/\n\x0boccurred_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0e\x63orrelation_id\x18\x06 \x01(\t\x12I\n\x15\x61pplication_submitted\x18\n \x01(\x0b\x32(.smartcredit.events.ApplicationSubmittedH\x00\x12\x39\n\rinfo_provided\x18\x0b \x01(\x0b\x32 .smartcredit.events.InfoProvidedH\x00\x12;\n\x0eoffer_accepted\x18\x0c \x01(\x0b\x32!.smartcredit.events.OfferAcceptedH\x00\x12;\n\x0eoffer_declined\x18\r \x01(\x0b\x32!.smartcredit.events.OfferDeclinedH\x00\x12=\n\x0f\x63ontract_signed\x18\x0e \x01(\x0b\x32\".smartcredit.events.ContractSignedH\x00\x12I\n\x15\x61pplication_cancelled\x18\x0f \x01(\x0b\x32(.smartcredit.events.ApplicationCancelledH\x00\x12\x61\n\"application_public_state_published\x18\x10 \x01(\x0b\x32\x33.smartcredit.events.ApplicationPublicStatePublishedH\x00\x12P\n\x19product_catalog_published\x18\x11 \x01(\x0b\x32+.smartcredit.events.ProductCatalogPublishedH\x00\x42\t\n\x07payload\"\xb2\x02\n\x14\x41pplicationSubmitted\x12\x0e\n\x06org_id\x18\x01 \x01(\t\x12\x16\n\x0e\x63lient_user_id\x18\x02 \x01(\t\x12\x12\n\nproduct_id\x18\x03 \x01(\t\x12\x17\n\x0fproduct_version\x18\x04 \x01(\x03\x12\x34\n\x07\x63ompany\x18\x05 \x01(\x0b\x32#.smartcredit.common.CompanySnapshot\x12\x31\n\x04\x66orm\x18\x06 \x01(\x0b\x32#.smartcredit.common.ApplicationForm\x12\x37\n\tdocuments\x18\x07 \x03(\x0b\x32$.smartcredit.common.DocumentMetadata\x12#\n\x1brequirements_reference_date\x18\x08 \x01(\t\"\xe6\x01\n\x0cInfoProvided\x12\x12\n\nrequest_id\x18\x01 \x01(\t\x12\x31\n\x04\x66orm\x18\x02 \x01(\x0b\x32#.smartcredit.common.ApplicationForm\x12\x37\n\tdocuments\x18\x03 \x03(\x0b\x32$.smartcredit.common.DocumentMetadata\x12\x34\n\x07\x63ompany\x18\x04 \x01(\x0b\x32#.smartcredit.common.CompanySnapshot\x12 \n\x18\x61nswered_requirement_ids\x18\x05 \x03(\t\"!\n\rOfferAccepted\x12\x10\n\x08offer_id\x18\x01 \x01(\t\"!\n\rOfferDeclined\x12\x10\n\x08offer_id\x18\x01 \x01(\t\"Q\n\x0e\x43ontractSigned\x12\x10\n\x08offer_id\x18\x01 \x01(\t\x12-\n\tsigned_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"&\n\x14\x41pplicationCancelled\x12\x0e\n\x06reason\x18\x01 \x01(\t\"\xc4\x02\n\x1f\x41pplicationPublicStatePublished\x12\x30\n\x06status\x18\x01 \x01(\x0e\x32 .smartcredit.events.ClientStatus\x12\x13\n\x0bstage_label\x18\x02 \x01(\t\x12\x13\n\x0bnext_action\x18\x03 \x01(\t\x12<\n\x13\x61\x63tive_info_request\x18\x04 \x01(\x0b\x32\x1f.smartcredit.common.InfoRequest\x12/\n\x0c\x61\x63tive_offer\x18\x05 \x01(\x0b\x32\x19.smartcredit.common.Offer\x12\x15\n\rpublic_reason\x18\x06 \x01(\t\x12?\n\x11requirements_plan\x18\x07 \x01(\x0b\x32$.smartcredit.common.RequirementsPlan\"H\n\x17ProductCatalogPublished\x12-\n\x08products\x18\x01 \x03(\x0b\x32\x1b.smartcredit.common.Product*\x9d\x02\n\x0c\x43lientStatus\x12\x1d\n\x19\x43LIENT_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17\x43LIENT_STATUS_SUBMITTED\x10\x01\x12\x1e\n\x1a\x43LIENT_STATUS_UNDER_REVIEW\x10\x02\x12\x1c\n\x18\x43LIENT_STATUS_NEEDS_INFO\x10\x03\x12!\n\x1d\x43LIENT_STATUS_OFFER_AVAILABLE\x10\x04\x12\x1d\n\x19\x43LIENT_STATUS_FORMALIZING\x10\x05\x12\x1b\n\x17\x43LIENT_STATUS_DISBURSED\x10\x06\x12\x1a\n\x16\x43LIENT_STATUS_REJECTED\x10\x07\x12\x18\n\x14\x43LIENT_STATUS_CLOSED\x10\x08\x42NZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events;eventspbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,24 +34,24 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'proto.events.events_pb2', _
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'ZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events;eventspb'
-  _globals['_CLIENTSTATUS']._serialized_start=1870
-  _globals['_CLIENTSTATUS']._serialized_end=2155
+  _globals['_CLIENTSTATUS']._serialized_start=2006
+  _globals['_CLIENTSTATUS']._serialized_end=2291
   _globals['_EVENT']._serialized_start=110
   _globals['_EVENT']._serialized_end=867
   _globals['_APPLICATIONSUBMITTED']._serialized_start=870
-  _globals['_APPLICATIONSUBMITTED']._serialized_end=1139
-  _globals['_INFOPROVIDED']._serialized_start=1142
-  _globals['_INFOPROVIDED']._serialized_end=1338
-  _globals['_OFFERACCEPTED']._serialized_start=1340
-  _globals['_OFFERACCEPTED']._serialized_end=1373
-  _globals['_OFFERDECLINED']._serialized_start=1375
-  _globals['_OFFERDECLINED']._serialized_end=1408
-  _globals['_CONTRACTSIGNED']._serialized_start=1410
-  _globals['_CONTRACTSIGNED']._serialized_end=1491
-  _globals['_APPLICATIONCANCELLED']._serialized_start=1493
-  _globals['_APPLICATIONCANCELLED']._serialized_end=1531
-  _globals['_APPLICATIONPUBLICSTATEPUBLISHED']._serialized_start=1534
-  _globals['_APPLICATIONPUBLICSTATEPUBLISHED']._serialized_end=1793
-  _globals['_PRODUCTCATALOGPUBLISHED']._serialized_start=1795
-  _globals['_PRODUCTCATALOGPUBLISHED']._serialized_end=1867
+  _globals['_APPLICATIONSUBMITTED']._serialized_end=1176
+  _globals['_INFOPROVIDED']._serialized_start=1179
+  _globals['_INFOPROVIDED']._serialized_end=1409
+  _globals['_OFFERACCEPTED']._serialized_start=1411
+  _globals['_OFFERACCEPTED']._serialized_end=1444
+  _globals['_OFFERDECLINED']._serialized_start=1446
+  _globals['_OFFERDECLINED']._serialized_end=1479
+  _globals['_CONTRACTSIGNED']._serialized_start=1481
+  _globals['_CONTRACTSIGNED']._serialized_end=1562
+  _globals['_APPLICATIONCANCELLED']._serialized_start=1564
+  _globals['_APPLICATIONCANCELLED']._serialized_end=1602
+  _globals['_APPLICATIONPUBLICSTATEPUBLISHED']._serialized_start=1605
+  _globals['_APPLICATIONPUBLICSTATEPUBLISHED']._serialized_end=1929
+  _globals['_PRODUCTCATALOGPUBLISHED']._serialized_start=1931
+  _globals['_PRODUCTCATALOGPUBLISHED']._serialized_end=2003
 # @@protoc_insertion_point(module_scope)

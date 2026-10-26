@@ -28,9 +28,9 @@ function fromProfile(p: CompanyProfile): Draft {
     name: p.name,
     okved: p.okved,
     registered_at: p.registered_at,
-    revenue: p.revenue_12m.amount_kopecks,
-    profit: p.profit_12m.amount_kopecks,
-    obligations: p.obligations.amount_kopecks,
+    revenue: p.revenue_12m?.amount_kopecks,
+    profit: p.profit_12m?.amount_kopecks,
+    obligations: p.obligations?.amount_kopecks,
   };
 }
 

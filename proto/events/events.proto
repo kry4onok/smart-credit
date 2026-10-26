@@ -40,6 +40,7 @@ message ApplicationSubmitted {
   smartcredit.common.CompanySnapshot company = 5;
   smartcredit.common.ApplicationForm form = 6;
   repeated smartcredit.common.DocumentMetadata documents = 7;
+  string requirements_reference_date = 8; // pinned at draft creation, YYYY-MM-DD
 }
 
 message InfoProvided {
@@ -48,6 +49,7 @@ message InfoProvided {
   smartcredit.common.ApplicationForm form = 2;
   repeated smartcredit.common.DocumentMetadata documents = 3;
   smartcredit.common.CompanySnapshot company = 4;
+  repeated string answered_requirement_ids = 5; // explicitly supplied FIELD answers for v2
 }
 
 message OfferAccepted { string offer_id = 1; }
@@ -67,6 +69,7 @@ message ApplicationPublicStatePublished {
   smartcredit.common.InfoRequest active_info_request = 4;
   smartcredit.common.Offer active_offer = 5;
   string public_reason = 6;
+  smartcredit.common.RequirementsPlan requirements_plan = 7;
 }
 
 enum ClientStatus {

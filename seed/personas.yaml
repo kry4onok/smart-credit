@@ -3,6 +3,7 @@ version: 1
 personas:
   - inn: "7707083893"
     profile:
+      legal_form: LLC
       status: ACTIVE
       registered_at: "2019-04-15"
       okved: "10.71"
@@ -19,6 +20,7 @@ personas:
 
   - inn: "7810755500"
     profile:
+      legal_form: LLC
       status: ACTIVE
       registered_at: "2016-09-20"
       okved: "52.10"
@@ -35,6 +37,7 @@ personas:
 
   - inn: "5401010012"
     profile:
+      legal_form: LLC
       status: ACTIVE
       registered_at: "2021-02-10"
       okved: "43.21"
@@ -49,6 +52,7 @@ personas:
 
   - inn: "6671160003"
     profile:
+      legal_form: LLC
       status: ACTIVE
       registered_at: "2018-11-05"
       okved: "25.62"
@@ -61,6 +65,7 @@ personas:
 
   - inn: "1234567894"
     profile:
+      legal_form: LLC
       status: ACTIVE
       registered_at: "2020-05-12"
       okved: "62.01"
@@ -73,6 +78,7 @@ personas:
 
   - inn: "1111111117"
     profile:
+      legal_form: LLC
       status: LIQUIDATING
       registered_at: "2020-01-15"
       okved: "46.90"
@@ -83,6 +89,7 @@ personas:
 
   - inn: "9876543210"
     profile:
+      legal_form: LLC
       status: ACTIVE
       registered_at: "2023-10-22"
       okved: "47.91"
@@ -93,7 +100,32 @@ personas:
 
   - inn: "500100732259"
     profile:
+      legal_form: IP
       status: ACTIVE
       registered_at: "2022-01-10"
       okved: "62.02"
     credit_history: {} # Missing values stay absent in protobuf.
+
+  - inn: "9900000017"
+    profile:
+      legal_form: LLC
+      status: ACTIVE
+      registered_at: "2020-01-01"
+      okved: "47.11"
+      address: "Демо-профиль этапа 1"
+    credit_history:
+      total_debt: {amount_kopecks: 100000000, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0
+
+  - inn: "990000000115"
+    profile:
+      legal_form: IP
+      status: ACTIVE
+      registered_at: "2020-01-01"
+      okved: "47.11"
+      address: "Демо-профиль этапа 1"
+    credit_history:
+      total_debt: {amount_kopecks: 100000000, currency: RUB}
+      overdue_count_12m: 0
+      max_overdue_days: 0

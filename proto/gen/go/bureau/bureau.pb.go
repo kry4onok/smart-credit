@@ -126,6 +126,7 @@ type CompanyProfileResponse struct {
 	DirectorName  string                 `protobuf:"bytes,4,opt,name=director_name,json=directorName,proto3" json:"director_name,omitempty"`
 	FounderNames  []string               `protobuf:"bytes,5,rep,name=founder_names,json=founderNames,proto3" json:"founder_names,omitempty"`
 	Address       string                 `protobuf:"bytes,6,opt,name=address,proto3" json:"address,omitempty"`
+	LegalForm     common.LegalForm       `protobuf:"varint,7,opt,name=legal_form,json=legalForm,proto3,enum=smartcredit.common.LegalForm" json:"legal_form,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -200,6 +201,13 @@ func (x *CompanyProfileResponse) GetAddress() string {
 		return x.Address
 	}
 	return ""
+}
+
+func (x *CompanyProfileResponse) GetLegalForm() common.LegalForm {
+	if x != nil {
+		return x.LegalForm
+	}
+	return common.LegalForm(0)
 }
 
 type CreditHistoryRequest struct {
@@ -374,14 +382,16 @@ const file_proto_bureau_bureau_proto_rawDesc = "" +
 	"\n" +
 	"\x19proto/bureau/bureau.proto\x12\x12smartcredit.bureau\x1a\x19proto/common/common.proto\")\n" +
 	"\x15CompanyProfileRequest\x12\x10\n" +
-	"\x03inn\x18\x01 \x01(\tR\x03inn\"\xf2\x01\n" +
+	"\x03inn\x18\x01 \x01(\tR\x03inn\"\xb0\x02\n" +
 	"\x16CompanyProfileResponse\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.smartcredit.bureau.CompanyStatusR\x06status\x12#\n" +
 	"\rregistered_at\x18\x02 \x01(\tR\fregisteredAt\x12\x14\n" +
 	"\x05okved\x18\x03 \x01(\tR\x05okved\x12#\n" +
 	"\rdirector_name\x18\x04 \x01(\tR\fdirectorName\x12#\n" +
 	"\rfounder_names\x18\x05 \x03(\tR\ffounderNames\x12\x18\n" +
-	"\aaddress\x18\x06 \x01(\tR\aaddress\"(\n" +
+	"\aaddress\x18\x06 \x01(\tR\aaddress\x12<\n" +
+	"\n" +
+	"legal_form\x18\a \x01(\x0e2\x1d.smartcredit.common.LegalFormR\tlegalForm\"(\n" +
 	"\x14CreditHistoryRequest\x12\x10\n" +
 	"\x03inn\x18\x01 \x01(\tR\x03inn\"\x9e\x02\n" +
 	"\x15CreditHistoryResponse\x128\n" +
@@ -426,22 +436,24 @@ var file_proto_bureau_bureau_proto_goTypes = []any{
 	(*CreditHistoryRequest)(nil),   // 3: smartcredit.bureau.CreditHistoryRequest
 	(*CreditHistoryResponse)(nil),  // 4: smartcredit.bureau.CreditHistoryResponse
 	(*Obligation)(nil),             // 5: smartcredit.bureau.Obligation
-	(*common.Money)(nil),           // 6: smartcredit.common.Money
+	(common.LegalForm)(0),          // 6: smartcredit.common.LegalForm
+	(*common.Money)(nil),           // 7: smartcredit.common.Money
 }
 var file_proto_bureau_bureau_proto_depIdxs = []int32{
 	0, // 0: smartcredit.bureau.CompanyProfileResponse.status:type_name -> smartcredit.bureau.CompanyStatus
-	6, // 1: smartcredit.bureau.CreditHistoryResponse.total_debt:type_name -> smartcredit.common.Money
-	5, // 2: smartcredit.bureau.CreditHistoryResponse.obligations:type_name -> smartcredit.bureau.Obligation
-	6, // 3: smartcredit.bureau.Obligation.outstanding:type_name -> smartcredit.common.Money
-	1, // 4: smartcredit.bureau.BureauService.GetCompanyProfile:input_type -> smartcredit.bureau.CompanyProfileRequest
-	3, // 5: smartcredit.bureau.BureauService.GetCreditHistory:input_type -> smartcredit.bureau.CreditHistoryRequest
-	2, // 6: smartcredit.bureau.BureauService.GetCompanyProfile:output_type -> smartcredit.bureau.CompanyProfileResponse
-	4, // 7: smartcredit.bureau.BureauService.GetCreditHistory:output_type -> smartcredit.bureau.CreditHistoryResponse
-	6, // [6:8] is the sub-list for method output_type
-	4, // [4:6] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	6, // 1: smartcredit.bureau.CompanyProfileResponse.legal_form:type_name -> smartcredit.common.LegalForm
+	7, // 2: smartcredit.bureau.CreditHistoryResponse.total_debt:type_name -> smartcredit.common.Money
+	5, // 3: smartcredit.bureau.CreditHistoryResponse.obligations:type_name -> smartcredit.bureau.Obligation
+	7, // 4: smartcredit.bureau.Obligation.outstanding:type_name -> smartcredit.common.Money
+	1, // 5: smartcredit.bureau.BureauService.GetCompanyProfile:input_type -> smartcredit.bureau.CompanyProfileRequest
+	3, // 6: smartcredit.bureau.BureauService.GetCreditHistory:input_type -> smartcredit.bureau.CreditHistoryRequest
+	2, // 7: smartcredit.bureau.BureauService.GetCompanyProfile:output_type -> smartcredit.bureau.CompanyProfileResponse
+	4, // 8: smartcredit.bureau.BureauService.GetCreditHistory:output_type -> smartcredit.bureau.CreditHistoryResponse
+	7, // [7:9] is the sub-list for method output_type
+	5, // [5:7] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_proto_bureau_bureau_proto_init() }
