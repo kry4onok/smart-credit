@@ -38,7 +38,7 @@ func (r *Repository) PrepareDecision(ctx context.Context, in decide.Input) (deci
 	err := q.QueryRow(ctx, previewDecisionCase, in.CaseID).Scan(
 		&status, &assignee, &version, &company, &documents, &purpose, &requestedProductName,
 		&dossier.referenceDate, &dossier.policy, &dossier.purposes, &dossier.documents,
-		&dossier.minAmount, &dossier.maxAmount, &dossier.minTerm, &dossier.maxTerm, &dossier.amount, &dossier.term,
+		&dossier.minAmount, &dossier.maxAmount, &dossier.minTerm, &dossier.maxTerm, &dossier.amount, &dossier.term, &dossier.purposeDescription,
 	)
 	if err != nil || assignee == nil || *assignee != in.AnalystID ||
 		status != model.CaseStatusManualReview || version != in.ExpectedVersion {
@@ -65,6 +65,7 @@ type decisionProduct struct {
 }
 
 type decisionDossier struct {
+	purposeDescription           string
 	referenceDate                *time.Time
 	policy                       string
 	purposes, documents          []string
@@ -116,7 +117,7 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 
 	err = q.QueryRow(ctx, lockDecisionCase, in.CaseID).Scan(&status, &assignee, &version, &company, &documents, &purpose,
 		&dossier.referenceDate, &dossier.policy, &dossier.purposes, &dossier.documents,
-		&dossier.minAmount, &dossier.maxAmount, &dossier.minTerm, &dossier.maxTerm, &dossier.amount, &dossier.term)
+		&dossier.minAmount, &dossier.maxAmount, &dossier.minTerm, &dossier.maxTerm, &dossier.amount, &dossier.term, &dossier.purposeDescription)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Case{}, decide.ErrNotFound
 	}
@@ -188,7 +189,7 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 		var data []byte
 		if in.InfoRequest.V2 {
 			checked := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, ReferenceDate: dossier.referenceDate,
-				AmountKopecks: dossier.amount, TermMonths: dossier.term, PurposeTag: purpose}, dossier.product())
+				AmountKopecks: dossier.amount, TermMonths: dossier.term, PurposeTag: purpose, PurposeDescription: dossier.purposeDescription}, dossier.product())
 			plan = checked.Plan
 			selected, err = requirements.SelectRequest(plan, in.InfoRequest.RequirementIDs)
 			if err != nil {
@@ -249,7 +250,7 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 	}
 	if request != nil && in.InfoRequest.V2 {
 		checked := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, ReferenceDate: dossier.referenceDate,
-			AmountKopecks: dossier.amount, TermMonths: dossier.term, PurposeTag: purpose}, dossier.product())
+			AmountKopecks: dossier.amount, TermMonths: dossier.term, PurposeTag: purpose, PurposeDescription: dossier.purposeDescription}, dossier.product())
 		payload, err = publicstate.WithRequirements(payload, checked.Plan, request.Requirements)
 		if err != nil {
 			return model.Case{}, fmt.Errorf("add decision requirements: %w", err)

@@ -9,25 +9,27 @@ import (
 
 func ToResponse(value model.Application) generated.ClientApplication {
 	response := generated.ClientApplication{
-		Id:               common.Id(value.ID),
-		ProductId:        common.Id(value.ProductID),
-		ProductVersion:   value.ProductVersion,
-		Company:          companyProfile(value.Company),
-		RequirementsPlan: profile.PlanHTTP(value.RequirementsPlan),
-		Status:           common.ClientStatus(value.Status),
-		StageLabel:       value.StageLabel,
-		NextAction:       value.NextAction,
-		AllowedActions:   allowedActions(value.AllowedActions),
-		Documents:        documents(value.Documents),
-		CreatedAt:        value.CreatedAt,
-		UpdatedAt:        value.UpdatedAt,
-		Version:          value.Version,
+		Id:                 common.Id(value.ID),
+		ProductId:          common.Id(value.ProductID),
+		ProductVersion:     value.ProductVersion,
+		Company:            companyProfile(value.Company),
+		RequirementsPlan:   profile.PlanHTTP(value.RequirementsPlan),
+		Status:             common.ClientStatus(value.Status),
+		StageLabel:         value.StageLabel,
+		NextAction:         value.NextAction,
+		AllowedActions:     allowedActions(value.AllowedActions),
+		Documents:          documents(value.Documents),
+		CreatedAt:          value.CreatedAt,
+		UpdatedAt:          value.UpdatedAt,
+		Version:            value.Version,
+		PurposeDescription: &value.PurposeDescription,
 	}
 	if value.Form != nil {
 		response.Form = &generated.ApplicationForm{
-			Amount:     common.Money{AmountKopecks: value.Form.AmountKopecks, Currency: common.MoneyCurrencyRUB},
-			TermMonths: value.Form.TermMonths,
-			Purpose:    common.PurposeTag(value.Form.Purpose),
+			Amount:             common.Money{AmountKopecks: value.Form.AmountKopecks, Currency: common.MoneyCurrencyRUB},
+			TermMonths:         value.Form.TermMonths,
+			Purpose:            common.PurposeTag(value.Form.Purpose),
+			PurposeDescription: &value.Form.PurposeDescription,
 		}
 	}
 	if value.PendingAction != nil {

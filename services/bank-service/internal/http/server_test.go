@@ -254,7 +254,7 @@ func TestProductsRouteReturnsActiveTermsOnlyToEmployees(t *testing.T) {
 		if len(body.Items) != 1 || body.Items[0].Id != id || body.Items[0].Version != 2 ||
 			body.Items[0].Name != "Оборотный кредит" || body.Items[0].MaxAmount.AmountKopecks != 500000000 ||
 			body.Items[0].IndicativeRateBps == nil || *body.Items[0].IndicativeRateBps != 1650 ||
-			len(body.Items[0].PurposeTags) != 1 || body.Items[0].PurposeTags[0] != common.WORKINGCAPITAL ||
+			len(body.Items[0].PurposeTags) != 1 || body.Items[0].PurposeTags[0] != common.PurposeTagWORKINGCAPITAL ||
 			len(body.Items[0].RequiredDocumentTypes) != 1 || body.Items[0].RequiredDocumentTypes[0] != common.BANKSTATEMENT {
 			t.Fatalf("role %q: items = %+v", test.role, body.Items)
 		}

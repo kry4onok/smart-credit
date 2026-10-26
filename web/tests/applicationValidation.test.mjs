@@ -16,8 +16,8 @@ test("term is a positive integer; purpose must be selected explicitly", () => {
   for (const value of [0, -1, 1.5, 2147483648]) assert.ok(validateInfoValue("APPLICATION_TERM_MONTHS", value));
   assert.equal(validateInfoValue("APPLICATION_TERM_MONTHS", 12), null);
   assert.ok(validateInfoValue("APPLICATION_PURPOSE", ""));
-  assert.ok(validateInfoValue("APPLICATION_PURPOSE", "OTHER"));
-  for (const value of ["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION"]) assert.equal(validateInfoValue("APPLICATION_PURPOSE", value), null);
+  assert.ok(validateInfoValue("APPLICATION_PURPOSE", "UNKNOWN"));
+  for (const value of ["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION", "OTHER"]) assert.equal(validateInfoValue("APPLICATION_PURPOSE", value), null);
 });
 
 test("attachments survive reload and retain every required type", () => {

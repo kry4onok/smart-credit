@@ -11,6 +11,7 @@ enum PurposeTag {
   PURPOSE_TAG_WORKING_CAPITAL = 1;
   PURPOSE_TAG_EQUIPMENT = 2;
   PURPOSE_TAG_EXPANSION = 3;
+  PURPOSE_TAG_OTHER = 4; // Multiple spending categories or another purpose; describe in the form.
 }
 
 enum DocumentType {
@@ -63,6 +64,7 @@ message ApplicationForm {
   Money amount = 1;
   int32 term_months = 2;
   PurposeTag purpose = 3;
+  string purpose_description = 4; // Required for OTHER, at most 1000 Unicode characters.
 }
 
 message Offer {

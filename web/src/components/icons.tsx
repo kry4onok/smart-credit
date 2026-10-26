@@ -1,6 +1,6 @@
 import type { PurposeTag } from "../api/types";
 
-// Line icons for the three purposes; decorative, the text next to them carries the meaning.
+// Line icons for the four purposes; decorative, the text next to them carries the meaning.
 export function PurposeIcon({ purpose }: { purpose: PurposeTag }) {
   return (
     <svg className="purpose-icon" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -17,6 +17,14 @@ export function PurposeIcon({ purpose }: { purpose: PurposeTag }) {
         <>
           <circle cx="16" cy="16" r="4" />
           <path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M6.8 25.2l2.8-2.8M22.4 9.6l2.8-2.8" />
+        </>
+      )}
+      {purpose === "OTHER" && (
+        <>
+          <rect x="4" y="4" width="10" height="10" rx="2" />
+          <rect x="18" y="4" width="10" height="10" rx="2" />
+          <rect x="4" y="18" width="10" height="10" rx="2" />
+          <path d="M23 18v10M18 23h10" />
         </>
       )}
       {purpose === "EXPANSION" && (

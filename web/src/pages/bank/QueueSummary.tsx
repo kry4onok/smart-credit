@@ -13,11 +13,16 @@ const groups: Group[] = [
 
 const DAY = 86_400_000;
 
+// isStale: a manual case received more than a day ago; the tile and the table filter share it.
+export function isStale(c: CaseListItem, now = Date.now()): boolean {
+  return c.status === "MANUAL_REVIEW" && now - new Date(c.created_at).getTime() > DAY;
+}
+
 type Props = {
   items: CaseListItem[];
   partial: boolean;
   me: string | undefined;
-  onFilter: (filter: { status?: BankStatus; assignee?: string }) => void;
+  onFilter: (filter: { status?: BankStatus; assignee?: string; stale?: boolean }) => void;
 };
 
 // QueueSummary answers «what needs me now» before the analyst reads the table.
@@ -25,7 +30,7 @@ export function QueueSummary({ items, partial, me, onFilter }: Props) {
   const manual = items.filter((c) => c.status === "MANUAL_REVIEW");
   const free = manual.filter((c) => !c.assignee_id).length;
   const mine = manual.filter((c) => c.assignee_id === me).length;
-  const stale = manual.filter((c) => Date.now() - new Date(c.created_at).getTime() > DAY).length;
+  const stale = manual.filter((c) => isStale(c)).length;
   const counts = groups.map((g) => ({ ...g, n: items.filter((c) => g.statuses.includes(c.status)).length }));
   const total = items.length || 1;
 
@@ -39,7 +44,7 @@ export function QueueSummary({ items, partial, me, onFilter }: Props) {
             свободных {free}, у вас {mine}
           </span>
         </button>
-        <button type="button" className={`tile${stale ? " tile-alert" : ""}`} onClick={() => onFilter({ status: "MANUAL_REVIEW" })}>
+        <button type="button" className={`tile${stale ? " tile-alert" : ""}`} onClick={() => onFilter({ status: "MANUAL_REVIEW", stale: true })}>
           <span className="tile-label">Ждут больше суток</span>
           <span className="tile-value">{stale}</span>
           <span className="tile-note">{stale ? "начните с самых старых" : "просроченных нет"}</span>

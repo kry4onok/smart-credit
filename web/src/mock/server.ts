@@ -73,7 +73,8 @@ const PRODUCTS: (Product & { maxShareBps: number; minAgeMonths: number; rates: R
     code: "DEVELOPMENT",
     name: "Кредит на развитие",
     description: "Для оборудования, новой точки или крупного проекта. Срок до трёх лет, нужен бизнес-план.",
-    purpose_tags: ["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION"],
+    // The universal product finances any purpose, including several at once (OTHER).
+    purpose_tags: ["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION", "OTHER"],
     min_amount: rub(500_000),
     max_amount: rub(8_000_000),
     min_term_months: 6,
@@ -500,7 +501,7 @@ function view(m: MockApp): ClientApplication {
   const pending = m.event ? pendingByEvent[m.event.type] : undefined;
   const allowed: ClientApplication["allowed_actions"] = [];
   if (!pending) {
-    if (status === "DRAFT") allowed.push("EDIT_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT");
+    if (status === "DRAFT") allowed.push("EDIT_DRAFT", "DELETE_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT");
     if (status === "NEEDS_INFO") allowed.push("PROVIDE_INFO", "UPLOAD_DOCUMENT");
     if (status === "OFFER_AVAILABLE") allowed.push("ACCEPT_OFFER", "DECLINE_OFFER");
     if (m.bank?.status === "OFFER_ACCEPTED") allowed.push("SIGN");
@@ -514,6 +515,8 @@ function view(m: MockApp): ClientApplication {
     ...m.app,
     // client-service returns the form only when amount, term and purpose are all set.
     form: f?.amount?.amount_kopecks && f.term_months && f.purpose ? f : undefined,
+    // Until the form is complete the explanation is still returned at the top level.
+    purpose_description: f?.purpose_description,
     offer: showOffer ? m.app.offer : undefined,
     info_request: m.bank?.status === "NEEDS_INFO" ? m.app.info_request : undefined,
     public_reason: m.bank?.public_reason,
@@ -550,7 +553,7 @@ function caseView(m: MockApp, me: User): BankCase {
     product_version: m.app.product_version,
     company: m.app.company,
     documents: m.app.documents,
-    application: { amount: form.amount, term_months: form.term_months, purpose: form.purpose, document_types: [...new Set(m.app.documents.map((d) => d.document_type))] },
+    application: { amount: form.amount, term_months: form.term_months, purpose: form.purpose, purpose_description: form.purpose_description, document_types: [...new Set(m.app.documents.map((d) => d.document_type))] },
     checks: b.checks,
     score: b.score,
     triggered_rules: b.triggered_rules,
@@ -689,8 +692,10 @@ const routes: [string, RegExp, Handler][] = [
     /^\/api\/client\/products$/,
     (r) => {
       requireClient(r);
+      // As in client-service: the whole catalog, products for the chosen purpose first.
       const purpose = new URL(r.url).searchParams.get("purpose");
-      const items = PRODUCTS.filter((p) => !purpose || p.purpose_tags.includes(purpose as never)).map(publicProduct);
+      const fits = (p: (typeof PRODUCTS)[number]) => !purpose || p.purpose_tags.includes(purpose as never);
+      const items = [...PRODUCTS.filter(fits), ...PRODUCTS.filter((p) => !fits(p))].map(publicProduct);
       return json(200, { items, catalog_version: 1 });
     },
   ],
@@ -749,9 +754,27 @@ const routes: [string, RegExp, Handler][] = [
       if (patch.company !== undefined) return problem(422, "PROFILE_V2_NOT_ENABLED", "Этап 1 ещё не подключён.");
       // A draft may be filled field by field; missing fields stay missing.
       const current = m.app.form ?? ({} as NonNullable<ClientApplication["form"]>);
+      if ((patch.purpose_description?.length ?? 0) > 1000) return problem(422, "INVALID_APPLICATION", "Пояснение цели — не больше 1000 символов.");
       m.app.form = { ...current, ...patch } as ClientApplication["form"];
+      // An empty string clears the explanation, an omitted field keeps it.
+      if (patch.purpose_description === "") delete m.app.form!.purpose_description;
       touch(m);
       return json(200, view(m));
+    },
+  ],
+  [
+    "DELETE",
+    new RegExp(`^${A}$`),
+    (r, [id]) => {
+      const user = requireClient(r);
+      const index = state.apps.findIndex((a) => a.app.id === id && a.orgId === user.orgId);
+      if (index < 0) return problem(404, "APPLICATION_NOT_FOUND", "Заявка не найдена.");
+      const m = state.apps[index];
+      if (!m.draft) return problem(409, "APPLICATION_STATE_CONFLICT", "Редактировать и удалять можно только черновик заявки.");
+      if (r.headers.get("If-Match") !== `"${m.app.version}"`) return problem(409, "APPLICATION_VERSION_CONFLICT", "Заявка уже изменена; обновите карточку и повторите запрос.");
+      state.apps.splice(index, 1);
+      save();
+      return new Response(null, { status: 204 });
     },
   ],
   [
@@ -784,6 +807,8 @@ const routes: [string, RegExp, Handler][] = [
       const p = productOf(m);
       const f = m.app.form;
       if (!f?.amount?.amount_kopecks || !f.term_months || !f.purpose) return problem(422, "FORM_INCOMPLETE", "Заполните сумму, срок и цель кредита.");
+      if (!p.purpose_tags.includes(f.purpose)) return problem(422, "PURPOSE_NOT_SUPPORTED", "Продукт не финансирует выбранную цель.");
+      if (f.purpose === "OTHER" && !f.purpose_description?.trim()) return problem(422, "PURPOSE_DESCRIPTION_REQUIRED", "Опишите, на что пойдут деньги.");
       if (f.amount.amount_kopecks < p.min_amount.amount_kopecks || f.amount.amount_kopecks > p.max_amount.amount_kopecks) return problem(422, "AMOUNT_OUT_OF_RANGE", "Сумма вне диапазона продукта.");
       if (f.term_months < p.min_term_months || f.term_months > p.max_term_months) return problem(422, "TERM_OUT_OF_RANGE", "Срок вне диапазона продукта.");
       m.draft = false;

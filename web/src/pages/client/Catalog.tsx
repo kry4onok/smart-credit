@@ -2,16 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { clientApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
-import type { Product, PurposeTag } from "../../api/types";
+import type { Product } from "../../api/types";
 import { MoneyInput } from "../../components/inputs";
 import { PurposeIcon } from "../../components/icons";
 import { ErrorNote, Field, Loading, useAction, useTitle } from "../../components/ui";
 import { money, months, moneyShort, monthlyPayment, rate, rub } from "../../lib/format";
-import { documentLabel, purposeHint, purposeLabel } from "../../lib/labels";
+import { documentLabel, purposeHint, purposeLabel, purposeOrder } from "../../lib/labels";
 import { useIntents } from "../../lib/util";
 import { createDraft, misfit, prefillFromParams, prefillToParams, type Prefill } from "./products";
-
-const purposes: PurposeTag[] = ["WORKING_CAPITAL", "EQUIPMENT", "EXPANSION"];
 
 export function CatalogPage() {
   const [params, setParams] = useSearchParams();
@@ -62,8 +60,10 @@ export function CatalogPage() {
     if (created) navigate(`/cabinet/applications/${created.id}`);
   }
 
+  // The bank returns the whole catalog with products for the chosen purpose first; products that
+  // do not fit stay visible below with the reason.
   const ranked = products
-    ?.map((p) => ({ p, why: misfit(p, prefill.amount, term) }))
+    ?.map((p) => ({ p, why: misfit(p, prefill.amount, term, purpose ?? undefined), wrongPurpose: !!purpose && !p.purpose_tags.includes(purpose) }))
     .sort((a, b) => Number(!!a.why) - Number(!!b.why));
   const fitting = ranked?.filter((r) => !r.why).length ?? 0;
 
@@ -72,7 +72,7 @@ export function CatalogPage() {
       <section className="purpose-pick">
         <h1>На что нужны деньги?</h1>
         <div className="purpose-options" role="group" aria-label="Цель кредита">
-          {purposes.map((p) => (
+          {purposeOrder.map((p) => (
             <button
               key={p}
               type="button"
@@ -98,10 +98,12 @@ export function CatalogPage() {
             <input id="calc-term" inputMode="numeric" value={termText} onChange={(e) => setTermText(e.target.value.replace(/\D/g, ""))} />
           </Field>
           <p className="calc-result" aria-live="polite">
-            {ranked && (prefill.amount || term)
+            {ranked && (prefill.amount || term || purpose)
               ? fitting
                 ? `Подходит ${fitting === 1 ? "один продукт" : fitting < 5 ? `${fitting} продукта` : `${fitting} продуктов`}`
-                : "Под эти условия продуктов нет — измените сумму или срок"
+                : purpose
+                  ? "Под эту цель и условия продуктов нет — измените цель, сумму или срок"
+                  : "Под эти условия продуктов нет — измените сумму или срок"
               : "Укажите сумму и срок — покажем подходящие продукты и платёж"}
           </p>
         </div>
@@ -111,14 +113,11 @@ export function CatalogPage() {
       {!products && !error && <Loading label="Подбираем продукты…" />}
       {products && products.length === 0 && (
         <div className="empty panel">
-          <p>Под эту цель сейчас нет продуктов. Выберите другую цель или посмотрите все предложения.</p>
-          <button type="button" className="btn btn-secondary" onClick={() => setParams(prefillToParams({ ...prefill, purpose: undefined }))}>
-            Показать все
-          </button>
+          <p>Банк сейчас не публикует продукты. Загляните чуть позже.</p>
         </div>
       )}
       <div className="products">
-        {ranked?.map(({ p, why }) => {
+        {ranked?.map(({ p, why, wrongPurpose }) => {
           const estimate = !why && prefill.amount && term && p.indicative_rate_bps !== undefined ? monthlyPayment(rub(prefill.amount), term, p.indicative_rate_bps) : null;
           return (
             <article key={p.id} className={`product panel${why ? " product-off" : ""}`}>
@@ -152,16 +151,21 @@ export function CatalogPage() {
                   </div>
                 )}
               </dl>
+              <p className="product-purposes">Цели: {purposeOrder.filter((t) => p.purpose_tags.includes(t)).map((t) => purposeLabel[t].toLowerCase()).join(", ")}</p>
               <p className="product-docs">
                 {p.required_document_types.length
                   ? `Понадобится: ${p.required_document_types.map((d) => documentLabel[d].toLowerCase()).join(", ")}`
                   : "Документы банк подберёт по форме бизнеса и налоговому режиму"}
               </p>
               <footer>
-                <button type="button" className={`btn ${why ? "btn-secondary" : "btn-primary"}`} disabled={create.busy} onClick={() => void apply(p)}>
+                <button type="button" className={`btn ${why ? "btn-secondary" : "btn-primary"}`} disabled={create.busy || wrongPurpose} onClick={() => void apply(p)}>
                   Оформить заявку
                 </button>
-                <small>Ставка и платёж предварительные: точные условия банк предложит после проверки.</small>
+                <small>
+                  {wrongPurpose
+                    ? "Продукт выдаётся только на перечисленные цели. Выберите другую цель или другой продукт."
+                    : "Ставка и платёж предварительные: точные условия банк предложит после проверки."}
+                </small>
               </footer>
             </article>
           );

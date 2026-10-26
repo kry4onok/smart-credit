@@ -470,6 +470,10 @@ components:
           minimum: 1
         purpose:
           "$ref": "./common.yaml#/components/schemas/PurposeTag"
+        purpose_description:
+          type: string
+          maxLength: 1000
+          description: Client explanation of intended spending, required for OTHER.
         document_types:
           type: array
           items:

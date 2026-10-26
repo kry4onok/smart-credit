@@ -240,6 +240,8 @@ export interface components {
             amount: components["schemas"]["Money"];
             term_months: number;
             purpose: components["schemas"]["PurposeTag"];
+            /** @description Client explanation of intended spending, required for OTHER. */
+            purpose_description?: string;
             document_types: components["schemas"]["DocumentType"][];
         };
         Checks: {
@@ -346,8 +348,11 @@ export interface components {
         };
         /** Format: uuid */
         Id: string;
-        /** @enum {string} */
-        PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION";
+        /**
+         * @description WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
+         * @enum {string}
+         */
+        PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION" | "OTHER";
         Money: {
             /** Format: int64 */
             amount_kopecks: number;

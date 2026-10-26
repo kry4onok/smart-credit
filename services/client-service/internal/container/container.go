@@ -11,6 +11,7 @@ import (
 	httpapi "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http"
 	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
+	applicationdelete "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/delete"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	documentcontent "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document/content"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
@@ -34,6 +35,7 @@ import (
 	productrepo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/repository/product"
 	cancelapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/cancel"
 	createapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/create"
+	deleteapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/delete"
 	addapplicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document"
 	getdocumentcontent "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/document/content"
 	getapplication "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/application/get"
@@ -49,15 +51,17 @@ import (
 	updatecompany "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/company/update"
 	getproduct "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/product/get"
 	listproducts "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/usecase/product/list"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/worker/documentcleanup"
 	clientoutbox "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/worker/outbox"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Container struct {
-	DB          *pgxpool.Pool
-	HTTPHandler http.Handler
-	Outbox      *clientoutbox.Worker
-	BankEvents  *bankevents.Consumer
+	DB              *pgxpool.Pool
+	HTTPHandler     http.Handler
+	DocumentCleanup *documentcleanup.Worker
+	Outbox          *clientoutbox.Worker
+	BankEvents      *bankevents.Consumer
 }
 
 func New(ctx context.Context, cfg config.Config) (*Container, error) {
@@ -82,9 +86,10 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 		return nil, fmt.Errorf("create bank events consumer: %w", err)
 	}
 	return &Container{
-		DB:         db,
-		Outbox:     outbox,
-		BankEvents: bankEvents,
+		DB:              db,
+		DocumentCleanup: documentcleanup.New(db, cfg.DocumentStoragePath),
+		Outbox:          outbox,
+		BankEvents:      bankEvents,
 		HTTPHandler: httpapi.New(httpapi.Params{
 			DB:                      db,
 			Assessment:              assessmenthandler.New(db, cfg.AssistantTarget),
@@ -93,6 +98,7 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			CompanyGet:              companyget.New(getcompany.New(company.New(db))),
 			CompanyUpdate:           companyupdate.New(updatecompany.New(company.New(db))),
 			ApplicationCreate:       applicationcreate.New(createapplication.New(applicationRepository)),
+			ApplicationDelete:       applicationdelete.New(deleteapplication.New(applicationRepository)),
 			ApplicationCancel:       applicationcancel.New(cancelapplication.New(applicationRepository)),
 			ApplicationDocument:     applicationdocument.New(addapplicationdocument.New(applicationRepository)),
 			DocumentContent:         documentcontent.New(getdocumentcontent.New(applicationRepository)),

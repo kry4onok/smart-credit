@@ -9,6 +9,7 @@ import (
 )
 
 type Application struct {
+	PurposeDescription        string                     `json:"purpose_description,omitempty"`
 	RequirementsReferenceDate *time.Time                 `json:"requirements_reference_date,omitempty"`
 	RequirementsPlan          *commonpb.RequirementsPlan `json:"requirements_plan,omitempty"`
 	ID                        uuid.UUID                  `json:"id"`
@@ -40,9 +41,10 @@ type ApplicationListItem struct {
 }
 
 type ApplicationForm struct {
-	AmountKopecks int64  `json:"amount_kopecks"`
-	TermMonths    int    `json:"term_months"`
-	Purpose       string `json:"purpose"`
+	AmountKopecks      int64  `json:"amount_kopecks"`
+	TermMonths         int    `json:"term_months"`
+	Purpose            string `json:"purpose"`
+	PurposeDescription string `json:"purpose_description,omitempty"`
 }
 
 type ApplicationDocument struct {
@@ -89,11 +91,18 @@ type CreateApplicationParams struct {
 }
 
 type ApplicationPatch struct {
-	Company        *Company
-	AmountKopecks  *int64
-	AmountCurrency string
-	TermMonths     *int
-	Purpose        *string
+	Company            *Company
+	AmountKopecks      *int64
+	AmountCurrency     string
+	TermMonths         *int
+	Purpose            *string
+	PurposeDescription *string
+}
+
+type DeleteApplicationParams struct {
+	OrgID           uuid.UUID
+	ApplicationID   uuid.UUID
+	ExpectedVersion int64
 }
 
 type UpdateApplicationParams struct {

@@ -33,7 +33,7 @@ func (h *Handler) Handle(ctx context.Context, request generated.ListClientProduc
 
 func validPurpose(value string) bool {
 	switch common.PurposeTag(value) {
-	case common.WORKINGCAPITAL, common.EQUIPMENT, common.EXPANSION:
+	case common.PurposeTagWORKINGCAPITAL, common.PurposeTagEQUIPMENT, common.PurposeTagEXPANSION, common.PurposeTagOTHER:
 		return true
 	default:
 		return false

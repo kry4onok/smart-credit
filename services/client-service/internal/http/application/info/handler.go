@@ -60,6 +60,7 @@ func (h *Handler) Handle(ctx context.Context, request generated.ProvideInfoReque
 			purpose := string(*request.Body.Fields.Purpose)
 			patch.Purpose = &purpose
 		}
+		patch.PurposeDescription = request.Body.Fields.PurposeDescription
 		params.Fields = &patch
 	}
 	if request.Body.DocumentIds != nil {

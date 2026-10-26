@@ -260,3 +260,14 @@ INSERT INTO products(id,version,code,name,description,purpose_tags,required_docu
 VALUES ('10000000-0000-4000-8000-000000000022',1,'SME_CASHFLOW_V2','Демо: денежный поток','Синтетическая оценка; подтверждение менеджером',ARRAY['WORKING_CAPITAL','EQUIPMENT','EXPANSION'],ARRAY[]::text[],10000000,500000000,6,36,1600,true,'sme-profile-v2') ON CONFLICT(id,version) DO NOTHING;
 INSERT INTO product_rules(product_id,product_version,min_company_age_months,max_amount_to_revenue_bps,max_overdue_days,rate_grade_a_bps,rate_grade_b_bps,offer_ttl_hours)
 VALUES ('10000000-0000-4000-8000-000000000022',1,12,5000,90,1600,1800,72) ON CONFLICT(product_id,product_version) DO NOTHING;
+
+-- Universal demo financing supports a described mixed/other purpose explicitly.
+BEGIN;
+UPDATE products SET is_active=false WHERE id='10000000-0000-4000-8000-000000000022' AND version=1;
+INSERT INTO products(id,version,code,name,description,purpose_tags,required_document_types,min_amount_kopecks,max_amount_kopecks,min_term_months,max_term_months,indicative_rate_bps,is_active,requirements_policy_version)
+SELECT id,2,code,name,description,ARRAY['WORKING_CAPITAL','EQUIPMENT','EXPANSION','OTHER'],required_document_types,min_amount_kopecks,max_amount_kopecks,min_term_months,max_term_months,indicative_rate_bps,true,requirements_policy_version
+FROM products WHERE id='10000000-0000-4000-8000-000000000022' AND version=1 ON CONFLICT(id,version) DO NOTHING;
+INSERT INTO product_rules(product_id,product_version,min_company_age_months,max_amount_to_revenue_bps,max_overdue_days,rate_grade_a_bps,rate_grade_b_bps,offer_ttl_hours)
+SELECT product_id,2,min_company_age_months,max_amount_to_revenue_bps,max_overdue_days,rate_grade_a_bps,rate_grade_b_bps,offer_ttl_hours FROM product_rules
+WHERE product_id='10000000-0000-4000-8000-000000000022' AND product_version=1 ON CONFLICT(product_id,product_version) DO NOTHING;
+COMMIT;

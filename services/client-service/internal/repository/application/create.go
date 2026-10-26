@@ -40,16 +40,20 @@ func (r *Repository) Create(ctx context.Context, params model.CreateApplicationP
 	if errors.Is(err, pgx.ErrNoRows) {
 		var storedHash []byte
 		var responseBody []byte
+		var responseStatus int
 		err = tx.QueryRow(ctx, `
-			SELECT request_hash, response_body
+			SELECT request_hash, response_body, response_status
 			FROM idempotency_keys
 			WHERE actor_id = $1 AND route = $2 AND idempotency_key = $3`,
-			params.UserID, idempotencyRoute, params.IdempotencyID).Scan(&storedHash, &responseBody)
+			params.UserID, idempotencyRoute, params.IdempotencyID).Scan(&storedHash, &responseBody, &responseStatus)
 		if err != nil {
 			return model.Application{}, fmt.Errorf("load idempotency record: %w", err)
 		}
 		if !bytes.Equal(storedHash, requestHash[:]) {
 			return model.Application{}, domain.ErrIdempotencyConflict
+		}
+		if responseStatus == 410 {
+			return model.Application{}, domain.ErrApplicationNotFound
 		}
 		var replay model.Application
 		if err := json.Unmarshal(responseBody, &replay); err != nil {
@@ -105,7 +109,7 @@ func (r *Repository) Create(ctx context.Context, params model.CreateApplicationP
 			return model.Application{}, err
 		}
 	}
-	application.AllowedActions = []string{"EDIT_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT"}
+	application.AllowedActions = []string{"EDIT_DRAFT", "DELETE_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT"}
 
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO timeline_entries (

@@ -3,6 +3,7 @@ import { clientApi } from "../../api/http";
 import { call } from "../../api/problem";
 import type { ApplicationFormPatch, ClientApplication, Offer, Product, PurposeTag } from "../../api/types";
 import { months, moneyShort, rub } from "../../lib/format";
+import { purposeLabel } from "../../lib/labels";
 
 let cache: Promise<Product[]> | null = null;
 
@@ -47,7 +48,7 @@ export function prefillToParams(p: Prefill): Record<string, string> {
   return out;
 }
 
-export type DraftValues = { amount?: number | null; term?: number; purpose?: PurposeTag };
+export type DraftValues = { amount?: number | null; term?: number; purpose?: PurposeTag; description?: string };
 
 const draftKey = (id: string) => `smart-credit:draft:${id}`;
 
@@ -58,6 +59,15 @@ export function rememberDraft(id: string, values: DraftValues) {
     localStorage.setItem(draftKey(id), JSON.stringify(values));
   } catch {
     // Storage can be unavailable (private window); the fields then start empty after a reload.
+  }
+}
+
+// forgetDraft drops the browser copy of a deleted draft.
+export function forgetDraft(id: string) {
+  try {
+    localStorage.removeItem(draftKey(id));
+  } catch {
+    // Nothing to clean when storage is unavailable.
   }
 }
 
@@ -98,7 +108,9 @@ export async function createDraft(product: Product, prefill: Prefill, key: strin
   const patch: ApplicationFormPatch = {};
   if (prefill.amount) patch.amount = rub(prefill.amount);
   if (prefill.term) patch.term_months = prefill.term;
-  const purpose = prefill.purpose && product.purpose_tags.includes(prefill.purpose) ? prefill.purpose : product.purpose_tags.length === 1 ? product.purpose_tags[0] : undefined;
+  // The chosen purpose is kept only when the product supports it; it is never swapped for the
+  // product's own purpose, so the client decides in the draft.
+  const purpose = prefill.purpose && product.purpose_tags.includes(prefill.purpose) ? prefill.purpose : undefined;
   if (purpose) patch.purpose = purpose;
   if (!Object.keys(patch).length) return draft;
   rememberDraft(draft.id, { amount: prefill.amount, term: prefill.term, purpose });
@@ -115,8 +127,9 @@ export async function createDraft(product: Product, prefill: Prefill, key: strin
   }
 }
 
-// Why a product does not fit the requested amount and term; null when it fits.
-export function misfit(p: Product, amount: number | undefined, term: number | undefined): string | null {
+// Why a product does not fit the requested purpose, amount and term; null when it fits.
+export function misfit(p: Product, amount: number | undefined, term: number | undefined, purpose?: PurposeTag): string | null {
+  if (purpose && !p.purpose_tags.includes(purpose)) return `Цель «${purposeLabel[purpose]}» продукт не финансирует`;
   if (amount !== undefined && amount < p.min_amount.amount_kopecks) return `Сумма от ${moneyShort(p.min_amount)}`;
   if (amount !== undefined && amount > p.max_amount.amount_kopecks) return `Сумма до ${moneyShort(p.max_amount)}`;
   if (term !== undefined && term < p.min_term_months) return `Срок от ${months(p.min_term_months)}`;

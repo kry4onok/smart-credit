@@ -96,46 +96,49 @@ export function CashFlowChart({ history, base, stress, showPayments = true, capt
           </span>
         )}
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`${caption}: ${months.length} месяцев`}>
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} className={t === 0 ? "grid zero" : "grid"} />
-            <text x={PAD.left - 8} y={y(t) + 4} className="tick" textAnchor="end">
-              {axisMoney(t)}
-            </text>
-          </g>
-        ))}
-        {firstForecast > 0 && (
-          <g>
-            <line x1={x(firstForecast) - step / 2} x2={x(firstForecast) - step / 2} y1={PAD.top} y2={H - PAD.bottom} className="divider" />
-            <text x={x(firstForecast) - step / 2 + 6} y={PAD.top + 10} className="tick">
-              прогноз
-            </text>
-          </g>
-        )}
-        {months.map((m, i) => {
-          const top = y(Math.max(m.cfads, 0));
-          const h = Math.max(1, Math.abs(y(m.cfads) - y(0)));
-          return (
-            <rect key={m.period + m.kind} x={x(i) - barW / 2} y={m.cfads >= 0 ? top : y(0)} width={barW} height={h} rx={2} className={`bar bar-${m.kind}${m.cfads < 0 ? " bar-neg" : ""}`}>
-              <title>
-                {periodLabel(m.period)}: поток {tooltipMoney(m.cfads)}
-                {m.payment ? `, платежи ${tooltipMoney(m.payment)}` : ""}
-                {m.stress !== null ? `, в стрессе ${tooltipMoney(m.stress)}` : ""}
-              </title>
-            </rect>
-          );
-        })}
-        {hasStress && <polyline points={line("stress")} className="line-stress" />}
-        {hasPayments && <polyline points={line("payment")} className="line-payment" />}
-        {months.map((m, i) =>
-          i % labelEvery === 0 ? (
-            <text key={`l${m.period}${m.kind}`} x={x(i)} y={H - PAD.bottom + 16} className="tick" textAnchor="middle">
-              {periodLabel(m.period)}
-            </text>
-          ) : null,
-        )}
-      </svg>
+      {/* On phones the chart keeps its scale and scrolls sideways instead of shrinking its labels. */}
+      <div className="chart-scroll">
+        <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`${caption}: ${months.length} месяцев`}>
+          {ticks.map((t) => (
+            <g key={t}>
+              <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} className={t === 0 ? "grid zero" : "grid"} />
+              <text x={PAD.left - 8} y={y(t) + 4} className="tick" textAnchor="end">
+                {axisMoney(t)}
+              </text>
+            </g>
+          ))}
+          {firstForecast > 0 && (
+            <g>
+              <line x1={x(firstForecast) - step / 2} x2={x(firstForecast) - step / 2} y1={PAD.top} y2={H - PAD.bottom} className="divider" />
+              <text x={x(firstForecast) - step / 2 + 6} y={PAD.top + 10} className="tick">
+                прогноз
+              </text>
+            </g>
+          )}
+          {months.map((m, i) => {
+            const top = y(Math.max(m.cfads, 0));
+            const h = Math.max(1, Math.abs(y(m.cfads) - y(0)));
+            return (
+              <rect key={m.period + m.kind} x={x(i) - barW / 2} y={m.cfads >= 0 ? top : y(0)} width={barW} height={h} rx={2} className={`bar bar-${m.kind}${m.cfads < 0 ? " bar-neg" : ""}`}>
+                <title>
+                  {periodLabel(m.period)}: поток {tooltipMoney(m.cfads)}
+                  {m.payment ? `, платежи ${tooltipMoney(m.payment)}` : ""}
+                  {m.stress !== null ? `, в стрессе ${tooltipMoney(m.stress)}` : ""}
+                </title>
+              </rect>
+            );
+          })}
+          {hasStress && <polyline points={line("stress")} className="line-stress" />}
+          {hasPayments && <polyline points={line("payment")} className="line-payment" />}
+          {months.map((m, i) =>
+            i % labelEvery === 0 ? (
+              <text key={`l${m.period}${m.kind}`} x={x(i)} y={H - PAD.bottom + 16} className="tick" textAnchor="middle">
+                {periodLabel(m.period)}
+              </text>
+            ) : null,
+          )}
+        </svg>
+      </div>
     </figure>
   );
 }

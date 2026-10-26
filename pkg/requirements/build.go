@@ -25,6 +25,7 @@ var fieldLabels = map[string]string{
 	"form.amount":               "Сумма кредита",
 	"form.term_months":          "Срок кредита",
 	"form.purpose":              "Цель кредита",
+	"form.purpose_description":  "На что нужны деньги",
 }
 
 var documentLabels = map[string]string{
@@ -142,6 +143,9 @@ func Build(in Input) (*commonpb.RequirementsPlan, error) {
 	finance := c.GetFinancialPeriod()
 	fields := []*commonpb.Requirement{
 		field("company.legal_form", legalPresent), field("company.tax_periods", taxPresent), field("company.revenue_12m", c.Revenue_12M != nil), field("company.profit_12m", c.Profit_12M != nil), field("company.obligations", c.Obligations != nil), field("company.financial_period", finance != nil), field("company.financial_basis", c.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED), field("company.obligations_as_of", c.GetObligationsAsOf() != ""), field("form.amount", f.GetAmount() != nil), field("form.term_months", f.GetTermMonths() > 0), field("form.purpose", f.GetPurpose() != commonpb.PurposeTag_PURPOSE_TAG_UNSPECIFIED),
+	}
+	if f.GetPurpose() == commonpb.PurposeTag_PURPOSE_TAG_OTHER {
+		fields = append(fields, field("form.purpose_description", strings.TrimSpace(f.GetPurposeDescription()) != ""))
 	}
 	for _, item := range fields {
 		if in.Product.GetRequirementsPolicyVersion() == SourceFirstPolicyVersion && strings.HasPrefix(item.FieldPath, "company.") && item.FieldPath != "company.legal_form" {

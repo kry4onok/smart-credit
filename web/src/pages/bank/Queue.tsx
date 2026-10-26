@@ -8,7 +8,7 @@ import { Badge, ErrorNote, Loading, useAction, useTitle } from "../../components
 import { age, money, caseNumber, shortId } from "../../lib/format";
 import { bankStatusLabel, bankStatusTone } from "../../lib/labels";
 import { appendPage, mergeFirstPage, usePolling } from "../../lib/util";
-import { QueueSummary } from "./QueueSummary";
+import { QueueSummary, isStale } from "./QueueSummary";
 
 const statuses = Object.keys(bankStatusLabel) as BankStatus[];
 
@@ -17,6 +17,8 @@ export function QueuePage() {
   const [params, setParams] = useSearchParams();
   const status = (params.get("status") as BankStatus | null) ?? undefined;
   const assignee = params.get("assignee") ?? undefined;
+  // «Ждут больше суток»: the API has no age filter, so the loaded cases are narrowed here.
+  const stale = params.get("waiting") === "day";
   const [items, setItems] = useState<CaseListItem[] | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -64,8 +66,12 @@ export function QueuePage() {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
+    // The «больше суток» selection only makes sense for manual review.
+    if (key === "status") next.delete("waiting");
     setParams(next);
   }
+
+  const rows = items && stale ? items.filter((c) => isStale(c)).sort((a, b) => a.created_at.localeCompare(b.created_at)) : items;
 
   return (
     <>
@@ -77,7 +83,7 @@ export function QueuePage() {
           items={all.items}
           partial={all.partial}
           me={user?.id}
-          onFilter={(f) => setParams({ ...(f.status ? { status: f.status } : {}), ...(f.assignee ? { assignee: f.assignee } : {}) })}
+          onFilter={(f) => setParams({ ...(f.status ? { status: f.status } : {}), ...(f.assignee ? { assignee: f.assignee } : {}), ...(f.stale ? { waiting: "day" } : {}) })}
         />
       )}
       <div className="filters">
@@ -101,11 +107,19 @@ export function QueuePage() {
           </select>
         </label>
       </div>
+      {stale && (
+        <p className="note note-attention">
+          Показаны дела на ручном разборе, которые ждут больше суток, — сначала самые старые.
+          <button type="button" className="btn btn-quiet btn-sm" onClick={() => filter("waiting", "")}>
+            Показать все
+          </button>
+        </p>
+      )}
       <ErrorNote error={error} onRetry={load} />
       <ErrorNote error={pager.error} onRetry={more} />
       {!items && !error && <Loading />}
-      {items && items.length === 0 && <p className="empty panel">Под эти фильтры дел нет.</p>}
-      {items && items.length > 0 && (
+      {rows && rows.length === 0 && <p className="empty panel">Под эти фильтры дел нет.</p>}
+      {rows && rows.length > 0 && (
         <div className="table-wrap panel">
           <table className="cases">
             <thead>
@@ -118,7 +132,7 @@ export function QueuePage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((c) => (
+              {rows.map((c) => (
                 <tr key={c.id} className={c.status === "MANUAL_REVIEW" ? "row-manual" : ""}>
                   <td>
                     <Link to={`/bank/cases/${c.id}`}>{c.company_name ?? `Дело ${shortId(c.id)}`}</Link>

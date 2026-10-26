@@ -25,8 +25,7 @@ func (r *Repository) List(ctx context.Context, purpose *string) (model.ProductCa
 		       min_amount_kopecks, max_amount_kopecks, min_term_months,
 		       max_term_months, indicative_rate_bps, required_document_types, requirements_policy_version
 		FROM products
-		WHERE ($1::text IS NULL OR $1 = ANY(purpose_tags))
-		ORDER BY code, id`, purposeArg)
+		ORDER BY CASE WHEN $1::text IS NOT NULL AND $1 = ANY(purpose_tags) THEN 0 ELSE 1 END, code, id`, purposeArg)
 	if err != nil {
 		return model.ProductCatalog{}, fmt.Errorf("list products: %w", err)
 	}

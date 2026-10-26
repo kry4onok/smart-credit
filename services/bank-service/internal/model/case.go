@@ -85,10 +85,11 @@ type Company struct {
 }
 
 type SubmittedApplication struct {
-	AmountKopecks int64
-	TermMonths    int
-	Purpose       PurposeTag
-	DocumentTypes []DocumentType
+	AmountKopecks      int64
+	TermMonths         int
+	Purpose            PurposeTag
+	PurposeDescription string
+	DocumentTypes      []DocumentType
 }
 
 type Checks struct {

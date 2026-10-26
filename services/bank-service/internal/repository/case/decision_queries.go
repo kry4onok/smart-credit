@@ -26,7 +26,7 @@ const previewDecisionCase = `
 SELECT c.status,c.assignee_id,c.version,c.company_snapshot,c.documents_snapshot,c.purpose_tag,c.product_name,
        c.requirements_reference_date,COALESCE(p.requirements_policy_version,''),p.purpose_tags,p.required_document_types,
        COALESCE(p.min_amount_kopecks,0),COALESCE(p.max_amount_kopecks,0),COALESCE(p.min_term_months,0),COALESCE(p.max_term_months,0),
-       c.requested_amount_kopecks,c.requested_term_months
+       c.requested_amount_kopecks,c.requested_term_months,COALESCE(c.application_snapshot->>'purpose_description','')
 FROM cases c LEFT JOIN products p ON p.id=c.product_id AND p.version=c.product_version
 WHERE c.id=$1`
 
@@ -34,7 +34,7 @@ const lockDecisionCase = `
 SELECT c.status,c.assignee_id,c.version,c.company_snapshot,c.documents_snapshot,c.purpose_tag,
        c.requirements_reference_date,COALESCE(p.requirements_policy_version,''),p.purpose_tags,p.required_document_types,
        COALESCE(p.min_amount_kopecks,0),COALESCE(p.max_amount_kopecks,0),COALESCE(p.min_term_months,0),COALESCE(p.max_term_months,0),
-       c.requested_amount_kopecks,c.requested_term_months
+       c.requested_amount_kopecks,c.requested_term_months,COALESCE(c.application_snapshot->>'purpose_description','')
 FROM cases c LEFT JOIN products p ON p.id=c.product_id AND p.version=c.product_version
 WHERE c.id=$1
 FOR UPDATE OF c`

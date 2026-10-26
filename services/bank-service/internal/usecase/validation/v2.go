@@ -45,7 +45,7 @@ func evaluateV2(snapshot Snapshot, product Product) Outcome {
 	if !ok {
 		return manual("INVALID_PROFILE", "Неизвестная цель кредита")
 	}
-	form := &commonpb.ApplicationForm{Amount: &commonpb.Money{AmountKopecks: snapshot.AmountKopecks, Currency: "RUB"}, TermMonths: snapshot.TermMonths, Purpose: commonpb.PurposeTag(purpose)}
+	form := &commonpb.ApplicationForm{Amount: &commonpb.Money{AmountKopecks: snapshot.AmountKopecks, Currency: "RUB"}, TermMonths: snapshot.TermMonths, Purpose: commonpb.PurposeTag(purpose), PurposeDescription: snapshot.PurposeDescription}
 	pbProduct := &commonpb.Product{RequirementsPolicyVersion: product.PolicyVersion, MinAmount: &commonpb.Money{AmountKopecks: product.MinAmountKopecks, Currency: "RUB"}, MaxAmount: &commonpb.Money{AmountKopecks: product.MaxAmountKopecks, Currency: "RUB"}, MinTermMonths: product.MinTermMonths, MaxTermMonths: product.MaxTermMonths}
 	for _, tag := range product.PurposeTags {
 		value, ok := commonpb.PurposeTag_value["PURPOSE_TAG_"+tag]

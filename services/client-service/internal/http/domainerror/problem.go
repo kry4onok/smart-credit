@@ -73,7 +73,7 @@ func Map(ctx context.Context, err error) common.Problem {
 	case errors.Is(err, domain.ErrApplicationVersionConflict):
 		return Problem(ctx, http.StatusConflict, "APPLICATION_VERSION_CONFLICT", "Заявка уже изменена; обновите карточку и повторите запрос.")
 	case errors.Is(err, domain.ErrApplicationNotDraft):
-		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Редактировать можно только черновик заявки.")
+		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Редактировать и удалять можно только черновик заявки.")
 	case errors.Is(err, domain.ErrApplicationDocumentState):
 		return Problem(ctx, http.StatusConflict, "APPLICATION_STATE_CONFLICT", "Документ нельзя добавить в текущем состоянии заявки.")
 	case errors.Is(err, domain.ErrCompanyAlreadyExists):

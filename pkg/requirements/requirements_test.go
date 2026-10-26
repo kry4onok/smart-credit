@@ -273,3 +273,35 @@ func TestSourceFirstPeriodDoesNotDependOnLegacyFinancialFields(t *testing.T) {
 		t.Fatalf("legacy policy changed: %v %v", old, err)
 	}
 }
+
+func TestOtherPurposeRequiresDescriptionAndProductSupport(t *testing.T) {
+	c := &commonpb.CompanySnapshot{Inn: "9900000017", Name: "Demo", Okved: "47.11", RegisteredAt: "2020-01-01", LegalForm: commonpb.LegalForm_LEGAL_FORM_LLC}
+	p := &commonpb.Product{RequirementsPolicyVersion: SourceFirstPolicyVersion, MinAmount: &commonpb.Money{AmountKopecks: 1, Currency: "RUB"}, MaxAmount: &commonpb.Money{AmountKopecks: 100, Currency: "RUB"}, MinTermMonths: 1, MaxTermMonths: 12, PurposeTags: []commonpb.PurposeTag{commonpb.PurposeTag_PURPOSE_TAG_OTHER}}
+	f := &commonpb.ApplicationForm{Amount: &commonpb.Money{AmountKopecks: 10, Currency: "RUB"}, TermMonths: 6, Purpose: commonpb.PurposeTag_PURPOSE_TAG_OTHER}
+	ref, _ := day("2026-10-26")
+	for _, description := range []string{"", " \t", "Ремонт, техника и сырьё"} {
+		f.PurposeDescription = description
+		plan, err := Build(Input{Company: c, Product: p, Form: f, ReferenceDate: ref})
+		want := strings.TrimSpace(description) != ""
+		if err != nil || plan.CanSubmit != want {
+			t.Fatalf("description=%q plan=%v err=%v", description, plan, err)
+		}
+		found := false
+		for _, item := range plan.Items {
+			if item.FieldPath == "form.purpose_description" {
+				found = true
+				if (item.Status == commonpb.RequirementStatus_REQUIREMENT_STATUS_PROVIDED) != want {
+					t.Fatal(item)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("missing purpose description requirement")
+		}
+	}
+	p.PurposeTags = []commonpb.PurposeTag{commonpb.PurposeTag_PURPOSE_TAG_WORKING_CAPITAL}
+	plan, err := Build(Input{Company: c, Product: p, Form: f, ReferenceDate: ref})
+	if err != nil || plan.CanSubmit {
+		t.Fatalf("unsupported purpose plan=%v err=%v", plan, err)
+	}
+}

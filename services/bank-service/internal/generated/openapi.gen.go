@@ -527,8 +527,13 @@ type ScoreResultGrade string
 type SubmittedApplication struct {
 	Amount        externalRef0.Money          `json:"amount"`
 	DocumentTypes []externalRef0.DocumentType `json:"document_types"`
-	Purpose       externalRef0.PurposeTag     `json:"purpose"`
-	TermMonths    int                         `json:"term_months"`
+
+	// Purpose WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
+	Purpose externalRef0.PurposeTag `json:"purpose"`
+
+	// PurposeDescription Client explanation of intended spending, required for OTHER.
+	PurposeDescription *string `json:"purpose_description,omitempty"`
+	TermMonths         int     `json:"term_months"`
 }
 
 // BadRequest defines model for BadRequest.

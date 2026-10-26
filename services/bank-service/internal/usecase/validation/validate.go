@@ -11,12 +11,13 @@ import (
 )
 
 type Snapshot struct {
-	CompanyJSON   []byte
-	DocumentsJSON []byte
-	ReferenceDate *time.Time
-	AmountKopecks int64
-	TermMonths    int32
-	PurposeTag    string
+	CompanyJSON        []byte
+	DocumentsJSON      []byte
+	ReferenceDate      *time.Time
+	AmountKopecks      int64
+	TermMonths         int32
+	PurposeTag         string
+	PurposeDescription string
 }
 
 type Product struct {
@@ -72,7 +73,7 @@ func Evaluate(snapshot Snapshot, product Product) Outcome {
 		{company.GetObligations() == nil, "COMPANY_OBLIGATIONS"},
 		{snapshot.AmountKopecks <= 0, "APPLICATION_AMOUNT"},
 		{snapshot.TermMonths <= 0, "APPLICATION_TERM_MONTHS"},
-		{!contains(product.PurposeTags, snapshot.PurposeTag), "APPLICATION_PURPOSE"},
+		{!contains(product.PurposeTags, snapshot.PurposeTag) || (snapshot.PurposeTag == "OTHER" && strings.TrimSpace(snapshot.PurposeDescription) == ""), "APPLICATION_PURPOSE"},
 	} {
 		if item.missing {
 			result.RequiredFields = append(result.RequiredFields, item.field)

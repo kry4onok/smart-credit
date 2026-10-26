@@ -86,7 +86,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Каталог продуктов, опубликованный банком */
+        /**
+         * Каталог продуктов, опубликованный банком
+         * @description Returns the full catalog. Optional purpose is a ranking preference: matching products come first, then other products. Read purpose_tags to explain explicit restrictions; a product not supporting the purpose cannot accept that application.
+         */
         get: operations["listClientProducts"];
         put?: never;
         post?: never;
@@ -144,7 +147,11 @@ export interface paths {
         get: operations["getApplication"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Удалить собственный черновик
+         * @description Only DRAFT, scoped to the authenticated organization. If-Match is required. Status and version are checked under the same row lock as submit and update. Deletes the draft, document metadata and timeline atomically. File cleanup is queued durably and retried by client-service. No bank event is emitted. A repeated delete or another organization's ID returns 404.
+         */
+        delete: operations["deleteApplication"];
         options?: never;
         head?: never;
         /**
@@ -305,19 +312,24 @@ export interface components {
             version: number;
             profile: components["schemas"]["CompanyProfile"];
         };
+        /** @description Explain the intended spending. Required and nonblank for OTHER before submit. Optional for other purposes. PATCH omission preserves the value; empty string clears it. */
+        PurposeDescription: string;
         ApplicationForm: {
             amount: components["schemas"]["Money"];
             term_months: number;
             purpose: components["schemas"]["PurposeTag"];
+            purpose_description?: components["schemas"]["PurposeDescription"];
         };
         /** @description Partial loan fields plus optional full company snapshot, DRAFT only. Identity must match organization and existing snapshot. Omitted company preserves snapshot. Financial omission inside supplied company means unknown. */
         ApplicationFormPatch: {
             amount?: components["schemas"]["Money"];
             term_months?: number;
             purpose?: components["schemas"]["PurposeTag"];
+            purpose_description?: components["schemas"]["PurposeDescription"];
             company?: components["schemas"]["CompanyProfile"];
         };
         ClientApplication: {
+            purpose_description?: components["schemas"]["PurposeDescription"];
             id: components["schemas"]["Id"];
             product_id: components["schemas"]["Id"];
             /** Format: int64 */
@@ -329,7 +341,7 @@ export interface components {
             stage_label: string;
             next_action: string;
             /** @description Вычисляются сервером из статуса и ожидающего действия. */
-            allowed_actions: ("EDIT_DRAFT" | "UPLOAD_DOCUMENT" | "SUBMIT" | "PROVIDE_INFO" | "ACCEPT_OFFER" | "DECLINE_OFFER" | "SIGN" | "CANCEL")[];
+            allowed_actions: ("EDIT_DRAFT" | "DELETE_DRAFT" | "UPLOAD_DOCUMENT" | "SUBMIT" | "PROVIDE_INFO" | "ACCEPT_OFFER" | "DECLINE_OFFER" | "SIGN" | "CANCEL")[];
             /** @enum {string} */
             pending_action?: "INFO_SENT" | "ACCEPT_PENDING" | "DECLINE_PENDING" | "SIGN_PENDING" | "CANCEL_PENDING";
             documents: components["schemas"]["DocumentMetadata"][];
@@ -378,6 +390,7 @@ export interface components {
             amount?: components["schemas"]["Money"];
             term_months?: number;
             purpose?: components["schemas"]["PurposeTag"];
+            purpose_description?: components["schemas"]["PurposeDescription"];
         };
         /** Format: uuid */
         Id: string;
@@ -445,8 +458,11 @@ export interface components {
             /** Format: date */
             obligations_as_of?: string;
         };
-        /** @enum {string} */
-        PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION";
+        /**
+         * @description WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
+         * @enum {string}
+         */
+        PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION" | "OTHER";
         /** @enum {string} */
         DocumentType: "BANK_STATEMENT" | "BUSINESS_PLAN" | "ACCOUNTING_REPORT" | "MANAGEMENT_REPORT" | "TAX_DECLARATION_USN" | "TAX_DECLARATION_3NDFL" | "INCOME_LEDGER" | "PATENT" | "RECEIVABLES_PAYABLES";
         Product: {
@@ -899,6 +915,34 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    deleteApplication: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ETag из GET, равный версии ресурса в двойных кавычках. */
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                application_id: components["parameters"]["ApplicationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Черновик удалён. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateApplication: {

@@ -53,6 +53,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		defer workers.Done()
 		dependencies.BankEvents.Run(workerCtx, logger)
 	}()
+	workers.Add(1)
+	go func() { defer workers.Done(); dependencies.DocumentCleanup.Run(workerCtx, logger) }()
 	logger.Info("client-service started", "address", cfg.HTTP.Address)
 
 	select {

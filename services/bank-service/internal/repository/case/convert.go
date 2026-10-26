@@ -104,6 +104,7 @@ func scanCase(row rowScanner) (model.Case, error) {
 		&item.Application.AmountKopecks,
 		&item.Application.TermMonths,
 		&purpose,
+		&item.Application.PurposeDescription,
 		&documentTypes,
 		&documentsJSON,
 		&hasChecks,
@@ -253,7 +254,7 @@ func scanCase(row rowScanner) (model.Case, error) {
 		item.CompanyV2 = companyV2
 	}
 	if policyVersion != "" {
-		outcome := validation.Evaluate(validation.Snapshot{CompanyJSON: companyJSON, DocumentsJSON: documentsJSON, ReferenceDate: referenceDate, AmountKopecks: item.Application.AmountKopecks, TermMonths: int32(item.Application.TermMonths), PurposeTag: purpose}, validation.Product{Found: productFound, PolicyVersion: policyVersion, PurposeTags: productPurposeTags, RequiredDocumentTypes: productDocumentTypes, MinAmountKopecks: productMinAmount, MaxAmountKopecks: productMaxAmount, MinTermMonths: productMinTerm, MaxTermMonths: productMaxTerm})
+		outcome := validation.Evaluate(validation.Snapshot{CompanyJSON: companyJSON, DocumentsJSON: documentsJSON, ReferenceDate: referenceDate, AmountKopecks: item.Application.AmountKopecks, TermMonths: int32(item.Application.TermMonths), PurposeTag: purpose, PurposeDescription: item.Application.PurposeDescription}, validation.Product{Found: productFound, PolicyVersion: policyVersion, PurposeTags: productPurposeTags, RequiredDocumentTypes: productDocumentTypes, MinAmountKopecks: productMinAmount, MaxAmountKopecks: productMaxAmount, MinTermMonths: productMinTerm, MaxTermMonths: productMaxTerm})
 		item.RequirementsPlan = outcome.Plan
 	}
 	return item, nil

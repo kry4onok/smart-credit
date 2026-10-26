@@ -164,6 +164,10 @@ paths:
     get:
       tags:
       - Products
+      description: >-
+        Returns the full catalog. Optional purpose is a ranking preference: matching
+        products come first, then other products. Read purpose_tags to explain explicit
+        restrictions; a product not supporting the purpose cannot accept that application.
       operationId: listClientProducts
       summary: Каталог продуктов, опубликованный банком
       parameters:
@@ -304,6 +308,32 @@ paths:
                 "$ref": "#/components/schemas/ClientApplication"
         '404':
           "$ref": "#/components/responses/NotFound"
+    delete:
+      tags:
+      - Applications
+      operationId: deleteApplication
+      summary: Удалить собственный черновик
+      description: >-
+        Only DRAFT, scoped to the authenticated organization. If-Match is required.
+        Status and version are checked under the same row lock as submit and update.
+        Deletes the draft, document metadata and timeline atomically. File cleanup is
+        queued durably and retried by client-service. No bank event is emitted.
+        A repeated delete or another organization's ID returns 404.
+      parameters:
+      - "$ref": "./common.yaml#/components/parameters/IfMatch"
+      responses:
+        '204':
+          description: Черновик удалён.
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
     patch:
       tags:
       - Applications
@@ -629,6 +659,12 @@ components:
           minimum: 1
         profile:
           "$ref": "./common.yaml#/components/schemas/CompanyProfile"
+    PurposeDescription:
+      type: string
+      maxLength: 1000
+      description: >-
+        Explain the intended spending. Required and nonblank for OTHER before submit.
+        Optional for other purposes. PATCH omission preserves the value; empty string clears it.
     ApplicationForm:
       type: object
       additionalProperties: false
@@ -644,6 +680,8 @@ components:
           minimum: 1
         purpose:
           "$ref": "./common.yaml#/components/schemas/PurposeTag"
+        purpose_description:
+          "$ref": "#/components/schemas/PurposeDescription"
     ApplicationFormPatch:
       type: object
       additionalProperties: false
@@ -656,6 +694,8 @@ components:
           minimum: 1
         purpose:
           "$ref": "./common.yaml#/components/schemas/PurposeTag"
+        purpose_description:
+          "$ref": "#/components/schemas/PurposeDescription"
         company:
           "$ref": "./common.yaml#/components/schemas/CompanyProfile"
       description: Partial loan fields plus optional full company snapshot, DRAFT
@@ -678,6 +718,8 @@ components:
       - updated_at
       - version
       properties:
+        purpose_description:
+          "$ref": "#/components/schemas/PurposeDescription"
         id:
           "$ref": "./common.yaml#/components/schemas/Id"
         product_id:
@@ -704,6 +746,7 @@ components:
             type: string
             enum:
             - EDIT_DRAFT
+            - DELETE_DRAFT
             - UPLOAD_DOCUMENT
             - SUBMIT
             - PROVIDE_INFO
@@ -836,3 +879,5 @@ components:
           minimum: 1
         purpose:
           "$ref": "./common.yaml#/components/schemas/PurposeTag"
+        purpose_description:
+          "$ref": "#/components/schemas/PurposeDescription"

@@ -12,6 +12,7 @@ import (
 
 	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
+	applicationdelete "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/delete"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
 	applicationinfo "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/info"
@@ -142,6 +143,12 @@ func (applicationCancelMock) Execute(_ context.Context, params model.CancelAppli
 	return model.ActionAccepted{ApplicationID: params.ApplicationID, PendingAction: "CANCEL_PENDING"}, nil
 }
 
+type applicationDeleteMock struct{}
+
+func (applicationDeleteMock) Execute(context.Context, model.DeleteApplicationParams) error {
+	return nil
+}
+
 func TestRoutes(t *testing.T) {
 	handler := New(Params{
 		DB:                      pingerMock{},
@@ -149,6 +156,7 @@ func TestRoutes(t *testing.T) {
 		Verifier:                verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT", CanSubmit: true}},
 		CompanyGet:              companyget.New(companyMock{}),
 		ApplicationCreate:       applicationcreate.New(applicationMock{}),
+		ApplicationDelete:       applicationdelete.New(applicationDeleteMock{}),
 		ApplicationCancel:       applicationcancel.New(applicationCancelMock{}),
 		ApplicationDocument:     applicationdocument.New(applicationDocumentMock{}),
 		ApplicationGet:          applicationget.New(applicationGetMock{}),
@@ -183,11 +191,16 @@ func TestRoutes(t *testing.T) {
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/offer/accept", "Bearer test", 202},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/offer/decline", "Bearer test", 202},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/sign", "Bearer test", 202},
+		{http.MethodDelete, "/client/applications/00000000-0000-0000-0000-000000000001", "Bearer test", 204},
+		{http.MethodDelete, "/client/applications/00000000-0000-0000-0000-000000000001", "", 401},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/cancel", "Bearer test", 202},
 		{http.MethodPost, "/client/applications/00000000-0000-0000-0000-000000000001/cancel", "", 401},
 	} {
 		t.Run(tc.method+tc.path+tc.authorization, func(t *testing.T) {
 			request := httptest.NewRequest(tc.method, tc.path, nil)
+			if tc.method == http.MethodDelete {
+				request.Header.Set("If-Match", `"1"`)
+			}
 			if tc.method == http.MethodPost && strings.HasSuffix(tc.path, "/documents") {
 				body := bytes.NewBuffer(nil)
 				writer := multipart.NewWriter(body)

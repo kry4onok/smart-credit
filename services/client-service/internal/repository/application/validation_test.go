@@ -32,6 +32,7 @@ func TestSubmissionNamesAllMissingInputs(t *testing.T) {
 		t.Fatal("validation incorrectly reports already filled fields")
 	}
 	snapshot.application.Form.Purpose = "WORKING_CAPITAL"
+	snapshot.product.PurposeTags = []string{"WORKING_CAPITAL"}
 	if err := validateSubmitSnapshot(snapshot); err != nil {
 		t.Fatal(err)
 	}
