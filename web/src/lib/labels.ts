@@ -15,11 +15,25 @@ export const purposeHint: Record<PurposeTag, string> = {
 export const documentLabel: Record<DocumentType, string> = {
   BANK_STATEMENT: "Выписка по расчётному счёту",
   BUSINESS_PLAN: "Бизнес-план",
+  ACCOUNTING_REPORT: "Бухгалтерская отчётность",
+  MANAGEMENT_REPORT: "Управленческий отчёт",
+  TAX_DECLARATION_USN: "Декларация УСН",
+  TAX_DECLARATION_3NDFL: "Декларация 3-НДФЛ",
+  INCOME_LEDGER: "Книга учёта доходов и расходов",
+  PATENT: "Патент",
+  RECEIVABLES_PAYABLES: "Дебиторская и кредиторская задолженность",
 };
 
 export const documentHint: Record<DocumentType, string> = {
   BANK_STATEMENT: "За последние 12 месяцев, из любого банка",
   BUSINESS_PLAN: "Цель, план расходов и ожидаемый эффект",
+  ACCOUNTING_REPORT: "Баланс и отчёт о финансовых результатах за указанный период",
+  MANAGEMENT_REPORT: "Доходы, расходы и прибыль за указанный период",
+  TAX_DECLARATION_USN: "За год, указанный в запросе банка",
+  TAX_DECLARATION_3NDFL: "Доходы предпринимателя за указанный год",
+  INCOME_LEDGER: "Книга учёта, соответствующая налоговому режиму",
+  PATENT: "Выданный патент или комплект действующих патентов",
+  RECEIVABLES_PAYABLES: "Расшифровка на указанную дату",
 };
 
 export const infoFieldLabel: Record<InfoField, string> = {

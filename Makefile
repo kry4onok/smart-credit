@@ -23,7 +23,8 @@ AUTH_MIGRATIONS := services/auth/migrations
 BANK_MIGRATIONS := services/bank-service/migrations
 BANK_DEMO_SEED := services/bank-service/seeds/demo.sql
 CLIENT_MIGRATIONS := services/client-service/migrations
-OAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
+CONTRACT_GO_TOOLCHAIN ?= go1.27.1
+OAPI_CODEGEN := GOTOOLCHAIN=$(CONTRACT_GO_TOOLCHAIN) go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 OPENAPI_OUTPUT_DIRS := \
 	pkg/api/common \
@@ -39,6 +40,7 @@ OPENAPI_OUTPUT_DIRS := \
 
 help:
 	@echo 'Сначала: cp .env.example .env'
+	@echo 'make profile-seed-check Проверить профильные сиды и их связь с моками'
 	@echo 'make gen              Сгенерировать код из всех контрактов'
 	@echo 'make gen-openapi      Сгенерировать Go-код из OpenAPI'
 	@echo 'make gen-proto        Сгенерировать Go/Python из protobuf'
@@ -301,7 +303,7 @@ bank-db-down: require-env
 bank-db-status: require-env
 	$(GOOSE) -dir $(BANK_MIGRATIONS) postgres "$(BANK_DATABASE_URL)" status
 
-bank-demo-seed: require-env
+bank-demo-seed: bank-db-up
 	$(COMPOSE) exec -T postgres sh -c 'PGPASSWORD="$$BANK_DB_PASSWORD" psql -h 127.0.0.1 -U bank_user -d bank_db -v ON_ERROR_STOP=1' < $(BANK_DEMO_SEED)
 
 client-up: auth-up
@@ -392,3 +394,7 @@ web-down: require-env
 
 web-logs: require-env
 	$(COMPOSE) logs -f web
+
+.PHONY: profile-seed-check
+profile-seed-check:
+	go test ./seed/profile-requirements ./services/bureau-mocks/internal/persona ./services/bureau-mocks/internal/grpcserver

@@ -38,6 +38,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/backoffice/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Активные продукты банка для аналитика
+         * @description Ориентировочная ставка не является офертой. Контроферта проверяется по банковским правилам.
+         */
+        get: operations["listBankProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/backoffice/applications": {
         parameters: {
             query?: never;
@@ -64,6 +84,26 @@ export interface paths {
         };
         /** Дело с данными, проверками и скорингом */
         get: operations["getCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backoffice/applications/{application_id}/documents/{document_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Открыть оригинал вложения из карточки дела
+         * @description Банк проверяет право сотрудника и наличие документа в снимке дела, затем запрашивает неизменённый файл у client-service. Финансовые данные из содержимого не извлекаются.
+         */
+        get: operations["getCaseDocumentContent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -175,6 +215,8 @@ export interface components {
             product_version: number;
             company: components["schemas"]["CompanyProfile"];
             application: components["schemas"]["SubmittedApplication"];
+            /** @description Метаданные вложений, полученные банком в событиях заявки. */
+            documents: components["schemas"]["DocumentMetadata"][];
             checks?: components["schemas"]["Checks"];
             score?: components["schemas"]["ScoreResult"];
             triggered_rules?: string[];
@@ -183,7 +225,7 @@ export interface components {
             assignee_id?: components["schemas"]["Id"];
             info_request?: components["schemas"]["InfoRequest"];
             offer?: components["schemas"]["Offer"];
-            /** @description Текст результата */
+            /** @description Текст результата, опубликованный клиенту. */
             public_reason?: string;
             allowed_actions: ("TAKE" | "DECIDE" | "VIEW")[];
             /** Format: int64 */
@@ -192,6 +234,7 @@ export interface components {
             updated_at: components["schemas"]["Timestamp"];
             /** Format: int64 */
             version: number;
+            requirements_plan?: components["schemas"]["RequirementsPlan"];
         };
         SubmittedApplication: {
             amount: components["schemas"]["Money"];
@@ -214,7 +257,7 @@ export interface components {
         ScoreResult: {
             /** @enum {string} */
             assessment_status: "ASSESSED" | "INSUFFICIENT_DATA" | "UNSUPPORTED_INPUT";
-            /** @description Присутствует только при ASSESSED; чем выше значение */
+            /** @description Присутствует только при ASSESSED; чем выше значение, тем ниже риск. */
             score?: number;
             /** @enum {string} */
             grade: "UNSPECIFIED" | "A" | "B" | "C" | "D" | "E";
@@ -231,7 +274,7 @@ export interface components {
             attempt_id?: components["schemas"]["Id"];
             /**
              * Format: int64
-             * @description Версия входных данных оценки
+             * @description Версия входных данных оценки, отдельная от version дела.
              */
             input_revision?: number;
             /**
@@ -279,10 +322,12 @@ export interface components {
             term_months: number;
             rate_bps: number;
         };
+        /** @description For v2 send selected requirement_ids from current server plan and empty legacy arrays. Server resolves complete definitions; no client-supplied requirement definitions. Both formats together rejected. */
         InfoRequestDraft: {
             message: string;
             required_fields: components["schemas"]["InfoField"][];
             required_document_types: components["schemas"]["DocumentType"][];
+            requirement_ids?: string[];
         };
         AuditEntry: {
             id: components["schemas"]["Id"];
@@ -299,21 +344,39 @@ export interface components {
             items: components["schemas"]["AuditEntry"][];
             next_cursor?: string | null;
         };
-        /** @enum {string} */
-        BankStatus: "SUBMITTED" | "VALIDATION" | "NEEDS_INFO" | "ENRICHMENT" | "SCORING" | "DECISION" | "MANUAL_REVIEW" | "OFFER" | "COUNTER_OFFER" | "OFFER_ACCEPTED" | "SIGNING" | "DISBURSED" | "REJECTED" | "CANCELLED" | "EXPIRED";
         /** Format: uuid */
         Id: string;
+        /** @enum {string} */
+        PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION";
         Money: {
             /** Format: int64 */
             amount_kopecks: number;
             /** @constant */
             currency: "RUB";
         };
-        /**
-         * Format: date-time
-         * @description RFC 3339, UTC.
-         */
-        Timestamp: string;
+        /** @enum {string} */
+        DocumentType: "BANK_STATEMENT" | "BUSINESS_PLAN" | "ACCOUNTING_REPORT" | "MANAGEMENT_REPORT" | "TAX_DECLARATION_USN" | "TAX_DECLARATION_3NDFL" | "INCOME_LEDGER" | "PATENT" | "RECEIVABLES_PAYABLES";
+        Product: {
+            id: components["schemas"]["Id"];
+            code: string;
+            name: string;
+            description: string;
+            purpose_tags: components["schemas"]["PurposeTag"][];
+            min_amount: components["schemas"]["Money"];
+            max_amount: components["schemas"]["Money"];
+            min_term_months: number;
+            max_term_months: number;
+            /** @description Не является офертой. */
+            indicative_rate_bps?: number;
+            required_document_types: components["schemas"]["DocumentType"][];
+            /** Format: int64 */
+            version: number;
+            /**
+             * @description Absent means legacy required_document_types. Versioned with product. v2 requires required_document_types=[]; never combine both policies.
+             * @enum {string}
+             */
+            requirements_policy_version?: "sme-profile-v1";
+        };
         Problem: {
             /**
              * Format: uri-reference
@@ -327,37 +390,98 @@ export interface components {
             code: string;
             trace_id: string;
         };
+        /** @enum {string} */
+        BankStatus: "SUBMITTED" | "VALIDATION" | "NEEDS_INFO" | "ENRICHMENT" | "SCORING" | "DECISION" | "MANUAL_REVIEW" | "OFFER" | "COUNTER_OFFER" | "OFFER_ACCEPTED" | "SIGNING" | "DISBURSED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+        /**
+         * Format: date-time
+         * @description RFC 3339, UTC.
+         */
+        Timestamp: string;
         SignedMoney: {
             /** Format: int64 */
             amount_kopecks: number;
             /** @constant */
             currency: "RUB";
         };
+        /** @enum {string} */
+        LegalForm: "IP" | "LLC";
+        /** @enum {string} */
+        TaxRegime: "OSNO" | "USN_INCOME" | "USN_INCOME_EXPENSE" | "PSN" | "AUSN_INCOME" | "AUSN_INCOME_EXPENSE" | "ESHN" | "NPD" | "OTHER" | "UNKNOWN";
+        TaxPeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to?: string;
+            regimes: components["schemas"]["TaxRegime"][];
+            /** @enum {string} */
+            vat_status: "UNKNOWN" | "EXEMPT" | "PAYER";
+        };
+        DatePeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        /** @description Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified. */
         CompanyProfile: {
             inn: string;
             name: string;
             okved: string;
             /** Format: date */
             registered_at: string;
-            revenue_12m: components["schemas"]["Money"];
-            profit_12m: components["schemas"]["SignedMoney"];
-            obligations: components["schemas"]["Money"];
+            revenue_12m?: components["schemas"]["Money"];
+            profit_12m?: components["schemas"]["SignedMoney"];
+            obligations?: components["schemas"]["Money"];
+            /** @constant */
+            profile_schema_version?: 2;
+            legal_form?: components["schemas"]["LegalForm"];
+            tax_periods?: components["schemas"]["TaxPeriod"][];
+            financial_period?: components["schemas"]["DatePeriod"];
+            /** @enum {string} */
+            financial_basis?: "MANAGEMENT" | "ACCOUNTING" | "TAX" | "UNKNOWN";
+            /** Format: date */
+            obligations_as_of?: string;
         };
-        /** @enum {string} */
-        PurposeTag: "WORKING_CAPITAL" | "EQUIPMENT" | "EXPANSION";
-        /** @enum {string} */
-        DocumentType: "BANK_STATEMENT" | "BUSINESS_PLAN";
+        DocumentMetadata: {
+            id: components["schemas"]["Id"];
+            document_type: components["schemas"]["DocumentType"];
+            file_name: string;
+            sha256: string;
+            uploaded_at: components["schemas"]["Timestamp"];
+            is_mock: boolean;
+            requirement_id?: string;
+            coverage_period?: components["schemas"]["DatePeriod"];
+        };
         /**
          * @description Поле снимка конкретной заявки, которое банк просит уточнить.
          * @enum {string}
          */
         InfoField: "COMPANY_REVENUE_12M" | "COMPANY_PROFIT_12M" | "COMPANY_OBLIGATIONS" | "APPLICATION_AMOUNT" | "APPLICATION_TERM_MONTHS" | "APPLICATION_PURPOSE";
+        Requirement: {
+            id: string;
+            code: string;
+            label: string;
+            reason: string;
+            /** @enum {string} */
+            kind: "FIELD" | "DOCUMENT";
+            /** @enum {string} */
+            required_at: "SUBMIT" | "ASSESSMENT" | "ON_REQUEST";
+            /** @enum {string} */
+            status: "MISSING" | "PROVIDED";
+            field_path?: string;
+            accepted_document_types: components["schemas"]["DocumentType"][];
+            period?: components["schemas"]["DatePeriod"];
+            tax_regime?: components["schemas"]["TaxRegime"];
+            document_ids: components["schemas"]["Id"][];
+        };
+        /** @description Legacy uses required_fields/document_types; v2 uses nonempty requirements and both legacy arrays empty. PROVIDED means supplied, never verified. */
         InfoRequest: {
             id: components["schemas"]["Id"];
             message: string;
             required_fields: components["schemas"]["InfoField"][];
             required_document_types: components["schemas"]["DocumentType"][];
             created_at: components["schemas"]["Timestamp"];
+            requirements?: components["schemas"]["Requirement"][];
         };
         Offer: {
             id: components["schemas"]["Id"];
@@ -373,6 +497,17 @@ export interface components {
             rate_bps: number;
             expires_at: components["schemas"]["Timestamp"];
             explanation: string;
+        };
+        RequirementsPlan: {
+            /** @enum {string} */
+            policy_version: "sme-profile-v1";
+            /** Format: date */
+            reference_date: string;
+            can_submit: boolean;
+            /** @enum {string} */
+            route: "STANDARD" | "MANUAL_REVIEW";
+            reason_codes: string[];
+            items: components["schemas"]["Requirement"][];
         };
     };
     responses: {
@@ -490,6 +625,30 @@ export interface operations {
             };
         };
     };
+    listBankProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Активные версии продуктов из bank_db, отсортированные по коду и UUID. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Product"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listCases: {
         parameters: {
             query?: {
@@ -517,6 +676,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
         };
     };
@@ -541,7 +701,44 @@ export interface operations {
                     "application/json": components["schemas"]["BankCase"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getCaseDocumentContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: components["parameters"]["ApplicationId"];
+                document_id: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Исходные байты документа. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Client-service недоступен или содержимое не совпадает с метаданными. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     takeCase: {
@@ -571,6 +768,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -605,6 +803,7 @@ export interface operations {
                     "application/json": components["schemas"]["BankCase"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
@@ -635,6 +834,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
@@ -664,6 +864,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };

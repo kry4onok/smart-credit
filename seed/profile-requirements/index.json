@@ -1,0 +1,92 @@
+[
+  {
+    "file": "company-llc-usn.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "company-ip-usn.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "company-ip-psn.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "company-ip-usn-psn.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "company-unknown.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "company-missing-profit.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "company-zero-profit.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": true
+  },
+  {
+    "file": "product-v2.json",
+    "schema": "common#/components/schemas/Product",
+    "valid": true
+  },
+  {
+    "file": "requirements-plan-ip-psn.json",
+    "schema": "common#/components/schemas/RequirementsPlan",
+    "valid": true
+  },
+  {
+    "file": "application-draft-ip-psn.json",
+    "schema": "client#/components/schemas/ClientApplication",
+    "valid": true
+  },
+  {
+    "file": "application-needs-info.json",
+    "schema": "client#/components/schemas/ClientApplication",
+    "valid": true
+  },
+  {
+    "file": "bank-case-needs-info.json",
+    "schema": "bank#/components/schemas/BankCase",
+    "valid": true
+  },
+  {
+    "file": "document-statement.json",
+    "schema": "common#/components/schemas/DocumentMetadata",
+    "valid": true
+  },
+  {
+    "file": "provide-info-correction.json",
+    "schema": "client#/components/schemas/ProvideInfoRequest",
+    "valid": true
+  },
+  {
+    "file": "analyst-request-info.json",
+    "schema": "bank#/components/schemas/InfoRequestDraft",
+    "valid": true
+  },
+  {
+    "file": "draft-profile-patch.json",
+    "schema": "client#/components/schemas/ApplicationFormPatch",
+    "valid": true
+  },
+  {
+    "file": "invalid-client-verified.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": false
+  },
+  {
+    "file": "invalid-null-profit.json",
+    "schema": "common#/components/schemas/CompanyProfile",
+    "valid": false
+  }
+]

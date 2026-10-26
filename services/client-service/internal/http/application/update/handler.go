@@ -26,6 +26,9 @@ func (h *Handler) Handle(ctx context.Context, request generated.UpdateApplicatio
 	if request.Body == nil {
 		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION_FORM", "Форма заявки заполнена некорректно.")}, nil
 	}
+	if request.Body.Company != nil {
+		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "PROFILE_V2_NOT_ENABLED", "Обновление профиля в черновике будет доступно после подключения этапа 1.")}, nil
+	}
 	patch := model.ApplicationPatch{TermMonths: request.Body.TermMonths}
 	if request.Body.Purpose != nil {
 		purpose := string(*request.Body.Purpose)

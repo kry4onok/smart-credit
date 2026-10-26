@@ -95,11 +95,14 @@ type ApplicationForm struct {
 	TermMonths int                     `json:"term_months"`
 }
 
-// ApplicationFormPatch defines model for ApplicationFormPatch.
+// ApplicationFormPatch Partial loan fields plus optional full company snapshot, DRAFT only. Identity must match organization and existing snapshot. Omitted company preserves snapshot. Financial omission inside supplied company means unknown.
 type ApplicationFormPatch struct {
-	Amount     *externalRef0.Money      `json:"amount,omitempty"`
-	Purpose    *externalRef0.PurposeTag `json:"purpose,omitempty"`
-	TermMonths *int                     `json:"term_months,omitempty"`
+	Amount *externalRef0.Money `json:"amount,omitempty"`
+
+	// Company Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified.
+	Company    *externalRef0.CompanyProfile `json:"company,omitempty"`
+	Purpose    *externalRef0.PurposeTag     `json:"purpose,omitempty"`
+	TermMonths *int                         `json:"term_months,omitempty"`
 }
 
 // ApplicationListItem defines model for ApplicationListItem.
@@ -124,20 +127,25 @@ type ApplicationPage struct {
 type ClientApplication struct {
 	// AllowedActions Вычисляются сервером из статуса и ожидающего действия.
 	AllowedActions []ClientApplicationAllowedActions `json:"allowed_actions"`
-	Company        externalRef0.CompanyProfile       `json:"company"`
+
+	// Company Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified.
+	Company externalRef0.CompanyProfile `json:"company"`
 
 	// CreatedAt RFC 3339, UTC.
-	CreatedAt      externalRef0.Timestamp          `json:"created_at"`
-	Documents      []externalRef0.DocumentMetadata `json:"documents"`
-	Form           *ApplicationForm                `json:"form,omitempty"`
-	Id             externalRef0.Id                 `json:"id"`
-	InfoRequest    *externalRef0.InfoRequest       `json:"info_request,omitempty"`
-	NextAction     string                          `json:"next_action"`
-	Offer          *externalRef0.Offer             `json:"offer,omitempty"`
-	PendingAction  *ClientApplicationPendingAction `json:"pending_action,omitempty"`
-	ProductId      externalRef0.Id                 `json:"product_id"`
-	ProductVersion int64                           `json:"product_version"`
-	PublicReason   *string                         `json:"public_reason,omitempty"`
+	CreatedAt externalRef0.Timestamp          `json:"created_at"`
+	Documents []externalRef0.DocumentMetadata `json:"documents"`
+	Form      *ApplicationForm                `json:"form,omitempty"`
+	Id        externalRef0.Id                 `json:"id"`
+
+	// InfoRequest Legacy uses required_fields/document_types; v2 uses nonempty requirements and both legacy arrays empty. PROVIDED means supplied, never verified.
+	InfoRequest      *externalRef0.InfoRequest       `json:"info_request,omitempty"`
+	NextAction       string                          `json:"next_action"`
+	Offer            *externalRef0.Offer             `json:"offer,omitempty"`
+	PendingAction    *ClientApplicationPendingAction `json:"pending_action,omitempty"`
+	ProductId        externalRef0.Id                 `json:"product_id"`
+	ProductVersion   int64                           `json:"product_version"`
+	PublicReason     *string                         `json:"public_reason,omitempty"`
+	RequirementsPlan *externalRef0.RequirementsPlan  `json:"requirements_plan,omitempty"`
 
 	// StageLabel Понятное клиенту название текущего этапа.
 	StageLabel string                    `json:"stage_label"`
@@ -154,6 +162,13 @@ type ClientApplicationAllowedActions string
 // ClientApplicationPendingAction defines model for ClientApplication.PendingAction.
 type ClientApplicationPendingAction string
 
+// LoanFieldsPatch defines model for LoanFieldsPatch.
+type LoanFieldsPatch struct {
+	Amount     *externalRef0.Money      `json:"amount,omitempty"`
+	Purpose    *externalRef0.PurposeTag `json:"purpose,omitempty"`
+	TermMonths *int                     `json:"term_months,omitempty"`
+}
+
 // OfferActionRequest defines model for OfferActionRequest.
 type OfferActionRequest struct {
 	OfferId externalRef0.Id `json:"offer_id"`
@@ -164,7 +179,7 @@ type ProvideInfoRequest struct {
 	// Company Полный уточнённый снимок компании для этой заявки.
 	Company     *externalRef0.CompanyProfile `json:"company,omitempty"`
 	DocumentIds *[]externalRef0.Id           `json:"document_ids,omitempty"`
-	Fields      *ApplicationFormPatch        `json:"fields,omitempty"`
+	Fields      *LoanFieldsPatch             `json:"fields,omitempty"`
 	RequestId   externalRef0.Id              `json:"request_id"`
 }
 
@@ -180,6 +195,7 @@ type TimelineEntry struct {
 
 // VersionedCompany defines model for VersionedCompany.
 type VersionedCompany struct {
+	// Profile Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified.
 	Profile externalRef0.CompanyProfile `json:"profile"`
 	Version int64                       `json:"version"`
 }
@@ -240,8 +256,11 @@ type CancelApplicationParams struct {
 
 // AddApplicationDocumentMultipartBody defines parameters for AddApplicationDocument.
 type AddApplicationDocumentMultipartBody struct {
-	DocumentType externalRef0.DocumentType `json:"document_type"`
-	File         openapi_types.File        `json:"file"`
+	CoverageFrom  *openapi_types.Date       `json:"coverage_from,omitempty"`
+	CoverageTo    *openapi_types.Date       `json:"coverage_to,omitempty"`
+	DocumentType  externalRef0.DocumentType `json:"document_type"`
+	File          openapi_types.File        `json:"file"`
+	RequirementId *string                   `json:"requirement_id,omitempty"`
 }
 
 // AddApplicationDocumentParams defines parameters for AddApplicationDocument.

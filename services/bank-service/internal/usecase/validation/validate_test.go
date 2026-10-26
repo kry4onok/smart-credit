@@ -83,3 +83,12 @@ func TestEvaluateUnknownProductAndMalformedSnapshot(t *testing.T) {
 		t.Fatalf("malformed snapshot outcome = %+v", result)
 	}
 }
+
+func TestV2ProfileDoesNotUseLegacyDocumentPolicy(t *testing.T) {
+	snapshot := completeSnapshot()
+	snapshot.CompanyJSON = []byte(strings.Replace(string(snapshot.CompanyJSON), `"inn":`, `"profile_schema_version":2,"inn":`, 1))
+	result := Evaluate(snapshot, testProduct())
+	if result.Status != model.CaseStatusManualReview || result.Reason != "PROFILE_V2_NOT_ENABLED" {
+		t.Fatalf("unexpected legacy processing: %+v", result)
+	}
+}

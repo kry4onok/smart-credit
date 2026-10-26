@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19proto/common/common.proto\x12\x12smartcredit.common\x1a\x1fgoogle/protobuf/timestamp.proto\"1\n\x05Money\x12\x16\n\x0e\x61mount_kopecks\x18\x01 \x01(\x03\x12\x10\n\x08\x63urrency\x18\x02 \x01(\t\"\xe1\x01\n\x0f\x43ompanySnapshot\x12\x0b\n\x03inn\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05okved\x18\x03 \x01(\t\x12\x15\n\rregistered_at\x18\x04 \x01(\t\x12.\n\x0brevenue_12m\x18\x05 \x01(\x0b\x32\x19.smartcredit.common.Money\x12-\n\nprofit_12m\x18\x06 \x01(\x0b\x32\x19.smartcredit.common.Money\x12.\n\x0bobligations\x18\x07 \x01(\x0b\x32\x19.smartcredit.common.Money\"\xc5\x01\n\x10\x44ocumentMetadata\x12\x13\n\x0b\x64ocument_id\x18\x01 \x01(\t\x12\x37\n\rdocument_type\x18\x02 \x01(\x0e\x32 .smartcredit.common.DocumentType\x12\x11\n\tfile_name\x18\x03 \x01(\t\x12\x0e\n\x06sha256\x18\x04 \x01(\t\x12/\n\x0buploaded_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0f\n\x07is_mock\x18\x06 \x01(\x08\"\x82\x01\n\x0f\x41pplicationForm\x12)\n\x06\x61mount\x18\x01 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x13\n\x0bterm_months\x18\x02 \x01(\x05\x12/\n\x07purpose\x18\x03 \x01(\x0e\x32\x1e.smartcredit.common.PurposeTag\"\xa0\x02\n\x05Offer\x12\x10\n\x08offer_id\x18\x01 \x01(\t\x12+\n\x04kind\x18\x02 \x01(\x0e\x32\x1d.smartcredit.common.OfferKind\x12)\n\x06\x61mount\x18\x03 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x13\n\x0bterm_months\x18\x04 \x01(\x05\x12\x10\n\x08rate_bps\x18\x05 \x01(\x05\x12.\n\nexpires_at\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x13\n\x0b\x65xplanation\x18\x07 \x01(\t\x12\x12\n\nproduct_id\x18\x08 \x01(\t\x12\x17\n\x0fproduct_version\x18\t \x01(\x03\x12\x14\n\x0cproduct_name\x18\n \x01(\t\"\xdd\x01\n\x0bInfoRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x36\n\x0frequired_fields\x18\x03 \x03(\x0e\x32\x1d.smartcredit.common.InfoField\x12\x41\n\x17required_document_types\x18\x04 \x03(\x0e\x32 .smartcredit.common.DocumentType\x12.\n\ncreated_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\x85\x03\n\x07Product\x12\x12\n\nproduct_id\x18\x01 \x01(\t\x12\x0c\n\x04\x63ode\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x34\n\x0cpurpose_tags\x18\x05 \x03(\x0e\x32\x1e.smartcredit.common.PurposeTag\x12-\n\nmin_amount\x18\x06 \x01(\x0b\x32\x19.smartcredit.common.Money\x12-\n\nmax_amount\x18\x07 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x17\n\x0fmin_term_months\x18\x08 \x01(\x05\x12\x17\n\x0fmax_term_months\x18\t \x01(\x05\x12\x1b\n\x13indicative_rate_bps\x18\n \x01(\x05\x12\x41\n\x17required_document_types\x18\x0b \x03(\x0e\x32 .smartcredit.common.DocumentType\x12\x0f\n\x07version\x18\x0c \x01(\x03*\x80\x01\n\nPurposeTag\x12\x1b\n\x17PURPOSE_TAG_UNSPECIFIED\x10\x00\x12\x1f\n\x1bPURPOSE_TAG_WORKING_CAPITAL\x10\x01\x12\x19\n\x15PURPOSE_TAG_EQUIPMENT\x10\x02\x12\x19\n\x15PURPOSE_TAG_EXPANSION\x10\x03*p\n\x0c\x44ocumentType\x12\x1d\n\x19\x44OCUMENT_TYPE_UNSPECIFIED\x10\x00\x12 \n\x1c\x44OCUMENT_TYPE_BANK_STATEMENT\x10\x01\x12\x1f\n\x1b\x44OCUMENT_TYPE_BUSINESS_PLAN\x10\x02*[\n\tOfferKind\x12\x1a\n\x16OFFER_KIND_UNSPECIFIED\x10\x00\x12\x14\n\x10OFFER_KIND_OFFER\x10\x01\x12\x1c\n\x18OFFER_KIND_COUNTER_OFFER\x10\x02*\x81\x02\n\tInfoField\x12\x1a\n\x16INFO_FIELD_UNSPECIFIED\x10\x00\x12\"\n\x1eINFO_FIELD_COMPANY_REVENUE_12M\x10\x01\x12!\n\x1dINFO_FIELD_COMPANY_PROFIT_12M\x10\x02\x12\"\n\x1eINFO_FIELD_COMPANY_OBLIGATIONS\x10\x03\x12!\n\x1dINFO_FIELD_APPLICATION_AMOUNT\x10\x04\x12&\n\"INFO_FIELD_APPLICATION_TERM_MONTHS\x10\x05\x12\"\n\x1eINFO_FIELD_APPLICATION_PURPOSE\x10\x06\x42NZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common;commonpbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19proto/common/common.proto\x12\x12smartcredit.common\x1a\x1fgoogle/protobuf/timestamp.proto\"1\n\x05Money\x12\x16\n\x0e\x61mount_kopecks\x18\x01 \x01(\x03\x12\x10\n\x08\x63urrency\x18\x02 \x01(\t\"\x9a\x04\n\x0f\x43ompanySnapshot\x12\x0b\n\x03inn\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05okved\x18\x03 \x01(\t\x12\x15\n\rregistered_at\x18\x04 \x01(\t\x12.\n\x0brevenue_12m\x18\x05 \x01(\x0b\x32\x19.smartcredit.common.Money\x12-\n\nprofit_12m\x18\x06 \x01(\x0b\x32\x19.smartcredit.common.Money\x12.\n\x0bobligations\x18\x07 \x01(\x0b\x32\x19.smartcredit.common.Money\x12#\n\x16profile_schema_version\x18\x08 \x01(\x05H\x00\x88\x01\x01\x12\x31\n\nlegal_form\x18\t \x01(\x0e\x32\x1d.smartcredit.common.LegalForm\x12\x32\n\x0btax_periods\x18\n \x03(\x0b\x32\x1d.smartcredit.common.TaxPeriod\x12\x38\n\x10\x66inancial_period\x18\x0b \x01(\x0b\x32\x1e.smartcredit.common.DatePeriod\x12;\n\x0f\x66inancial_basis\x18\x0c \x01(\x0e\x32\".smartcredit.common.FinancialBasis\x12\x19\n\x11obligations_as_of\x18\r \x01(\tB\x19\n\x17_profile_schema_version\"\x96\x02\n\x10\x44ocumentMetadata\x12\x13\n\x0b\x64ocument_id\x18\x01 \x01(\t\x12\x37\n\rdocument_type\x18\x02 \x01(\x0e\x32 .smartcredit.common.DocumentType\x12\x11\n\tfile_name\x18\x03 \x01(\t\x12\x0e\n\x06sha256\x18\x04 \x01(\t\x12/\n\x0buploaded_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0f\n\x07is_mock\x18\x06 \x01(\x08\x12\x16\n\x0erequirement_id\x18\x07 \x01(\t\x12\x37\n\x0f\x63overage_period\x18\x08 \x01(\x0b\x32\x1e.smartcredit.common.DatePeriod\"\x82\x01\n\x0f\x41pplicationForm\x12)\n\x06\x61mount\x18\x01 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x13\n\x0bterm_months\x18\x02 \x01(\x05\x12/\n\x07purpose\x18\x03 \x01(\x0e\x32\x1e.smartcredit.common.PurposeTag\"\xa0\x02\n\x05Offer\x12\x10\n\x08offer_id\x18\x01 \x01(\t\x12+\n\x04kind\x18\x02 \x01(\x0e\x32\x1d.smartcredit.common.OfferKind\x12)\n\x06\x61mount\x18\x03 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x13\n\x0bterm_months\x18\x04 \x01(\x05\x12\x10\n\x08rate_bps\x18\x05 \x01(\x05\x12.\n\nexpires_at\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x13\n\x0b\x65xplanation\x18\x07 \x01(\t\x12\x12\n\nproduct_id\x18\x08 \x01(\t\x12\x17\n\x0fproduct_version\x18\t \x01(\x03\x12\x14\n\x0cproduct_name\x18\n \x01(\t\"\x94\x02\n\x0bInfoRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x36\n\x0frequired_fields\x18\x03 \x03(\x0e\x32\x1d.smartcredit.common.InfoField\x12\x41\n\x17required_document_types\x18\x04 \x03(\x0e\x32 .smartcredit.common.DocumentType\x12.\n\ncreated_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x35\n\x0crequirements\x18\x06 \x03(\x0b\x32\x1f.smartcredit.common.Requirement\"\xaa\x03\n\x07Product\x12\x12\n\nproduct_id\x18\x01 \x01(\t\x12\x0c\n\x04\x63ode\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x34\n\x0cpurpose_tags\x18\x05 \x03(\x0e\x32\x1e.smartcredit.common.PurposeTag\x12-\n\nmin_amount\x18\x06 \x01(\x0b\x32\x19.smartcredit.common.Money\x12-\n\nmax_amount\x18\x07 \x01(\x0b\x32\x19.smartcredit.common.Money\x12\x17\n\x0fmin_term_months\x18\x08 \x01(\x05\x12\x17\n\x0fmax_term_months\x18\t \x01(\x05\x12\x1b\n\x13indicative_rate_bps\x18\n \x01(\x05\x12\x41\n\x17required_document_types\x18\x0b \x03(\x0e\x32 .smartcredit.common.DocumentType\x12\x0f\n\x07version\x18\x0c \x01(\x03\x12#\n\x1brequirements_policy_version\x18\r \x01(\t\"&\n\nDatePeriod\x12\x0c\n\x04\x66rom\x18\x01 \x01(\t\x12\n\n\x02to\x18\x02 \x01(\t\"\x94\x01\n\tTaxPeriod\x12\x0c\n\x04\x66rom\x18\x01 \x01(\t\x12\x0f\n\x02to\x18\x02 \x01(\tH\x00\x88\x01\x01\x12.\n\x07regimes\x18\x03 \x03(\x0e\x32\x1d.smartcredit.common.TaxRegime\x12\x31\n\nvat_status\x18\x04 \x01(\x0e\x32\x1d.smartcredit.common.VatStatusB\x05\n\x03_to\"\xbb\x03\n\x0bRequirement\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04\x63ode\x18\x02 \x01(\t\x12\r\n\x05label\x18\x03 \x01(\t\x12\x0e\n\x06reason\x18\x04 \x01(\t\x12\x31\n\x04kind\x18\x05 \x01(\x0e\x32#.smartcredit.common.RequirementKind\x12\x39\n\x0brequired_at\x18\x06 \x01(\x0e\x32$.smartcredit.common.RequirementStage\x12\x35\n\x06status\x18\x07 \x01(\x0e\x32%.smartcredit.common.RequirementStatus\x12\x12\n\nfield_path\x18\x08 \x01(\t\x12\x41\n\x17\x61\x63\x63\x65pted_document_types\x18\t \x03(\x0e\x32 .smartcredit.common.DocumentType\x12.\n\x06period\x18\n \x01(\x0b\x32\x1e.smartcredit.common.DatePeriod\x12\x31\n\ntax_regime\x18\x0b \x01(\x0e\x32\x1d.smartcredit.common.TaxRegime\x12\x14\n\x0c\x64ocument_ids\x18\x0c \x03(\t\"\xd2\x01\n\x10RequirementsPlan\x12\x16\n\x0epolicy_version\x18\x01 \x01(\t\x12\x16\n\x0ereference_date\x18\x02 \x01(\t\x12\x12\n\ncan_submit\x18\x03 \x01(\x08\x12\x34\n\x05route\x18\x04 \x01(\x0e\x32%.smartcredit.common.RequirementsRoute\x12\x14\n\x0creason_codes\x18\x05 \x03(\t\x12.\n\x05items\x18\x06 \x03(\x0b\x32\x1f.smartcredit.common.Requirement*\x80\x01\n\nPurposeTag\x12\x1b\n\x17PURPOSE_TAG_UNSPECIFIED\x10\x00\x12\x1f\n\x1bPURPOSE_TAG_WORKING_CAPITAL\x10\x01\x12\x19\n\x15PURPOSE_TAG_EQUIPMENT\x10\x02\x12\x19\n\x15PURPOSE_TAG_EXPANSION\x10\x03*\xed\x02\n\x0c\x44ocumentType\x12\x1d\n\x19\x44OCUMENT_TYPE_UNSPECIFIED\x10\x00\x12 \n\x1c\x44OCUMENT_TYPE_BANK_STATEMENT\x10\x01\x12\x1f\n\x1b\x44OCUMENT_TYPE_BUSINESS_PLAN\x10\x02\x12#\n\x1f\x44OCUMENT_TYPE_ACCOUNTING_REPORT\x10\x03\x12#\n\x1f\x44OCUMENT_TYPE_MANAGEMENT_REPORT\x10\x04\x12%\n!DOCUMENT_TYPE_TAX_DECLARATION_USN\x10\x05\x12\'\n#DOCUMENT_TYPE_TAX_DECLARATION_3NDFL\x10\x06\x12\x1f\n\x1b\x44OCUMENT_TYPE_INCOME_LEDGER\x10\x07\x12\x18\n\x14\x44OCUMENT_TYPE_PATENT\x10\x08\x12&\n\"DOCUMENT_TYPE_RECEIVABLES_PAYABLES\x10\t*[\n\tOfferKind\x12\x1a\n\x16OFFER_KIND_UNSPECIFIED\x10\x00\x12\x14\n\x10OFFER_KIND_OFFER\x10\x01\x12\x1c\n\x18OFFER_KIND_COUNTER_OFFER\x10\x02*\x81\x02\n\tInfoField\x12\x1a\n\x16INFO_FIELD_UNSPECIFIED\x10\x00\x12\"\n\x1eINFO_FIELD_COMPANY_REVENUE_12M\x10\x01\x12!\n\x1dINFO_FIELD_COMPANY_PROFIT_12M\x10\x02\x12\"\n\x1eINFO_FIELD_COMPANY_OBLIGATIONS\x10\x03\x12!\n\x1dINFO_FIELD_APPLICATION_AMOUNT\x10\x04\x12&\n\"INFO_FIELD_APPLICATION_TERM_MONTHS\x10\x05\x12\"\n\x1eINFO_FIELD_APPLICATION_PURPOSE\x10\x06*N\n\tLegalForm\x12\x1a\n\x16LEGAL_FORM_UNSPECIFIED\x10\x00\x12\x11\n\rLEGAL_FORM_IP\x10\x01\x12\x12\n\x0eLEGAL_FORM_LLC\x10\x02*\xa5\x02\n\tTaxRegime\x12\x1a\n\x16TAX_REGIME_UNSPECIFIED\x10\x00\x12\x13\n\x0fTAX_REGIME_OSNO\x10\x01\x12\x19\n\x15TAX_REGIME_USN_INCOME\x10\x02\x12!\n\x1dTAX_REGIME_USN_INCOME_EXPENSE\x10\x03\x12\x12\n\x0eTAX_REGIME_PSN\x10\x04\x12\x1a\n\x16TAX_REGIME_AUSN_INCOME\x10\x05\x12\"\n\x1eTAX_REGIME_AUSN_INCOME_EXPENSE\x10\x06\x12\x13\n\x0fTAX_REGIME_ESHN\x10\x07\x12\x12\n\x0eTAX_REGIME_NPD\x10\x08\x12\x14\n\x10TAX_REGIME_OTHER\x10\t\x12\x16\n\x12TAX_REGIME_UNKNOWN\x10\n*l\n\tVatStatus\x12\x1a\n\x16VAT_STATUS_UNSPECIFIED\x10\x00\x12\x16\n\x12VAT_STATUS_UNKNOWN\x10\x01\x12\x15\n\x11VAT_STATUS_EXEMPT\x10\x02\x12\x14\n\x10VAT_STATUS_PAYER\x10\x03*\xa7\x01\n\x0e\x46inancialBasis\x12\x1f\n\x1b\x46INANCIAL_BASIS_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x46INANCIAL_BASIS_MANAGEMENT\x10\x01\x12\x1e\n\x1a\x46INANCIAL_BASIS_ACCOUNTING\x10\x02\x12\x17\n\x13\x46INANCIAL_BASIS_TAX\x10\x03\x12\x1b\n\x17\x46INANCIAL_BASIS_UNKNOWN\x10\x04*n\n\x0fRequirementKind\x12 \n\x1cREQUIREMENT_KIND_UNSPECIFIED\x10\x00\x12\x1a\n\x16REQUIREMENT_KIND_FIELD\x10\x01\x12\x1d\n\x19REQUIREMENT_KIND_DOCUMENT\x10\x02*\x97\x01\n\x10RequirementStage\x12!\n\x1dREQUIREMENT_STAGE_UNSPECIFIED\x10\x00\x12\x1c\n\x18REQUIREMENT_STAGE_SUBMIT\x10\x01\x12 \n\x1cREQUIREMENT_STAGE_ASSESSMENT\x10\x02\x12 \n\x1cREQUIREMENT_STAGE_ON_REQUEST\x10\x03*x\n\x11RequirementStatus\x12\"\n\x1eREQUIREMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n\x1aREQUIREMENT_STATUS_MISSING\x10\x01\x12\x1f\n\x1bREQUIREMENT_STATUS_PROVIDED\x10\x02*~\n\x11RequirementsRoute\x12\"\n\x1eREQUIREMENTS_ROUTE_UNSPECIFIED\x10\x00\x12\x1f\n\x1bREQUIREMENTS_ROUTE_STANDARD\x10\x01\x12$\n REQUIREMENTS_ROUTE_MANUAL_REVIEW\x10\x02\x42NZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common;commonpbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,26 +33,50 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'proto.common.common_pb2', _
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'ZLgithub.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common;commonpb'
-  _globals['_PURPOSETAG']._serialized_start=1602
-  _globals['_PURPOSETAG']._serialized_end=1730
-  _globals['_DOCUMENTTYPE']._serialized_start=1732
-  _globals['_DOCUMENTTYPE']._serialized_end=1844
-  _globals['_OFFERKIND']._serialized_start=1846
-  _globals['_OFFERKIND']._serialized_end=1937
-  _globals['_INFOFIELD']._serialized_start=1940
-  _globals['_INFOFIELD']._serialized_end=2197
+  _globals['_PURPOSETAG']._serialized_start=2938
+  _globals['_PURPOSETAG']._serialized_end=3066
+  _globals['_DOCUMENTTYPE']._serialized_start=3069
+  _globals['_DOCUMENTTYPE']._serialized_end=3434
+  _globals['_OFFERKIND']._serialized_start=3436
+  _globals['_OFFERKIND']._serialized_end=3527
+  _globals['_INFOFIELD']._serialized_start=3530
+  _globals['_INFOFIELD']._serialized_end=3787
+  _globals['_LEGALFORM']._serialized_start=3789
+  _globals['_LEGALFORM']._serialized_end=3867
+  _globals['_TAXREGIME']._serialized_start=3870
+  _globals['_TAXREGIME']._serialized_end=4163
+  _globals['_VATSTATUS']._serialized_start=4165
+  _globals['_VATSTATUS']._serialized_end=4273
+  _globals['_FINANCIALBASIS']._serialized_start=4276
+  _globals['_FINANCIALBASIS']._serialized_end=4443
+  _globals['_REQUIREMENTKIND']._serialized_start=4445
+  _globals['_REQUIREMENTKIND']._serialized_end=4555
+  _globals['_REQUIREMENTSTAGE']._serialized_start=4558
+  _globals['_REQUIREMENTSTAGE']._serialized_end=4709
+  _globals['_REQUIREMENTSTATUS']._serialized_start=4711
+  _globals['_REQUIREMENTSTATUS']._serialized_end=4831
+  _globals['_REQUIREMENTSROUTE']._serialized_start=4833
+  _globals['_REQUIREMENTSROUTE']._serialized_end=4959
   _globals['_MONEY']._serialized_start=82
   _globals['_MONEY']._serialized_end=131
   _globals['_COMPANYSNAPSHOT']._serialized_start=134
-  _globals['_COMPANYSNAPSHOT']._serialized_end=359
-  _globals['_DOCUMENTMETADATA']._serialized_start=362
-  _globals['_DOCUMENTMETADATA']._serialized_end=559
-  _globals['_APPLICATIONFORM']._serialized_start=562
-  _globals['_APPLICATIONFORM']._serialized_end=692
-  _globals['_OFFER']._serialized_start=695
-  _globals['_OFFER']._serialized_end=983
-  _globals['_INFOREQUEST']._serialized_start=986
-  _globals['_INFOREQUEST']._serialized_end=1207
-  _globals['_PRODUCT']._serialized_start=1210
-  _globals['_PRODUCT']._serialized_end=1599
+  _globals['_COMPANYSNAPSHOT']._serialized_end=672
+  _globals['_DOCUMENTMETADATA']._serialized_start=675
+  _globals['_DOCUMENTMETADATA']._serialized_end=953
+  _globals['_APPLICATIONFORM']._serialized_start=956
+  _globals['_APPLICATIONFORM']._serialized_end=1086
+  _globals['_OFFER']._serialized_start=1089
+  _globals['_OFFER']._serialized_end=1377
+  _globals['_INFOREQUEST']._serialized_start=1380
+  _globals['_INFOREQUEST']._serialized_end=1656
+  _globals['_PRODUCT']._serialized_start=1659
+  _globals['_PRODUCT']._serialized_end=2085
+  _globals['_DATEPERIOD']._serialized_start=2087
+  _globals['_DATEPERIOD']._serialized_end=2125
+  _globals['_TAXPERIOD']._serialized_start=2128
+  _globals['_TAXPERIOD']._serialized_end=2276
+  _globals['_REQUIREMENT']._serialized_start=2279
+  _globals['_REQUIREMENT']._serialized_end=2722
+  _globals['_REQUIREMENTSPLAN']._serialized_start=2725
+  _globals['_REQUIREMENTSPLAN']._serialized_end=2935
 # @@protoc_insertion_point(module_scope)

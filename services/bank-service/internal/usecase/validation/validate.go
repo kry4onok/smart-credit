@@ -39,6 +39,10 @@ func Evaluate(snapshot Snapshot, product Product) Outcome {
 		strings.TrimSpace(company.GetRegisteredAt()) == "" {
 		return Outcome{Status: model.CaseStatusManualReview, Reason: "VALIDATION_INVALID_SNAPSHOT"}
 	}
+	if company.ProfileSchemaVersion != nil || company.GetLegalForm() != commonpb.LegalForm_LEGAL_FORM_UNSPECIFIED ||
+		len(company.GetTaxPeriods()) > 0 || company.GetFinancialPeriod() != nil || company.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED || company.GetObligationsAsOf() != "" {
+		return Outcome{Status: model.CaseStatusManualReview, Reason: "PROFILE_V2_NOT_ENABLED"}
+	}
 	var documents []struct {
 		DocumentType string `json:"document_type"`
 		DocumentID   string `json:"document_id"`

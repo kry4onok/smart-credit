@@ -1,0 +1,211 @@
+{
+  "policy_version": "sme-profile-v1",
+  "reference_date": "2026-10-26",
+  "can_submit": true,
+  "route": "STANDARD",
+  "reason_codes": [],
+  "items": [
+    {
+      "id": "company_financial_basis",
+      "code": "COMPANY_FINANCIAL_BASIS",
+      "label": "Основа финансовых данных",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.financial_basis",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_financial_period",
+      "code": "COMPANY_FINANCIAL_PERIOD",
+      "label": "Период финансовых данных",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.financial_period",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_legal_form",
+      "code": "COMPANY_LEGAL_FORM",
+      "label": "Форма бизнеса",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.legal_form",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_obligations",
+      "code": "COMPANY_OBLIGATIONS",
+      "label": "Остаток кредитных обязательств",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.obligations",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_obligations_as_of",
+      "code": "COMPANY_OBLIGATIONS_AS_OF",
+      "label": "Дата остатка обязательств",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.obligations_as_of",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_profit_12m",
+      "code": "COMPANY_PROFIT_12M",
+      "label": "Прибыль",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.profit_12m",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_revenue_12m",
+      "code": "COMPANY_REVENUE_12M",
+      "label": "Выручка",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.revenue_12m",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "company_tax_periods",
+      "code": "COMPANY_TAX_PERIODS",
+      "label": "Налоговые режимы",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "company.tax_periods",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "form_amount",
+      "code": "FORM_AMOUNT",
+      "label": "Сумма кредита",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "form.amount",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "form_purpose",
+      "code": "FORM_PURPOSE",
+      "label": "Цель кредита",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "form.purpose",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "form_term_months",
+      "code": "FORM_TERM_MONTHS",
+      "label": "Срок кредита",
+      "reason": "Нужно для рассмотрения заявки",
+      "kind": "FIELD",
+      "required_at": "SUBMIT",
+      "status": "PROVIDED",
+      "field_path": "form.term_months",
+      "accepted_document_types": [],
+      "document_ids": []
+    },
+    {
+      "id": "business_result:2025-10-01:2026-09-30:all",
+      "code": "BUSINESS_RESULT",
+      "label": "Доходы и расходы бизнеса",
+      "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+      "kind": "DOCUMENT",
+      "required_at": "ASSESSMENT",
+      "status": "MISSING",
+      "accepted_document_types": [
+        "MANAGEMENT_REPORT"
+      ],
+      "period": {
+        "from": "2025-10-01",
+        "to": "2026-09-30"
+      },
+      "document_ids": []
+    },
+    {
+      "id": "cash_flow:2025-10-01:2026-09-30:all",
+      "code": "CASH_FLOW",
+      "label": "Выписка по счетам бизнеса",
+      "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+      "kind": "DOCUMENT",
+      "required_at": "ASSESSMENT",
+      "status": "MISSING",
+      "accepted_document_types": [
+        "BANK_STATEMENT"
+      ],
+      "period": {
+        "from": "2025-10-01",
+        "to": "2026-09-30"
+      },
+      "document_ids": []
+    },
+    {
+      "id": "patent_right:2026-10-26:2026-10-26:psn",
+      "code": "PATENT_RIGHT",
+      "label": "Действующий патент",
+      "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+      "kind": "DOCUMENT",
+      "required_at": "ASSESSMENT",
+      "status": "MISSING",
+      "accepted_document_types": [
+        "PATENT"
+      ],
+      "period": {
+        "from": "2026-10-26",
+        "to": "2026-10-26"
+      },
+      "document_ids": [],
+      "tax_regime": "PSN"
+    },
+    {
+      "id": "income_ledger:2025-10-01:2026-09-30:psn",
+      "code": "INCOME_LEDGER",
+      "label": "INCOME_LEDGER",
+      "reason": "Нужно для комплектности финансовых данных; содержание проверяется отдельно",
+      "kind": "DOCUMENT",
+      "required_at": "ON_REQUEST",
+      "status": "MISSING",
+      "accepted_document_types": [
+        "INCOME_LEDGER"
+      ],
+      "period": {
+        "from": "2025-10-01",
+        "to": "2026-09-30"
+      },
+      "document_ids": [],
+      "tax_regime": "PSN"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "40000000-0000-4000-8000-000000000021",
+  "document_type": "BANK_STATEMENT",
+  "file_name": "demo-statement.txt",
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "uploaded_at": "2026-10-26T09:02:00Z",
+  "is_mock": true,
+  "requirement_id": "cash_flow:2025-10-01:2026-09-30:all",
+  "coverage_period": {
+    "from": "2025-10-01",
+    "to": "2026-09-30"
+  }
+}

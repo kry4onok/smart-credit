@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/compat"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/middleware"
@@ -38,6 +39,9 @@ func (h *Handler) Handle(ctx context.Context, request generated.ProvideInfoReque
 		RequestHash: hash[:],
 	}
 	if request.Body.Company != nil {
+		if code, detail := compat.LegacyProfileProblem(*request.Body.Company); code != "" {
+			return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, code, detail)}, nil
+		}
 		company := model.Company{
 			INN: request.Body.Company.Inn, Name: request.Body.Company.Name, OKVED: request.Body.Company.Okved,
 			RegisteredAt:       request.Body.Company.RegisteredAt.Time,

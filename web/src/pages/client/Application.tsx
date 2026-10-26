@@ -433,9 +433,9 @@ const companyFields: Partial<Record<InfoField, "revenue_12m" | "profit_12m" | "o
 function InfoResponse({ app, onChange, reload }: { app: ClientApplication; onChange: (a: ClientApplication) => void; reload: () => Promise<void> }) {
   const request = app.info_request!;
   const [values, setValues] = useState<Partial<Record<InfoField, number | null | string>>>(() => ({
-    COMPANY_REVENUE_12M: app.company.revenue_12m.amount_kopecks,
-    COMPANY_PROFIT_12M: app.company.profit_12m.amount_kopecks,
-    COMPANY_OBLIGATIONS: app.company.obligations.amount_kopecks,
+    COMPANY_REVENUE_12M: app.company.revenue_12m?.amount_kopecks,
+    COMPANY_PROFIT_12M: app.company.profit_12m?.amount_kopecks,
+    COMPANY_OBLIGATIONS: app.company.obligations?.amount_kopecks,
     APPLICATION_AMOUNT: app.form?.amount?.amount_kopecks,
     APPLICATION_TERM_MONTHS: app.form?.term_months,
     APPLICATION_PURPOSE: app.form?.purpose,

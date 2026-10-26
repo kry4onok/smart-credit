@@ -56,6 +56,9 @@ func (h *Handler) Handle(ctx context.Context, r generated.DecideCaseRequestObjec
 	}
 	if r.Body.InfoRequest != nil {
 		draft := r.Body.InfoRequest
+		if draft.RequirementIds != nil {
+			return nil, &domainerror.Error{Status: 422, Code: "PROFILE_V2_NOT_ENABLED", Title: "Этап 1 ещё не подключён", Detail: "Запрос требований по ID будет доступен после подключения модуля требований."}
+		}
 		info := &decide.InfoRequest{Message: draft.Message}
 		for _, f := range draft.RequiredFields {
 			info.RequiredFields = append(info.RequiredFields, string(f))

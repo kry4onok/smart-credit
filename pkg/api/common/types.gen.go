@@ -105,18 +105,78 @@ func (e ClientStatus) Valid() bool {
 	}
 }
 
+// Defines values for CompanyProfileFinancialBasis.
+const (
+	CompanyProfileFinancialBasisACCOUNTING CompanyProfileFinancialBasis = "ACCOUNTING"
+	CompanyProfileFinancialBasisMANAGEMENT CompanyProfileFinancialBasis = "MANAGEMENT"
+	CompanyProfileFinancialBasisTAX        CompanyProfileFinancialBasis = "TAX"
+	CompanyProfileFinancialBasisUNKNOWN    CompanyProfileFinancialBasis = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the CompanyProfileFinancialBasis enum.
+func (e CompanyProfileFinancialBasis) Valid() bool {
+	switch e {
+	case CompanyProfileFinancialBasisACCOUNTING:
+		return true
+	case CompanyProfileFinancialBasisMANAGEMENT:
+		return true
+	case CompanyProfileFinancialBasisTAX:
+		return true
+	case CompanyProfileFinancialBasisUNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyProfileProfileSchemaVersion.
+const (
+	N2 CompanyProfileProfileSchemaVersion = 2
+)
+
+// Valid indicates whether the value is a known member of the CompanyProfileProfileSchemaVersion enum.
+func (e CompanyProfileProfileSchemaVersion) Valid() bool {
+	switch e {
+	case N2:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DocumentType.
 const (
-	BANKSTATEMENT DocumentType = "BANK_STATEMENT"
-	BUSINESSPLAN  DocumentType = "BUSINESS_PLAN"
+	ACCOUNTINGREPORT    DocumentType = "ACCOUNTING_REPORT"
+	BANKSTATEMENT       DocumentType = "BANK_STATEMENT"
+	BUSINESSPLAN        DocumentType = "BUSINESS_PLAN"
+	INCOMELEDGER        DocumentType = "INCOME_LEDGER"
+	MANAGEMENTREPORT    DocumentType = "MANAGEMENT_REPORT"
+	PATENT              DocumentType = "PATENT"
+	RECEIVABLESPAYABLES DocumentType = "RECEIVABLES_PAYABLES"
+	TAXDECLARATION3NDFL DocumentType = "TAX_DECLARATION_3NDFL"
+	TAXDECLARATIONUSN   DocumentType = "TAX_DECLARATION_USN"
 )
 
 // Valid indicates whether the value is a known member of the DocumentType enum.
 func (e DocumentType) Valid() bool {
 	switch e {
+	case ACCOUNTINGREPORT:
+		return true
 	case BANKSTATEMENT:
 		return true
 	case BUSINESSPLAN:
+		return true
+	case INCOMELEDGER:
+		return true
+	case MANAGEMENTREPORT:
+		return true
+	case PATENT:
+		return true
+	case RECEIVABLESPAYABLES:
+		return true
+	case TAXDECLARATION3NDFL:
+		return true
+	case TAXDECLARATIONUSN:
 		return true
 	default:
 		return false
@@ -147,6 +207,24 @@ func (e InfoField) Valid() bool {
 	case COMPANYPROFIT12M:
 		return true
 	case COMPANYREVENUE12M:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalForm.
+const (
+	IP  LegalForm = "IP"
+	LLC LegalForm = "LLC"
+)
+
+// Valid indicates whether the value is a known member of the LegalForm enum.
+func (e LegalForm) Valid() bool {
+	switch e {
+	case IP:
+		return true
+	case LLC:
 		return true
 	default:
 		return false
@@ -186,6 +264,21 @@ func (e OfferKind) Valid() bool {
 	}
 }
 
+// Defines values for ProductRequirementsPolicyVersion.
+const (
+	ProductRequirementsPolicyVersionSmeProfileV1 ProductRequirementsPolicyVersion = "sme-profile-v1"
+)
+
+// Valid indicates whether the value is a known member of the ProductRequirementsPolicyVersion enum.
+func (e ProductRequirementsPolicyVersion) Valid() bool {
+	switch e {
+	case ProductRequirementsPolicyVersionSmeProfileV1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PurposeTag.
 const (
 	EQUIPMENT      PurposeTag = "EQUIPMENT"
@@ -201,6 +294,96 @@ func (e PurposeTag) Valid() bool {
 	case EXPANSION:
 		return true
 	case WORKINGCAPITAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequirementKind.
+const (
+	DOCUMENT RequirementKind = "DOCUMENT"
+	FIELD    RequirementKind = "FIELD"
+)
+
+// Valid indicates whether the value is a known member of the RequirementKind enum.
+func (e RequirementKind) Valid() bool {
+	switch e {
+	case DOCUMENT:
+		return true
+	case FIELD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequirementRequiredAt.
+const (
+	ASSESSMENT RequirementRequiredAt = "ASSESSMENT"
+	ONREQUEST  RequirementRequiredAt = "ON_REQUEST"
+	SUBMIT     RequirementRequiredAt = "SUBMIT"
+)
+
+// Valid indicates whether the value is a known member of the RequirementRequiredAt enum.
+func (e RequirementRequiredAt) Valid() bool {
+	switch e {
+	case ASSESSMENT:
+		return true
+	case ONREQUEST:
+		return true
+	case SUBMIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequirementStatus.
+const (
+	MISSING  RequirementStatus = "MISSING"
+	PROVIDED RequirementStatus = "PROVIDED"
+)
+
+// Valid indicates whether the value is a known member of the RequirementStatus enum.
+func (e RequirementStatus) Valid() bool {
+	switch e {
+	case MISSING:
+		return true
+	case PROVIDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequirementsPlanPolicyVersion.
+const (
+	RequirementsPlanPolicyVersionSmeProfileV1 RequirementsPlanPolicyVersion = "sme-profile-v1"
+)
+
+// Valid indicates whether the value is a known member of the RequirementsPlanPolicyVersion enum.
+func (e RequirementsPlanPolicyVersion) Valid() bool {
+	switch e {
+	case RequirementsPlanPolicyVersionSmeProfileV1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequirementsPlanRoute.
+const (
+	RequirementsPlanRouteMANUALREVIEW RequirementsPlanRoute = "MANUAL_REVIEW"
+	RequirementsPlanRouteSTANDARD     RequirementsPlanRoute = "STANDARD"
+)
+
+// Valid indicates whether the value is a known member of the RequirementsPlanRoute enum.
+func (e RequirementsPlanRoute) Valid() bool {
+	switch e {
+	case RequirementsPlanRouteMANUALREVIEW:
+		return true
+	case RequirementsPlanRouteSTANDARD:
 		return true
 	default:
 		return false
@@ -243,30 +426,113 @@ func (e SignedMoneyCurrency) Valid() bool {
 	}
 }
 
+// Defines values for TaxPeriodVatStatus.
+const (
+	TaxPeriodVatStatusEXEMPT  TaxPeriodVatStatus = "EXEMPT"
+	TaxPeriodVatStatusPAYER   TaxPeriodVatStatus = "PAYER"
+	TaxPeriodVatStatusUNKNOWN TaxPeriodVatStatus = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the TaxPeriodVatStatus enum.
+func (e TaxPeriodVatStatus) Valid() bool {
+	switch e {
+	case TaxPeriodVatStatusEXEMPT:
+		return true
+	case TaxPeriodVatStatusPAYER:
+		return true
+	case TaxPeriodVatStatusUNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaxRegime.
+const (
+	TaxRegimeAUSNINCOME        TaxRegime = "AUSN_INCOME"
+	TaxRegimeAUSNINCOMEEXPENSE TaxRegime = "AUSN_INCOME_EXPENSE"
+	TaxRegimeESHN              TaxRegime = "ESHN"
+	TaxRegimeNPD               TaxRegime = "NPD"
+	TaxRegimeOSNO              TaxRegime = "OSNO"
+	TaxRegimeOTHER             TaxRegime = "OTHER"
+	TaxRegimePSN               TaxRegime = "PSN"
+	TaxRegimeUNKNOWN           TaxRegime = "UNKNOWN"
+	TaxRegimeUSNINCOME         TaxRegime = "USN_INCOME"
+	TaxRegimeUSNINCOMEEXPENSE  TaxRegime = "USN_INCOME_EXPENSE"
+)
+
+// Valid indicates whether the value is a known member of the TaxRegime enum.
+func (e TaxRegime) Valid() bool {
+	switch e {
+	case TaxRegimeAUSNINCOME:
+		return true
+	case TaxRegimeAUSNINCOMEEXPENSE:
+		return true
+	case TaxRegimeESHN:
+		return true
+	case TaxRegimeNPD:
+		return true
+	case TaxRegimeOSNO:
+		return true
+	case TaxRegimeOTHER:
+		return true
+	case TaxRegimePSN:
+		return true
+	case TaxRegimeUNKNOWN:
+		return true
+	case TaxRegimeUSNINCOME:
+		return true
+	case TaxRegimeUSNINCOMEEXPENSE:
+		return true
+	default:
+		return false
+	}
+}
+
 // BankStatus defines model for BankStatus.
 type BankStatus string
 
 // ClientStatus defines model for ClientStatus.
 type ClientStatus string
 
-// CompanyProfile defines model for CompanyProfile.
+// CompanyProfile Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified.
 type CompanyProfile struct {
-	Inn          string             `json:"inn"`
-	Name         string             `json:"name"`
-	Obligations  Money              `json:"obligations"`
-	Okved        string             `json:"okved"`
-	Profit12m    SignedMoney        `json:"profit_12m"`
-	RegisteredAt openapi_types.Date `json:"registered_at"`
-	Revenue12m   Money              `json:"revenue_12m"`
+	FinancialBasis       *CompanyProfileFinancialBasis       `json:"financial_basis,omitempty"`
+	FinancialPeriod      *DatePeriod                         `json:"financial_period,omitempty"`
+	Inn                  string                              `json:"inn"`
+	LegalForm            *LegalForm                          `json:"legal_form,omitempty"`
+	Name                 string                              `json:"name"`
+	Obligations          *Money                              `json:"obligations,omitempty"`
+	ObligationsAsOf      *openapi_types.Date                 `json:"obligations_as_of,omitempty"`
+	Okved                string                              `json:"okved"`
+	ProfileSchemaVersion *CompanyProfileProfileSchemaVersion `json:"profile_schema_version,omitempty"`
+	Profit12m            *SignedMoney                        `json:"profit_12m,omitempty"`
+	RegisteredAt         openapi_types.Date                  `json:"registered_at"`
+	Revenue12m           *Money                              `json:"revenue_12m,omitempty"`
+	TaxPeriods           *[]TaxPeriod                        `json:"tax_periods,omitempty"`
+}
+
+// CompanyProfileFinancialBasis defines model for CompanyProfile.FinancialBasis.
+type CompanyProfileFinancialBasis string
+
+// CompanyProfileProfileSchemaVersion defines model for CompanyProfile.ProfileSchemaVersion.
+type CompanyProfileProfileSchemaVersion int
+
+// DatePeriod defines model for DatePeriod.
+type DatePeriod struct {
+	From openapi_types.Date `json:"from"`
+	To   openapi_types.Date `json:"to"`
 }
 
 // DocumentMetadata defines model for DocumentMetadata.
 type DocumentMetadata struct {
-	DocumentType DocumentType `json:"document_type"`
-	FileName     string       `json:"file_name"`
-	Id           Id           `json:"id"`
-	IsMock       bool         `json:"is_mock"`
-	Sha256       string       `json:"sha256"`
+	CoveragePeriod *DatePeriod  `json:"coverage_period,omitempty"`
+	DocumentType   DocumentType `json:"document_type"`
+	FileName       string       `json:"file_name"`
+	Id             Id           `json:"id"`
+	IsMock         bool         `json:"is_mock"`
+	RequirementId  *string      `json:"requirement_id,omitempty"`
+	Sha256         string       `json:"sha256"`
 
 	// UploadedAt RFC 3339, UTC.
 	UploadedAt Timestamp `json:"uploaded_at"`
@@ -281,7 +547,7 @@ type Id = openapi_types.UUID
 // InfoField Поле снимка конкретной заявки, которое банк просит уточнить.
 type InfoField string
 
-// InfoRequest defines model for InfoRequest.
+// InfoRequest Legacy uses required_fields/document_types; v2 uses nonempty requirements and both legacy arrays empty. PROVIDED means supplied, never verified.
 type InfoRequest struct {
 	// CreatedAt RFC 3339, UTC.
 	CreatedAt             Timestamp      `json:"created_at"`
@@ -289,7 +555,11 @@ type InfoRequest struct {
 	Message               string         `json:"message"`
 	RequiredDocumentTypes []DocumentType `json:"required_document_types"`
 	RequiredFields        []InfoField    `json:"required_fields"`
+	Requirements          *[]Requirement `json:"requirements,omitempty"`
 }
+
+// LegalForm defines model for LegalForm.
+type LegalForm string
 
 // Money defines model for Money.
 type Money struct {
@@ -347,11 +617,58 @@ type Product struct {
 	Name                  string         `json:"name"`
 	PurposeTags           []PurposeTag   `json:"purpose_tags"`
 	RequiredDocumentTypes []DocumentType `json:"required_document_types"`
-	Version               int64          `json:"version"`
+
+	// RequirementsPolicyVersion Absent means legacy required_document_types. Versioned with product. v2 requires required_document_types=[]; never combine both policies.
+	RequirementsPolicyVersion *ProductRequirementsPolicyVersion `json:"requirements_policy_version,omitempty"`
+	Version                   int64                             `json:"version"`
 }
+
+// ProductRequirementsPolicyVersion Absent means legacy required_document_types. Versioned with product. v2 requires required_document_types=[]; never combine both policies.
+type ProductRequirementsPolicyVersion string
 
 // PurposeTag defines model for PurposeTag.
 type PurposeTag string
+
+// Requirement defines model for Requirement.
+type Requirement struct {
+	AcceptedDocumentTypes []DocumentType        `json:"accepted_document_types"`
+	Code                  string                `json:"code"`
+	DocumentIds           []Id                  `json:"document_ids"`
+	FieldPath             *string               `json:"field_path,omitempty"`
+	Id                    string                `json:"id"`
+	Kind                  RequirementKind       `json:"kind"`
+	Label                 string                `json:"label"`
+	Period                *DatePeriod           `json:"period,omitempty"`
+	Reason                string                `json:"reason"`
+	RequiredAt            RequirementRequiredAt `json:"required_at"`
+	Status                RequirementStatus     `json:"status"`
+	TaxRegime             *TaxRegime            `json:"tax_regime,omitempty"`
+}
+
+// RequirementKind defines model for Requirement.Kind.
+type RequirementKind string
+
+// RequirementRequiredAt defines model for Requirement.RequiredAt.
+type RequirementRequiredAt string
+
+// RequirementStatus defines model for Requirement.Status.
+type RequirementStatus string
+
+// RequirementsPlan defines model for RequirementsPlan.
+type RequirementsPlan struct {
+	CanSubmit     bool                          `json:"can_submit"`
+	Items         []Requirement                 `json:"items"`
+	PolicyVersion RequirementsPlanPolicyVersion `json:"policy_version"`
+	ReasonCodes   []string                      `json:"reason_codes"`
+	ReferenceDate openapi_types.Date            `json:"reference_date"`
+	Route         RequirementsPlanRoute         `json:"route"`
+}
+
+// RequirementsPlanPolicyVersion defines model for RequirementsPlan.PolicyVersion.
+type RequirementsPlanPolicyVersion string
+
+// RequirementsPlanRoute defines model for RequirementsPlan.Route.
+type RequirementsPlanRoute string
 
 // Role defines model for Role.
 type Role string
@@ -364,6 +681,20 @@ type SignedMoney struct {
 
 // SignedMoneyCurrency defines model for SignedMoney.Currency.
 type SignedMoneyCurrency string
+
+// TaxPeriod defines model for TaxPeriod.
+type TaxPeriod struct {
+	From      openapi_types.Date  `json:"from"`
+	Regimes   []TaxRegime         `json:"regimes"`
+	To        *openapi_types.Date `json:"to,omitempty"`
+	VatStatus TaxPeriodVatStatus  `json:"vat_status"`
+}
+
+// TaxPeriodVatStatus defines model for TaxPeriod.VatStatus.
+type TaxPeriodVatStatus string
+
+// TaxRegime defines model for TaxRegime.
+type TaxRegime string
 
 // Timestamp RFC 3339, UTC.
 type Timestamp = time.Time

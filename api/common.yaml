@@ -1,11 +1,11 @@
+---
 openapi: 3.1.0
 info:
   title: Smart Credit shared HTTP schemas
-  version: draft
-  description: >-
-    Общие схемы для auth, client и bank. Этот файл не содержит маршрутов.
-    Публичный origin обслуживает nginx: например, путь /client/products
-    доступен браузеру как /api/client/products.
+  version: stage1-profile-v2-candidate
+  description: 'Общие схемы для auth, client и bank. Этот файл не содержит маршрутов.
+    Публичный origin обслуживает nginx: например, путь /client/products доступен браузеру
+    как /api/client/products.'
 paths: {}
 components:
   securitySchemes:
@@ -18,64 +18,80 @@ components:
       name: application_id
       in: path
       required: true
-      schema: { $ref: '#/components/schemas/Id' }
+      schema:
+        "$ref": "#/components/schemas/Id"
     ProductId:
       name: product_id
       in: path
       required: true
-      schema: { $ref: '#/components/schemas/Id' }
+      schema:
+        "$ref": "#/components/schemas/Id"
     Cursor:
       name: cursor
       in: query
       description: Непрозрачный курсор из предыдущего ответа.
-      schema: { type: string }
+      schema:
+        type: string
     Limit:
       name: limit
       in: query
-      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
       description: UUID действия. Повтор с другим телом возвращает 409.
-      schema: { $ref: '#/components/schemas/Id' }
+      schema:
+        "$ref": "#/components/schemas/Id"
     IfMatch:
       name: If-Match
       in: header
       required: true
       description: ETag из GET, равный версии ресурса в двойных кавычках.
-      schema: { type: string, pattern: '^"[0-9]+"$' }
+      schema:
+        type: string
+        pattern: ^"[0-9]+"$
   responses:
     BadRequest:
       description: Некорректный синтаксис запроса.
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+          schema:
+            "$ref": "#/components/schemas/Problem"
     Unauthorized:
       description: Нет действительной сессии.
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+          schema:
+            "$ref": "#/components/schemas/Problem"
     Forbidden:
       description: Недостаточно прав.
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+          schema:
+            "$ref": "#/components/schemas/Problem"
     NotFound:
       description: Ресурс отсутствует либо не принадлежит организации.
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+          schema:
+            "$ref": "#/components/schemas/Problem"
     Conflict:
       description: Конфликт версии, перехода состояния или ключа идемпотентности.
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+          schema:
+            "$ref": "#/components/schemas/Problem"
     ValidationError:
       description: Не выполнено бизнес-правило.
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+          schema:
+            "$ref": "#/components/schemas/Problem"
   schemas:
     Id:
       type: string
@@ -87,147 +103,477 @@ components:
     Money:
       type: object
       additionalProperties: false
-      required: [amount_kopecks, currency]
+      required:
+      - amount_kopecks
+      - currency
       properties:
-        amount_kopecks: { type: integer, format: int64, minimum: 0, maximum: 9007199254740991 }
-        currency: { type: string, const: RUB }
+        amount_kopecks:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+        currency:
+          type: string
+          const: RUB
     Problem:
       type: object
       additionalProperties: false
-      required: [type, title, status, code, trace_id]
+      required:
+      - type
+      - title
+      - status
+      - code
+      - trace_id
       properties:
-        type: { type: string, format: uri-reference, default: 'about:blank' }
-        title: { type: string }
-        status: { type: integer, minimum: 400, maximum: 599 }
-        detail: { type: string }
-        code: { type: string, description: Машинный код ошибки в UPPER_SNAKE_CASE. }
-        trace_id: { type: string }
+        type:
+          type: string
+          format: uri-reference
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        code:
+          type: string
+          description: Машинный код ошибки в UPPER_SNAKE_CASE.
+        trace_id:
+          type: string
     Role:
       type: string
-      enum: [CLIENT, ANALYST, ADMIN]
+      enum:
+      - CLIENT
+      - ANALYST
+      - ADMIN
     PurposeTag:
       type: string
-      enum: [WORKING_CAPITAL, EQUIPMENT, EXPANSION]
+      enum:
+      - WORKING_CAPITAL
+      - EQUIPMENT
+      - EXPANSION
     DocumentType:
       type: string
-      enum: [BANK_STATEMENT, BUSINESS_PLAN]
+      enum:
+      - BANK_STATEMENT
+      - BUSINESS_PLAN
+      - ACCOUNTING_REPORT
+      - MANAGEMENT_REPORT
+      - TAX_DECLARATION_USN
+      - TAX_DECLARATION_3NDFL
+      - INCOME_LEDGER
+      - PATENT
+      - RECEIVABLES_PAYABLES
     ClientStatus:
       type: string
       enum:
-        - DRAFT
-        - SUBMITTED
-        - UNDER_REVIEW
-        - NEEDS_INFO
-        - OFFER_AVAILABLE
-        - FORMALIZING
-        - DISBURSED
-        - REJECTED
-        - CLOSED
+      - DRAFT
+      - SUBMITTED
+      - UNDER_REVIEW
+      - NEEDS_INFO
+      - OFFER_AVAILABLE
+      - FORMALIZING
+      - DISBURSED
+      - REJECTED
+      - CLOSED
     BankStatus:
       type: string
       enum:
-        - SUBMITTED
-        - VALIDATION
-        - NEEDS_INFO
-        - ENRICHMENT
-        - SCORING
-        - DECISION
-        - MANUAL_REVIEW
-        - OFFER
-        - COUNTER_OFFER
-        - OFFER_ACCEPTED
-        - SIGNING
-        - DISBURSED
-        - REJECTED
-        - CANCELLED
-        - EXPIRED
+      - SUBMITTED
+      - VALIDATION
+      - NEEDS_INFO
+      - ENRICHMENT
+      - SCORING
+      - DECISION
+      - MANUAL_REVIEW
+      - OFFER
+      - COUNTER_OFFER
+      - OFFER_ACCEPTED
+      - SIGNING
+      - DISBURSED
+      - REJECTED
+      - CANCELLED
+      - EXPIRED
     CompanyProfile:
       type: object
       additionalProperties: false
-      required: [inn, name, okved, registered_at, revenue_12m, profit_12m, obligations]
+      required:
+      - inn
+      - name
+      - okved
+      - registered_at
       properties:
-        inn: { type: string, pattern: '^[0-9]{10}([0-9]{2})?$' }
-        name: { type: string, minLength: 1, maxLength: 256 }
-        okved: { type: string, minLength: 2, maxLength: 16 }
-        registered_at: { type: string, format: date }
-        revenue_12m: { $ref: '#/components/schemas/Money' }
-        profit_12m: { $ref: '#/components/schemas/SignedMoney' }
-        obligations: { $ref: '#/components/schemas/Money' }
+        inn:
+          type: string
+          pattern: "^[0-9]{10}([0-9]{2})?$"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+        okved:
+          type: string
+          minLength: 2
+          maxLength: 16
+        registered_at:
+          type: string
+          format: date
+        revenue_12m:
+          "$ref": "#/components/schemas/Money"
+        profit_12m:
+          "$ref": "#/components/schemas/SignedMoney"
+        obligations:
+          "$ref": "#/components/schemas/Money"
+        profile_schema_version:
+          type: integer
+          const: 2
+        legal_form:
+          "$ref": "#/components/schemas/LegalForm"
+        tax_periods:
+          type: array
+          items:
+            "$ref": "#/components/schemas/TaxPeriod"
+          maxItems: 24
+        financial_period:
+          "$ref": "#/components/schemas/DatePeriod"
+        financial_basis:
+          type: string
+          enum:
+          - MANAGEMENT
+          - ACCOUNTING
+          - TAX
+          - UNKNOWN
+        obligations_as_of:
+          type: string
+          format: date
+      description: Absent profile_schema_version means legacy v1. For v2 submit requirements
+        are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered
+        facts are declared, not registry-verified.
     SignedMoney:
       type: object
       additionalProperties: false
-      required: [amount_kopecks, currency]
+      required:
+      - amount_kopecks
+      - currency
       properties:
-        amount_kopecks: { type: integer, format: int64, minimum: -9007199254740991, maximum: 9007199254740991 }
-        currency: { type: string, const: RUB }
+        amount_kopecks:
+          type: integer
+          format: int64
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        currency:
+          type: string
+          const: RUB
     Product:
       type: object
       additionalProperties: false
-      required: [id, code, name, description, purpose_tags, min_amount, max_amount, min_term_months, max_term_months, required_document_types, version]
+      required:
+      - id
+      - code
+      - name
+      - description
+      - purpose_tags
+      - min_amount
+      - max_amount
+      - min_term_months
+      - max_term_months
+      - required_document_types
+      - version
       properties:
-        id: { $ref: '#/components/schemas/Id' }
-        code: { type: string }
-        name: { type: string }
-        description: { type: string }
+        id:
+          "$ref": "#/components/schemas/Id"
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
         purpose_tags:
           type: array
-          items: { $ref: '#/components/schemas/PurposeTag' }
-        min_amount: { $ref: '#/components/schemas/Money' }
-        max_amount: { $ref: '#/components/schemas/Money' }
-        min_term_months: { type: integer, minimum: 1 }
-        max_term_months: { type: integer, minimum: 1 }
-        indicative_rate_bps: { type: integer, minimum: 0, description: Не является офертой. }
+          items:
+            "$ref": "#/components/schemas/PurposeTag"
+        min_amount:
+          "$ref": "#/components/schemas/Money"
+        max_amount:
+          "$ref": "#/components/schemas/Money"
+        min_term_months:
+          type: integer
+          minimum: 1
+        max_term_months:
+          type: integer
+          minimum: 1
+        indicative_rate_bps:
+          type: integer
+          minimum: 0
+          description: Не является офертой.
         required_document_types:
           type: array
-          items: { $ref: '#/components/schemas/DocumentType' }
-        version: { type: integer, format: int64, minimum: 1 }
+          items:
+            "$ref": "#/components/schemas/DocumentType"
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        requirements_policy_version:
+          type: string
+          enum:
+          - sme-profile-v1
+          description: Absent means legacy required_document_types. Versioned with
+            product. v2 requires required_document_types=[]; never combine both policies.
     DocumentMetadata:
       type: object
       additionalProperties: false
-      required: [id, document_type, file_name, sha256, uploaded_at, is_mock]
+      required:
+      - id
+      - document_type
+      - file_name
+      - sha256
+      - uploaded_at
+      - is_mock
       properties:
-        id: { $ref: '#/components/schemas/Id' }
-        document_type: { $ref: '#/components/schemas/DocumentType' }
-        file_name: { type: string }
-        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
-        uploaded_at: { $ref: '#/components/schemas/Timestamp' }
-        is_mock: { type: boolean }
+        id:
+          "$ref": "#/components/schemas/Id"
+        document_type:
+          "$ref": "#/components/schemas/DocumentType"
+        file_name:
+          type: string
+        sha256:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        uploaded_at:
+          "$ref": "#/components/schemas/Timestamp"
+        is_mock:
+          type: boolean
+        requirement_id:
+          type: string
+          maxLength: 160
+        coverage_period:
+          "$ref": "#/components/schemas/DatePeriod"
     InfoRequest:
       type: object
       additionalProperties: false
-      required: [id, message, required_fields, required_document_types, created_at]
+      required:
+      - id
+      - message
+      - required_fields
+      - required_document_types
+      - created_at
       properties:
-        id: { $ref: '#/components/schemas/Id' }
-        message: { type: string }
+        id:
+          "$ref": "#/components/schemas/Id"
+        message:
+          type: string
         required_fields:
           type: array
-          items: { $ref: '#/components/schemas/InfoField' }
+          items:
+            "$ref": "#/components/schemas/InfoField"
         required_document_types:
           type: array
-          items: { $ref: '#/components/schemas/DocumentType' }
-        created_at: { $ref: '#/components/schemas/Timestamp' }
+          items:
+            "$ref": "#/components/schemas/DocumentType"
+        created_at:
+          "$ref": "#/components/schemas/Timestamp"
+        requirements:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Requirement"
+      description: Legacy uses required_fields/document_types; v2 uses nonempty requirements
+        and both legacy arrays empty. PROVIDED means supplied, never verified.
     InfoField:
       type: string
       description: Поле снимка конкретной заявки, которое банк просит уточнить.
       enum:
-        - COMPANY_REVENUE_12M
-        - COMPANY_PROFIT_12M
-        - COMPANY_OBLIGATIONS
-        - APPLICATION_AMOUNT
-        - APPLICATION_TERM_MONTHS
-        - APPLICATION_PURPOSE
+      - COMPANY_REVENUE_12M
+      - COMPANY_PROFIT_12M
+      - COMPANY_OBLIGATIONS
+      - APPLICATION_AMOUNT
+      - APPLICATION_TERM_MONTHS
+      - APPLICATION_PURPOSE
     Offer:
       type: object
       additionalProperties: false
-      required: [id, kind, product_id, product_version, product_name, amount, term_months, rate_bps, expires_at, explanation]
+      required:
+      - id
+      - kind
+      - product_id
+      - product_version
+      - product_name
+      - amount
+      - term_months
+      - rate_bps
+      - expires_at
+      - explanation
       properties:
-        id: { $ref: '#/components/schemas/Id' }
-        kind: { type: string, enum: [OFFER, COUNTER_OFFER] }
-        product_id: { $ref: '#/components/schemas/Id' }
-        product_version: { type: integer, format: int64, minimum: 1 }
-        product_name: { type: string, description: Снимок названия предложенного продукта. }
-        amount: { $ref: '#/components/schemas/Money' }
-        term_months: { type: integer, minimum: 1 }
-        rate_bps: { type: integer, minimum: 0 }
-        expires_at: { $ref: '#/components/schemas/Timestamp' }
-        explanation: { type: string }
+        id:
+          "$ref": "#/components/schemas/Id"
+        kind:
+          type: string
+          enum:
+          - OFFER
+          - COUNTER_OFFER
+        product_id:
+          "$ref": "#/components/schemas/Id"
+        product_version:
+          type: integer
+          format: int64
+          minimum: 1
+        product_name:
+          type: string
+          description: Снимок названия предложенного продукта.
+        amount:
+          "$ref": "#/components/schemas/Money"
+        term_months:
+          type: integer
+          minimum: 1
+        rate_bps:
+          type: integer
+          minimum: 0
+        expires_at:
+          "$ref": "#/components/schemas/Timestamp"
+        explanation:
+          type: string
+    LegalForm:
+      type: string
+      enum:
+      - IP
+      - LLC
+    TaxRegime:
+      type: string
+      enum:
+      - OSNO
+      - USN_INCOME
+      - USN_INCOME_EXPENSE
+      - PSN
+      - AUSN_INCOME
+      - AUSN_INCOME_EXPENSE
+      - ESHN
+      - NPD
+      - OTHER
+      - UNKNOWN
+    DatePeriod:
+      type: object
+      additionalProperties: false
+      required:
+      - from
+      - to
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+    TaxPeriod:
+      type: object
+      additionalProperties: false
+      required:
+      - from
+      - regimes
+      - vat_status
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        regimes:
+          type: array
+          items:
+            "$ref": "#/components/schemas/TaxRegime"
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+        vat_status:
+          type: string
+          enum:
+          - UNKNOWN
+          - EXEMPT
+          - PAYER
+    Requirement:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - label
+      - reason
+      - kind
+      - required_at
+      - status
+      - accepted_document_types
+      - document_ids
+      properties:
+        id:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9._:-]{0,159}$"
+        code:
+          type: string
+        label:
+          type: string
+        reason:
+          type: string
+        kind:
+          type: string
+          enum:
+          - FIELD
+          - DOCUMENT
+        required_at:
+          type: string
+          enum:
+          - SUBMIT
+          - ASSESSMENT
+          - ON_REQUEST
+        status:
+          type: string
+          enum:
+          - MISSING
+          - PROVIDED
+        field_path:
+          type: string
+        accepted_document_types:
+          type: array
+          items:
+            "$ref": "#/components/schemas/DocumentType"
+        period:
+          "$ref": "#/components/schemas/DatePeriod"
+        tax_regime:
+          "$ref": "#/components/schemas/TaxRegime"
+        document_ids:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Id"
+    RequirementsPlan:
+      type: object
+      additionalProperties: false
+      required:
+      - policy_version
+      - reference_date
+      - can_submit
+      - route
+      - reason_codes
+      - items
+      properties:
+        policy_version:
+          type: string
+          enum:
+          - sme-profile-v1
+        reference_date:
+          type: string
+          format: date
+        can_submit:
+          type: boolean
+        route:
+          type: string
+          enum:
+          - STANDARD
+          - MANUAL_REVIEW
+        reason_codes:
+          type: array
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Requirement"

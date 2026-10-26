@@ -1,0 +1,1300 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "status": "specification_oracle_not_executed_business_tests",
+  "cases": [
+    {
+      "scenario_id": "llc_usn",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "9900000017",
+        "name": "ООО Демо-профиль",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "LLC",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": "BUSINESS_RESULT=ACCOUNTING_REPORT, period 2025-01-01..2025-12-31"
+    },
+    {
+      "scenario_id": "ip_usn",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "ip_psn",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "PSN"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW",
+          "PATENT_RIGHT"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "ip_usn_psn",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME_EXPENSE",
+              "PSN"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW",
+          "PATENT_RIGHT"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "unknown",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "UNKNOWN"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "MANUAL_REVIEW",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": []
+      },
+      "note": "TAX_REGIME_REQUIRES_REVIEW; assessment_codes empty"
+    },
+    {
+      "scenario_id": "missing_profit",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": false,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "zero_profit",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 0,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "loss",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": -100000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "llc_psn_invalid",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "9900000017",
+        "name": "ООО Демо-профиль",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "LLC",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "PSN"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": null,
+        "can_submit": false,
+        "validation_error": "UNSUPPORTED_TAX_COMBINATION",
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "ausn_manual",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "AUSN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "MANUAL_REVIEW",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": []
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "tax_history_gap",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2026-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "MANUAL_REVIEW",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": []
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "regime_changed",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "to": "2025-12-31",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          },
+          {
+            "from": "2026-01-01",
+            "regimes": [
+              "USN_INCOME_EXPENSE"
+            ],
+            "vat_status": "PAYER"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "STANDARD",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "overlap_invalid",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "to": "2025-12-31",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          },
+          {
+            "from": "2025-12-31",
+            "regimes": [
+              "USN_INCOME_EXPENSE"
+            ],
+            "vat_status": "PAYER"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": null,
+        "can_submit": false,
+        "validation_error": "INVALID_TAX_PERIOD",
+        "assessment_codes": [
+          "BUSINESS_RESULT",
+          "CASH_FLOW"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "tax_basis_manual",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "TAX",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "MANUAL_REVIEW",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": []
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "young_business_manual",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "9900000017",
+        "name": "ООО Демо-профиль",
+        "okved": "47.11",
+        "registered_at": "2026-07-01",
+        "profile_schema_version": 2,
+        "legal_form": "LLC",
+        "tax_periods": [
+          {
+            "from": "2026-07-01",
+            "regimes": [
+              "OSNO"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2026-07-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-10-20"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "MANUAL_REVIEW",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": []
+      },
+      "note": ""
+    },
+    {
+      "scenario_id": "stale_debt_date",
+      "reference_date": "2026-10-26",
+      "profile": {
+        "inn": "990000000115",
+        "name": "ИП Демо Предприниматель",
+        "okved": "47.11",
+        "registered_at": "2020-01-01",
+        "profile_schema_version": 2,
+        "legal_form": "IP",
+        "tax_periods": [
+          {
+            "from": "2020-01-01",
+            "regimes": [
+              "USN_INCOME"
+            ],
+            "vat_status": "UNKNOWN"
+          }
+        ],
+        "revenue_12m": {
+          "amount_kopecks": 2400000000,
+          "currency": "RUB"
+        },
+        "profit_12m": {
+          "amount_kopecks": 240000000,
+          "currency": "RUB"
+        },
+        "obligations": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "financial_period": {
+          "from": "2025-10-01",
+          "to": "2026-09-30"
+        },
+        "financial_basis": "MANAGEMENT",
+        "obligations_as_of": "2026-06-01"
+      },
+      "product": {
+        "id": "10000000-0000-4000-8000-000000000021",
+        "code": "SME_PROFILE_V2",
+        "name": "Демо: профиль ИП/ООО",
+        "description": "Тестовый продукт для v2 матрицы",
+        "purpose_tags": [
+          "WORKING_CAPITAL"
+        ],
+        "min_amount": {
+          "amount_kopecks": 10000000,
+          "currency": "RUB"
+        },
+        "max_amount": {
+          "amount_kopecks": 500000000,
+          "currency": "RUB"
+        },
+        "min_term_months": 6,
+        "max_term_months": 36,
+        "indicative_rate_bps": 1800,
+        "required_document_types": [],
+        "version": 1,
+        "requirements_policy_version": "sme-profile-v1"
+      },
+      "form": {
+        "amount": {
+          "amount_kopecks": 100000000,
+          "currency": "RUB"
+        },
+        "term_months": 24,
+        "purpose": "WORKING_CAPITAL"
+      },
+      "documents": [],
+      "expected": {
+        "route": "MANUAL_REVIEW",
+        "can_submit": true,
+        "validation_error": null,
+        "assessment_codes": []
+      },
+      "note": ""
+    }
+  ]
+}

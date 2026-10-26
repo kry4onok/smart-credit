@@ -36,7 +36,7 @@ func (m verifierMock) Verify(context.Context, string) (model.Principal, error) {
 func TestHandleCreatesCompanyAndReturnsETag(t *testing.T) {
 	usecase := &usecaseMock{company: model.Company{INN: "7707083893", Name: "Демо", OKVED: "62.01", RegisteredAt: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC), Version: 1}}
 	handler := New(usecase)
-	body := common.CompanyProfile{Inn: "7707083893", Name: "Демо", Okved: "62.01", RegisteredAt: openapi_types.Date{Time: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)}, Revenue12m: common.Money{Currency: common.MoneyCurrencyRUB}, Profit12m: common.SignedMoney{Currency: common.SignedMoneyCurrencyRUB}, Obligations: common.Money{Currency: common.MoneyCurrencyRUB}}
+	body := common.CompanyProfile{Inn: "7707083893", Name: "Демо", Okved: "62.01", RegisteredAt: openapi_types.Date{Time: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)}, Revenue12m: &common.Money{Currency: common.MoneyCurrencyRUB}, Profit12m: &common.SignedMoney{Currency: common.SignedMoneyCurrencyRUB}, Obligations: &common.Money{Currency: common.MoneyCurrencyRUB}}
 	request := generated.UpdateCompanyRequestObject{Body: &body}
 	recorder := serve(t, handler, request)
 	if recorder.Code != http.StatusOK || recorder.Header().Get("ETag") != `"1"` {
@@ -50,7 +50,7 @@ func TestHandleCreatesCompanyAndReturnsETag(t *testing.T) {
 func TestHandleParsesIfMatchAndRejectsMalformedValue(t *testing.T) {
 	usecase := &usecaseMock{company: model.Company{Version: 2}}
 	handler := New(usecase)
-	body := common.CompanyProfile{Inn: "7707083893", Name: "Демо", Okved: "62.01", RegisteredAt: openapi_types.Date{Time: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)}, Revenue12m: common.Money{Currency: common.MoneyCurrencyRUB}, Profit12m: common.SignedMoney{Currency: common.SignedMoneyCurrencyRUB}, Obligations: common.Money{Currency: common.MoneyCurrencyRUB}}
+	body := common.CompanyProfile{Inn: "7707083893", Name: "Демо", Okved: "62.01", RegisteredAt: openapi_types.Date{Time: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)}, Revenue12m: &common.Money{Currency: common.MoneyCurrencyRUB}, Profit12m: &common.SignedMoney{Currency: common.SignedMoneyCurrencyRUB}, Obligations: &common.Money{Currency: common.MoneyCurrencyRUB}}
 	value := `"7"`
 	serve(t, handler, generated.UpdateCompanyRequestObject{Params: generated.UpdateCompanyParams{IfMatch: &value}, Body: &body})
 	if usecase.version == nil || *usecase.version != 7 {
@@ -82,4 +82,21 @@ func serve(t *testing.T, handler *Handler, request generated.UpdateCompanyReques
 	requestHTTP.Header.Set("Authorization", "Bearer test")
 	protected.ServeHTTP(recorder, requestHTTP)
 	return recorder
+}
+
+func TestHandleRejectsMissingFinancialsAndV2WithoutPanic(t *testing.T) {
+	version := common.N2
+	for _, tc := range []struct {
+		body common.CompanyProfile
+		code string
+	}{
+		{common.CompanyProfile{}, "INVALID_COMPANY_PROFILE"},
+		{common.CompanyProfile{ProfileSchemaVersion: &version}, "PROFILE_V2_NOT_ENABLED"},
+	} {
+		recorder := serve(t, New(&usecaseMock{}), generated.UpdateCompanyRequestObject{Body: &tc.body})
+		var problem common.Problem
+		if json.Unmarshal(recorder.Body.Bytes(), &problem) != nil || recorder.Code != http.StatusUnprocessableEntity || problem.Code != tc.code {
+			t.Fatalf("response=%d %s", recorder.Code, recorder.Body.String())
+		}
+	}
 }
