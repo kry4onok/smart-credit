@@ -3,8 +3,9 @@ package decidehandler
 import (
 	"context"
 	"errors"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 	"testing"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/domainerror"

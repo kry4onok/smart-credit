@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/events/publicstate"

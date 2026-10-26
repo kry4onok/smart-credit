@@ -2,10 +2,11 @@ package decision
 
 import (
 	"encoding/json"
-	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"math/big"
 	"strings"
 	"time"
+
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"

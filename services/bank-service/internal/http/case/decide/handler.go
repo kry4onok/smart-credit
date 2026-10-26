@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 	"strconv"
 	"strings"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 	gethandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/get"
