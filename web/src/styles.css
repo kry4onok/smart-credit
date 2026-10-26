@@ -1081,6 +1081,16 @@ legend {
   gap: 8px;
 }
 
+/* The delete confirmation reads top to bottom: the warning, then the buttons. */
+.draft-toolbar .note {
+  display: grid;
+  gap: 10px;
+}
+
+.draft-toolbar .note p {
+  margin: 0;
+}
+
 #purpose-description {
   width: 100%;
   resize: vertical;
@@ -1836,8 +1846,49 @@ legend {
     display: none;
   }
 
+  /* Three tabs fit a 375 px phone without sideways scrolling. */
+  .nav {
+    gap: 0;
+  }
+
+  .nav a {
+    padding: 8px;
+    font-size: 0.92rem;
+  }
+
+  .purpose-pick h1 {
+    font-size: 1.7rem;
+    margin-bottom: 14px;
+  }
+
+  /* Compact rows keep the four purposes and the calculator on the first screen. */
   .purpose-options {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .purpose {
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 10px 14px;
+  }
+
+  .purpose .purpose-icon {
+    grid-row: 1 / span 2;
+    margin: 0;
+    width: 28px;
+    height: 28px;
+  }
+
+  .purpose strong,
+  .purpose span {
+    grid-column: 2;
+  }
+
+  .purpose span {
+    font-size: 0.85rem;
   }
 
   .products {
@@ -3121,6 +3172,16 @@ fieldset.group > legend {
   width: 100%;
   height: auto;
   overflow: visible;
+}
+
+.chart-scroll {
+  overflow-x: auto;
+}
+
+@media (max-width: 720px) {
+  .chart-scroll .chart {
+    min-width: 680px;
+  }
 }
 
 .chart .grid {
