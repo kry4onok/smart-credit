@@ -186,7 +186,8 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 		return nil
 	}
 
-	if _, err := tx.Exec(ctx, `UPDATE info_requests SET is_active = false, responded_at = now() WHERE application_id = $1 AND is_active`, applicationID); err != nil {
+	// created_at comes from the bank clock: clamp so a small clock skew cannot violate the CHECK and block the partition.
+	if _, err := tx.Exec(ctx, `UPDATE info_requests SET is_active = false, responded_at = greatest(now(), created_at) WHERE application_id = $1 AND is_active`, applicationID); err != nil {
 		return fmt.Errorf("deactivate info request: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE offers SET is_active = false WHERE application_id = $1 AND is_active`, applicationID); err != nil {
