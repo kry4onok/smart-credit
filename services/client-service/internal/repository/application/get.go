@@ -29,13 +29,13 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 		       requested_amount_kopecks, requested_term_months, purpose_tag,
 		       status, stage_label, next_action, pending_action, public_reason,
 		       version, created_at, updated_at,
-		       EXISTS (SELECT 1 FROM timeline_entries WHERE application_id = applications.id AND action = 'SIGN'), product_snapshot, requirements_reference_date, bank_requirements_plan
+		       EXISTS (SELECT 1 FROM timeline_entries WHERE application_id = applications.id AND action = 'SIGN'), product_snapshot, requirements_reference_date, bank_requirements_plan, purpose_description
 		FROM applications
 		WHERE id = $1 AND org_id = $2`, applicationID, orgID).Scan(
 		&application.ID, &application.ProductID, &application.ProductVersion, &companySnapshot,
 		&amount, &termMonths, &purpose, &application.Status, &application.StageLabel,
 		&application.NextAction, &application.PendingAction, &application.PublicReason,
-		&application.Version, &application.CreatedAt, &application.UpdatedAt, &hasSignature, &productRaw, &application.RequirementsReferenceDate, &planRaw,
+		&application.Version, &application.CreatedAt, &application.UpdatedAt, &hasSignature, &productRaw, &application.RequirementsReferenceDate, &planRaw, &application.PurposeDescription,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Application{}, domain.ErrApplicationNotFound
@@ -49,9 +49,10 @@ func (r *Repository) Get(ctx context.Context, orgID, applicationID uuid.UUID) (m
 	}
 	if amount != nil && termMonths != nil && purpose != nil {
 		application.Form = &model.ApplicationForm{
-			AmountKopecks: *amount,
-			TermMonths:    *termMonths,
-			Purpose:       *purpose,
+			AmountKopecks:      *amount,
+			TermMonths:         *termMonths,
+			Purpose:            *purpose,
+			PurposeDescription: application.PurposeDescription,
 		}
 	}
 
@@ -180,7 +181,7 @@ func allowedActions(status string, pendingAction *string, hasSignature bool) []s
 	actions := make([]string, 0)
 	switch status {
 	case "DRAFT":
-		actions = append(actions, "EDIT_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT")
+		actions = append(actions, "EDIT_DRAFT", "DELETE_DRAFT", "UPLOAD_DOCUMENT", "SUBMIT")
 	case "NEEDS_INFO":
 		actions = append(actions, "PROVIDE_INFO", "UPLOAD_DOCUMENT")
 	case "OFFER_AVAILABLE":

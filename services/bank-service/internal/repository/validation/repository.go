@@ -33,7 +33,7 @@ func (r *Repository) ClaimNext(ctx context.Context) (validation.Claim, bool, err
 		&claim.CaseID, &claim.Version, &claim.ProductID, &claim.ProductVersion,
 		&claim.Snapshot.CompanyJSON, &claim.Snapshot.DocumentsJSON,
 		&claim.Snapshot.ReferenceDate,
-		&claim.Snapshot.AmountKopecks, &claim.Snapshot.TermMonths, &claim.Snapshot.PurposeTag,
+		&claim.Snapshot.AmountKopecks, &claim.Snapshot.TermMonths, &claim.Snapshot.PurposeTag, &claim.Snapshot.PurposeDescription,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return validation.Claim{}, false, nil

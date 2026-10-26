@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
@@ -108,6 +109,12 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		if params.Fields.Purpose != nil {
 			form.Purpose = *params.Fields.Purpose
 		}
+		if params.Fields.PurposeDescription != nil {
+			form.PurposeDescription = *params.Fields.PurposeDescription
+		}
+	}
+	if form.Purpose == "OTHER" && strings.TrimSpace(form.PurposeDescription) == "" {
+		return model.ActionAccepted{}, domain.ErrInvalidInfoResponse
 	}
 	var answered []string
 	if snapshot.product.RequirementsPolicyVersion != nil {
@@ -193,7 +200,7 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		SET company_snapshot = $3,
 		    requested_amount_kopecks = $4,
 		    requested_term_months = $5,
-		    purpose_tag = $6,
+		    purpose_tag = $6, purpose_description=$10,
 		    pending_action = 'INFO_SENT',
 		    pending_since = $7,
 		    version = $8,
@@ -201,7 +208,7 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		    updated_at = greatest($7, created_at)
 		WHERE id = $1 AND org_id = $2 AND status = 'NEEDS_INFO' AND pending_action IS NULL`,
 		params.ApplicationID, params.OrgID, companyJSON, form.AmountKopecks,
-		form.TermMonths, form.Purpose, now, snapshot.version+1, clientEventVersion)
+		form.TermMonths, form.Purpose, now, snapshot.version+1, clientEventVersion, form.PurposeDescription)
 	if err != nil {
 		return model.ActionAccepted{}, fmt.Errorf("save info response: %w", err)
 	}
@@ -248,14 +255,15 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 	var amount *int64
 	var term *int
 	var purpose *string
+	var purposeDescription string
 	err := tx.QueryRow(ctx, `
 		SELECT status, pending_action, version, client_event_version, company_snapshot,
-		       product_snapshot, requested_amount_kopecks, requested_term_months, purpose_tag, requirements_reference_date
+		       product_snapshot, requested_amount_kopecks, requested_term_months, purpose_tag, requirements_reference_date, purpose_description
 		FROM applications
 		WHERE id = $1 AND org_id = $2
 		FOR UPDATE`, applicationID, orgID).Scan(
 		&snapshot.status, &snapshot.pendingAction, &snapshot.version, &snapshot.clientEventVersion, &companyRaw,
-		&productRaw, &amount, &term, &purpose, &snapshot.referenceDate)
+		&productRaw, &amount, &term, &purpose, &snapshot.referenceDate, &purposeDescription)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return infoSnapshot{}, domain.ErrApplicationNotFound
 	}
@@ -271,7 +279,7 @@ func (r *Repository) loadInfoSnapshot(ctx context.Context, tx Tx, applicationID,
 	if amount == nil || term == nil || purpose == nil {
 		return infoSnapshot{}, domain.ErrInvalidInfoResponse
 	}
-	snapshot.form = model.ApplicationForm{AmountKopecks: *amount, TermMonths: *term, Purpose: *purpose}
+	snapshot.form = model.ApplicationForm{AmountKopecks: *amount, TermMonths: *term, Purpose: *purpose, PurposeDescription: purposeDescription}
 	err = tx.QueryRow(ctx, `
 		SELECT id, required_fields, required_document_types, requirements
 		FROM info_requests
@@ -317,7 +325,7 @@ func validateInfoResponse(snapshot infoSnapshot, params model.ProvideInfoParams,
 		form.AmountKopecks > snapshot.product.MaxAmount.AmountKopecks ||
 		form.TermMonths < snapshot.product.MinTermMonths ||
 		form.TermMonths > snapshot.product.MaxTermMonths ||
-		!validPurpose(form.Purpose) {
+		(!validPurpose(form.Purpose) || !contains(snapshot.product.PurposeTags, form.Purpose)) {
 		issues = append(issues, "Проверьте сумму, срок и цель кредита: они должны соответствовать условиям продукта.")
 	}
 	for _, field := range snapshot.requiredFields {
@@ -452,6 +460,8 @@ func answeredFields(request []*commonpb.Requirement, params model.ProvideInfoPar
 				present = f.TermMonths != nil
 			case "form.purpose":
 				present = f.Purpose != nil
+			case "form.purpose_description":
+				present = f.PurposeDescription != nil
 			}
 		}
 		if present {

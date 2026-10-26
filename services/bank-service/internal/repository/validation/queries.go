@@ -3,7 +3,7 @@ package validationrepository
 const claimNextQuery = `
 SELECT id, version, product_id, product_version, company_snapshot,
        documents_snapshot, requirements_reference_date,
-       requested_amount_kopecks, requested_term_months, purpose_tag
+       requested_amount_kopecks, requested_term_months, purpose_tag, COALESCE(application_snapshot->>'purpose_description','')
 FROM cases
 WHERE status = 'VALIDATION'
   AND (next_run_at IS NULL OR next_run_at <= now())

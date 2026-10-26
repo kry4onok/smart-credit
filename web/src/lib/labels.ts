@@ -4,12 +4,14 @@ export const purposeLabel: Record<PurposeTag, string> = {
   WORKING_CAPITAL: "Пополнить оборотные средства",
   EQUIPMENT: "Купить оборудование",
   EXPANSION: "Развить бизнес",
+  OTHER: "Несколько целей или другая цель",
 };
 
 export const purposeHint: Record<PurposeTag, string> = {
   WORKING_CAPITAL: "Закупка товара, зарплаты, аренда, кассовые разрывы",
   EQUIPMENT: "Станки, транспорт, техника для работы",
   EXPANSION: "Новая точка, направление или крупный проект",
+  OTHER: "Опишите, на что нужны деньги",
 };
 
 export const documentLabel: Record<DocumentType, string> = {

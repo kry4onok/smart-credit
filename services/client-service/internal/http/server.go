@@ -9,6 +9,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	applicationcancel "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/cancel"
 	applicationcreate "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/create"
+	applicationdelete "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/delete"
 	applicationdocument "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document"
 	documentcontent "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/document/content"
 	applicationget "github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/application/get"
@@ -35,6 +36,7 @@ type server struct {
 	company                 *companyget.Handler
 	update                  *companyupdate.Handler
 	application             *applicationcreate.Handler
+	applicationDelete       *applicationdelete.Handler
 	applicationCancel       *applicationcancel.Handler
 	applicationDocument     *applicationdocument.Handler
 	documentContent         *documentcontent.Handler
@@ -61,6 +63,7 @@ type Params struct {
 	CompanyGet              *companyget.Handler
 	CompanyUpdate           *companyupdate.Handler
 	ApplicationCreate       *applicationcreate.Handler
+	ApplicationDelete       *applicationdelete.Handler
 	ApplicationCancel       *applicationcancel.Handler
 	ApplicationDocument     *applicationdocument.Handler
 	DocumentContent         *documentcontent.Handler
@@ -83,6 +86,7 @@ func New(params Params) http.Handler {
 		company:                 params.CompanyGet,
 		update:                  params.CompanyUpdate,
 		application:             params.ApplicationCreate,
+		applicationDelete:       params.ApplicationDelete,
 		applicationCancel:       params.ApplicationCancel,
 		applicationDocument:     params.ApplicationDocument,
 		documentContent:         params.DocumentContent,
@@ -203,4 +207,8 @@ func (s *server) GetApplicationTimeline(ctx context.Context, request generated.G
 
 func (s *server) CancelApplication(ctx context.Context, request generated.CancelApplicationRequestObject) (generated.CancelApplicationResponseObject, error) {
 	return s.applicationCancel.Handle(ctx, request)
+}
+
+func (s *server) DeleteApplication(ctx context.Context, request generated.DeleteApplicationRequestObject) (generated.DeleteApplicationResponseObject, error) {
+	return s.applicationDelete.Handle(ctx, request)
 }

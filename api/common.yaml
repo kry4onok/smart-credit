@@ -149,11 +149,17 @@ components:
       - ANALYST
       - ADMIN
     PurposeTag:
+      description: >-
+        WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport;
+        EXPANSION — premises, opening a location or expansion project;
+        OTHER — multiple purposes or another purpose, requiring purpose_description.
+        Product purpose_tags are explicit eligibility restrictions, not suggestions.
       type: string
       enum:
       - WORKING_CAPITAL
       - EQUIPMENT
       - EXPANSION
+      - OTHER
     DocumentType:
       type: string
       enum:

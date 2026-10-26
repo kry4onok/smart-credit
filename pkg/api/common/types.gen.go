@@ -281,19 +281,22 @@ func (e ProductRequirementsPolicyVersion) Valid() bool {
 
 // Defines values for PurposeTag.
 const (
-	EQUIPMENT      PurposeTag = "EQUIPMENT"
-	EXPANSION      PurposeTag = "EXPANSION"
-	WORKINGCAPITAL PurposeTag = "WORKING_CAPITAL"
+	PurposeTagEQUIPMENT      PurposeTag = "EQUIPMENT"
+	PurposeTagEXPANSION      PurposeTag = "EXPANSION"
+	PurposeTagOTHER          PurposeTag = "OTHER"
+	PurposeTagWORKINGCAPITAL PurposeTag = "WORKING_CAPITAL"
 )
 
 // Valid indicates whether the value is a known member of the PurposeTag enum.
 func (e PurposeTag) Valid() bool {
 	switch e {
-	case EQUIPMENT:
+	case PurposeTagEQUIPMENT:
 		return true
-	case EXPANSION:
+	case PurposeTagEXPANSION:
 		return true
-	case WORKINGCAPITAL:
+	case PurposeTagOTHER:
+		return true
+	case PurposeTagWORKINGCAPITAL:
 		return true
 	default:
 		return false
@@ -626,7 +629,7 @@ type Product struct {
 // ProductRequirementsPolicyVersion Absent means legacy required_document_types. Versioned with product. v2 requires required_document_types=[]; never combine both policies.
 type ProductRequirementsPolicyVersion string
 
-// PurposeTag defines model for PurposeTag.
+// PurposeTag WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
 type PurposeTag string
 
 // Requirement defines model for Requirement.

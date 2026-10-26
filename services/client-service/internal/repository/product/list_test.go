@@ -23,7 +23,7 @@ func (m dbMock) Query(ctx context.Context, query string, args ...any) (pgx.Rows,
 	return m.query(ctx, query, args...)
 }
 
-func TestListFiltersPurposeAndMapsProduct(t *testing.T) {
+func TestListRanksPurposeAndMapsProduct(t *testing.T) {
 	purpose := "WORKING_CAPITAL"
 	id := uuid.New()
 	db := dbMock{
@@ -37,7 +37,7 @@ func TestListFiltersPurposeAndMapsProduct(t *testing.T) {
 			}}
 		},
 		query: func(_ context.Context, query string, args ...any) (pgx.Rows, error) {
-			if !strings.Contains(query, "ANY(purpose_tags)") || !strings.Contains(query, "ORDER BY code, id") || len(args) != 1 || args[0] != purpose {
+			if !strings.Contains(query, "ANY(purpose_tags)") || !strings.Contains(query, "ORDER BY CASE") || len(args) != 1 || args[0] != purpose {
 				t.Fatalf("unexpected product query: %s %v", query, args)
 			}
 			return &rowsMock{scans: []func(...any) error{func(dest ...any) error {

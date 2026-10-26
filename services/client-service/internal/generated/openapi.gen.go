@@ -24,6 +24,7 @@ const (
 	ACCEPTOFFER    ClientApplicationAllowedActions = "ACCEPT_OFFER"
 	CANCEL         ClientApplicationAllowedActions = "CANCEL"
 	DECLINEOFFER   ClientApplicationAllowedActions = "DECLINE_OFFER"
+	DELETEDRAFT    ClientApplicationAllowedActions = "DELETE_DRAFT"
 	EDITDRAFT      ClientApplicationAllowedActions = "EDIT_DRAFT"
 	PROVIDEINFO    ClientApplicationAllowedActions = "PROVIDE_INFO"
 	SIGN           ClientApplicationAllowedActions = "SIGN"
@@ -39,6 +40,8 @@ func (e ClientApplicationAllowedActions) Valid() bool {
 	case CANCEL:
 		return true
 	case DECLINEOFFER:
+		return true
+	case DELETEDRAFT:
 		return true
 	case EDITDRAFT:
 		return true
@@ -90,9 +93,14 @@ type ActionAccepted struct {
 
 // ApplicationForm defines model for ApplicationForm.
 type ApplicationForm struct {
-	Amount     externalRef0.Money      `json:"amount"`
-	Purpose    externalRef0.PurposeTag `json:"purpose"`
-	TermMonths int                     `json:"term_months"`
+	Amount externalRef0.Money `json:"amount"`
+
+	// Purpose WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
+	Purpose externalRef0.PurposeTag `json:"purpose"`
+
+	// PurposeDescription Explain the intended spending. Required and nonblank for OTHER before submit. Optional for other purposes. PATCH omission preserves the value; empty string clears it.
+	PurposeDescription *PurposeDescription `json:"purpose_description,omitempty"`
+	TermMonths         int                 `json:"term_months"`
 }
 
 // ApplicationFormPatch Partial loan fields plus optional full company snapshot, DRAFT only. Identity must match organization and existing snapshot. Omitted company preserves snapshot. Financial omission inside supplied company means unknown.
@@ -100,9 +108,14 @@ type ApplicationFormPatch struct {
 	Amount *externalRef0.Money `json:"amount,omitempty"`
 
 	// Company Absent profile_schema_version means legacy v1. For v2 submit requirements are validated by sme-profile-v1. Missing money is unknown, not zero. All client-entered facts are declared, not registry-verified.
-	Company    *externalRef0.CompanyProfile `json:"company,omitempty"`
-	Purpose    *externalRef0.PurposeTag     `json:"purpose,omitempty"`
-	TermMonths *int                         `json:"term_months,omitempty"`
+	Company *externalRef0.CompanyProfile `json:"company,omitempty"`
+
+	// Purpose WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
+	Purpose *externalRef0.PurposeTag `json:"purpose,omitempty"`
+
+	// PurposeDescription Explain the intended spending. Required and nonblank for OTHER before submit. Optional for other purposes. PATCH omission preserves the value; empty string clears it.
+	PurposeDescription *PurposeDescription `json:"purpose_description,omitempty"`
+	TermMonths         *int                `json:"term_months,omitempty"`
 }
 
 // ApplicationListItem defines model for ApplicationListItem.
@@ -138,14 +151,17 @@ type ClientApplication struct {
 	Id        externalRef0.Id                 `json:"id"`
 
 	// InfoRequest Legacy uses required_fields/document_types; v2 uses nonempty requirements and both legacy arrays empty. PROVIDED means supplied, never verified.
-	InfoRequest      *externalRef0.InfoRequest       `json:"info_request,omitempty"`
-	NextAction       string                          `json:"next_action"`
-	Offer            *externalRef0.Offer             `json:"offer,omitempty"`
-	PendingAction    *ClientApplicationPendingAction `json:"pending_action,omitempty"`
-	ProductId        externalRef0.Id                 `json:"product_id"`
-	ProductVersion   int64                           `json:"product_version"`
-	PublicReason     *string                         `json:"public_reason,omitempty"`
-	RequirementsPlan *externalRef0.RequirementsPlan  `json:"requirements_plan,omitempty"`
+	InfoRequest    *externalRef0.InfoRequest       `json:"info_request,omitempty"`
+	NextAction     string                          `json:"next_action"`
+	Offer          *externalRef0.Offer             `json:"offer,omitempty"`
+	PendingAction  *ClientApplicationPendingAction `json:"pending_action,omitempty"`
+	ProductId      externalRef0.Id                 `json:"product_id"`
+	ProductVersion int64                           `json:"product_version"`
+	PublicReason   *string                         `json:"public_reason,omitempty"`
+
+	// PurposeDescription Explain the intended spending. Required and nonblank for OTHER before submit. Optional for other purposes. PATCH omission preserves the value; empty string clears it.
+	PurposeDescription *PurposeDescription            `json:"purpose_description,omitempty"`
+	RequirementsPlan   *externalRef0.RequirementsPlan `json:"requirements_plan,omitempty"`
 
 	// StageLabel Понятное клиенту название текущего этапа.
 	StageLabel string                    `json:"stage_label"`
@@ -164,9 +180,14 @@ type ClientApplicationPendingAction string
 
 // LoanFieldsPatch defines model for LoanFieldsPatch.
 type LoanFieldsPatch struct {
-	Amount     *externalRef0.Money      `json:"amount,omitempty"`
-	Purpose    *externalRef0.PurposeTag `json:"purpose,omitempty"`
-	TermMonths *int                     `json:"term_months,omitempty"`
+	Amount *externalRef0.Money `json:"amount,omitempty"`
+
+	// Purpose WORKING_CAPITAL — goods and current expenses; EQUIPMENT — equipment and transport; EXPANSION — premises, opening a location or expansion project; OTHER — multiple purposes or another purpose, requiring purpose_description. Product purpose_tags are explicit eligibility restrictions, not suggestions.
+	Purpose *externalRef0.PurposeTag `json:"purpose,omitempty"`
+
+	// PurposeDescription Explain the intended spending. Required and nonblank for OTHER before submit. Optional for other purposes. PATCH omission preserves the value; empty string clears it.
+	PurposeDescription *PurposeDescription `json:"purpose_description,omitempty"`
+	TermMonths         *int                `json:"term_months,omitempty"`
 }
 
 // OfferActionRequest defines model for OfferActionRequest.
@@ -182,6 +203,9 @@ type ProvideInfoRequest struct {
 	Fields      *LoanFieldsPatch             `json:"fields,omitempty"`
 	RequestId   externalRef0.Id              `json:"request_id"`
 }
+
+// PurposeDescription Explain the intended spending. Required and nonblank for OTHER before submit. Optional for other purposes. PATCH omission preserves the value; empty string clears it.
+type PurposeDescription = string
 
 // TimelineEntry defines model for TimelineEntry.
 type TimelineEntry struct {
@@ -235,6 +259,12 @@ type CreateApplicationJSONBody struct {
 type CreateApplicationParams struct {
 	// IdempotencyKey UUID действия. Повтор с другим телом возвращает 409.
 	IdempotencyKey externalRef0.IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// DeleteApplicationParams defines parameters for DeleteApplication.
+type DeleteApplicationParams struct {
+	// IfMatch ETag из GET, равный версии ресурса в двойных кавычках.
+	IfMatch externalRef0.IfMatch `json:"If-Match"`
 }
 
 // UpdateApplicationParams defines parameters for UpdateApplication.
@@ -345,6 +375,9 @@ type ServerInterface interface {
 	// CreateApplication Создать черновик по выбранному продукту
 	// (POST /client/applications)
 	CreateApplication(w http.ResponseWriter, r *http.Request, params CreateApplicationParams)
+	// DeleteApplication Удалить собственный черновик
+	// (DELETE /client/applications/{application_id})
+	DeleteApplication(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params DeleteApplicationParams)
 	// GetApplication Карточка заявки клиента
 	// (GET /client/applications/{application_id})
 	GetApplication(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId)
@@ -411,6 +444,12 @@ func (_ Unimplemented) ListApplications(w http.ResponseWriter, r *http.Request, 
 // CreateApplication Создать черновик по выбранному продукту
 // (POST /client/applications)
 func (_ Unimplemented) CreateApplication(w http.ResponseWriter, r *http.Request, params CreateApplicationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteApplication Удалить собственный черновик
+// (DELETE /client/applications/{application_id})
+func (_ Unimplemented) DeleteApplication(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params DeleteApplicationParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -620,6 +659,60 @@ func (siw *ServerInterfaceWrapper) CreateApplication(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateApplication(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteApplication operation middleware
+func (siw *ServerInterfaceWrapper) DeleteApplication(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "application_id" -------------
+	var applicationId externalRef0.ApplicationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "application_id", chi.URLParam(r, "application_id"), &applicationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteApplicationParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch externalRef0.IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteApplication(w, r, applicationId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1431,6 +1524,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/client/applications", wrapper.CreateApplication)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/client/applications/{application_id}", wrapper.DeleteApplication)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/client/applications/{application_id}", wrapper.GetApplication)
 	})
 	r.Group(func(r chi.Router) {
@@ -1661,6 +1757,103 @@ func (response CreateApplication422ApplicationProblemPlusJSONResponse) VisitCrea
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationRequestObject struct {
+	ApplicationId externalRef0.ApplicationId `json:"application_id"`
+	Params        DeleteApplicationParams
+}
+
+type DeleteApplicationResponseObject interface {
+	VisitDeleteApplicationResponse(w http.ResponseWriter) error
+}
+
+type DeleteApplication204Response struct {
+}
+
+func (response DeleteApplication204Response) VisitDeleteApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteApplication400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteApplication400ApplicationProblemPlusJSONResponse) VisitDeleteApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplication401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteApplication401ApplicationProblemPlusJSONResponse) VisitDeleteApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplication403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteApplication403ApplicationProblemPlusJSONResponse) VisitDeleteApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplication404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteApplication404ApplicationProblemPlusJSONResponse) VisitDeleteApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplication409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteApplication409ApplicationProblemPlusJSONResponse) VisitDeleteApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -2801,6 +2994,9 @@ type StrictServerInterface interface {
 	// CreateApplication Создать черновик по выбранному продукту
 	// (POST /client/applications)
 	CreateApplication(ctx context.Context, request CreateApplicationRequestObject) (CreateApplicationResponseObject, error)
+	// DeleteApplication Удалить собственный черновик
+	// (DELETE /client/applications/{application_id})
+	DeleteApplication(ctx context.Context, request DeleteApplicationRequestObject) (DeleteApplicationResponseObject, error)
 	// GetApplication Карточка заявки клиента
 	// (GET /client/applications/{application_id})
 	GetApplication(ctx context.Context, request GetApplicationRequestObject) (GetApplicationResponseObject, error)
@@ -2945,6 +3141,33 @@ func (sh *strictHandler) CreateApplication(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateApplicationResponseObject); ok {
 		if err := validResponse.VisitCreateApplicationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteApplication operation middleware
+func (sh *strictHandler) DeleteApplication(w http.ResponseWriter, r *http.Request, applicationId externalRef0.ApplicationId, params DeleteApplicationParams) {
+	var request DeleteApplicationRequestObject
+
+	request.ApplicationId = applicationId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteApplication(ctx, request.(DeleteApplicationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteApplication")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteApplicationResponseObject); ok {
+		if err := validResponse.VisitDeleteApplicationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

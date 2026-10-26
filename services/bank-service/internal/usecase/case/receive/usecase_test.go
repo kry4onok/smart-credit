@@ -324,3 +324,40 @@ func TestParseContractSigned(t *testing.T) {
 		})
 	}
 }
+
+func TestOtherPurposeDescription(t *testing.T) {
+	for _, tc := range []struct {
+		name, description string
+		valid             bool
+	}{
+		{"described", "Ремонт помещения, оборудование и сырьё", true},
+		{"blank", " \n\t", false},
+		{"limit", strings.Repeat("я", 1000), true},
+		{"too long", strings.Repeat("я", 1001), false},
+		{"null byte", "a\x00b", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			event := submittedEvent()
+			form := event.GetApplicationSubmitted().Form
+			form.Purpose = commonpb.PurposeTag_PURPOSE_TAG_OTHER
+			form.PurposeDescription = tc.description
+			input, err := parse(event)
+			if !tc.valid {
+				if !errors.Is(err, ErrInvalidEvent) {
+					t.Fatalf("error=%v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var restored commonpb.ApplicationForm
+			if err = protojson.Unmarshal(input.FormJSON, &restored); err != nil {
+				t.Fatal(err)
+			}
+			if input.PurposeTag != "OTHER" || restored.GetPurposeDescription() != tc.description {
+				t.Fatalf("lost purpose description: %v", &restored)
+			}
+		})
+	}
+}

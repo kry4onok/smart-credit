@@ -28,6 +28,7 @@ SELECT
     cases.requested_amount_kopecks,
     cases.requested_term_months,
     cases.purpose_tag,
+    COALESCE(cases.application_snapshot->>'purpose_description',''),
     COALESCE((
         SELECT array_agg(document->>'document_type' ORDER BY ordinality)
         FROM jsonb_array_elements(cases.documents_snapshot)

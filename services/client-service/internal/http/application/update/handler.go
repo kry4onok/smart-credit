@@ -3,8 +3,8 @@ package update
 import (
 	"context"
 	"net/http"
-	"strconv"
-	"strings"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/etag"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/profile"
 
@@ -28,7 +28,7 @@ func (h *Handler) Handle(ctx context.Context, request generated.UpdateApplicatio
 	if request.Body == nil {
 		return problemResponse{domainerror.Problem(ctx, http.StatusUnprocessableEntity, "INVALID_APPLICATION_FORM", "Форма заявки заполнена некорректно.")}, nil
 	}
-	patch := model.ApplicationPatch{TermMonths: request.Body.TermMonths}
+	patch := model.ApplicationPatch{TermMonths: request.Body.TermMonths, PurposeDescription: request.Body.PurposeDescription}
 	if request.Body.Company != nil {
 		if !profile.ValidCurrencies(*request.Body.Company) {
 			return problemResponse{domainerror.Problem(ctx, 422, "INVALID_COMPANY_PROFILE", "Валюта должна быть RUB.")}, nil
@@ -55,22 +55,7 @@ func (h *Handler) Handle(ctx context.Context, request generated.UpdateApplicatio
 	return generated.UpdateApplication200JSONResponse(applicationget.ToResponse(application)), nil
 }
 
-func parseIfMatch(value string) (int64, error) {
-	if len(value) < 3 || !strings.HasPrefix(value, `"`) || !strings.HasSuffix(value, `"`) {
-		return 0, strconv.ErrSyntax
-	}
-	rawVersion := value[1 : len(value)-1]
-	for _, digit := range rawVersion {
-		if digit < '0' || digit > '9' {
-			return 0, strconv.ErrSyntax
-		}
-	}
-	version, err := strconv.ParseInt(rawVersion, 10, 64)
-	if err != nil || version <= 0 {
-		return 0, strconv.ErrSyntax
-	}
-	return version, nil
-}
+func parseIfMatch(value string) (int64, error) { return etag.ParseIfMatch(value) }
 
 type problemResponse struct{ common.Problem }
 

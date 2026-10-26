@@ -224,9 +224,12 @@ func parse(event *eventspb.Event) (Input, error) {
 	switch form.GetPurpose() {
 	case commonpb.PurposeTag_PURPOSE_TAG_WORKING_CAPITAL,
 		commonpb.PurposeTag_PURPOSE_TAG_EQUIPMENT,
-		commonpb.PurposeTag_PURPOSE_TAG_EXPANSION:
+		commonpb.PurposeTag_PURPOSE_TAG_EXPANSION, commonpb.PurposeTag_PURPOSE_TAG_OTHER:
 	default:
 		return Input{}, fmt.Errorf("%w: purpose", ErrInvalidEvent)
+	}
+	if !utf8.ValidString(form.GetPurposeDescription()) || utf8.RuneCountInString(form.GetPurposeDescription()) > 1000 || strings.ContainsRune(form.GetPurposeDescription(), 0) || (form.GetPurpose() == commonpb.PurposeTag_PURPOSE_TAG_OTHER && strings.TrimSpace(form.GetPurposeDescription()) == "") {
+		return Input{}, fmt.Errorf("%w: purpose_description", ErrInvalidEvent)
 	}
 	companyJSON, err := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(company)
 	if err != nil {

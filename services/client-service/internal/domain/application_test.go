@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/model"
@@ -22,7 +23,7 @@ func TestValidateApplicationPatch(t *testing.T) {
 		{name: "empty", patch: model.ApplicationPatch{}, valid: false},
 		{name: "wrong currency", patch: model.ApplicationPatch{AmountKopecks: &amount, AmountCurrency: "USD"}, valid: false},
 		{name: "zero amount", patch: model.ApplicationPatch{AmountKopecks: new(int64), AmountCurrency: "RUB"}, valid: false},
-		{name: "invalid purpose", patch: model.ApplicationPatch{Purpose: stringPtr("OTHER")}, valid: false},
+		{name: "invalid purpose", patch: model.ApplicationPatch{Purpose: stringPtr("UNSUPPORTED")}, valid: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateApplicationPatch(tc.patch)
@@ -37,3 +38,23 @@ func TestValidateApplicationPatch(t *testing.T) {
 }
 
 func stringPtr(value string) *string { return &value }
+
+func TestPurposeDescriptionValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name, value string
+		valid       bool
+	}{
+		{"clear", "", true}, {"multibyte", strings.Repeat("я", 1000), true}, {"too long", strings.Repeat("я", 1001), false}, {"null byte", "a\x00b", false}, {"invalid utf8", string([]byte{255}), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateApplicationPatch(model.ApplicationPatch{PurposeDescription: &tc.value})
+			if (err == nil) != tc.valid {
+				t.Fatalf("error=%v", err)
+			}
+		})
+	}
+	purpose := "OTHER"
+	if err := ValidateApplicationPatch(model.ApplicationPatch{Purpose: &purpose}); err != nil {
+		t.Fatal("incomplete draft must autosave", err)
+	}
+}

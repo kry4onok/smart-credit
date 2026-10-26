@@ -21,7 +21,7 @@ func (m verifierMock) Verify(context.Context, string) (model.Principal, error) {
 }
 
 func TestHandleListsProductsAndPassesPurpose(t *testing.T) {
-	purpose := common.WORKINGCAPITAL
+	purpose := common.PurposeTagWORKINGCAPITAL
 	usecase := &usecaseMock{catalog: model.ProductCatalog{
 		Version: 3,
 		Items: []model.Product{{

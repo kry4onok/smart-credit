@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	caserepository "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/repository/case"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/receive"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -260,5 +261,40 @@ func TestApplyInfoProvidedUpdatesCaseAndDeduplicates(t *testing.T) {
 	}
 	if auditCount != 1 || eventCount != 1 {
 		t.Fatalf("audit=%d, processed=%d", auditCount, eventCount)
+	}
+}
+
+func TestOtherPurposeReachesBankCaseIntegration(t *testing.T) {
+	databaseURL := os.Getenv("BANK_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("BANK_DATABASE_URL is not set")
+	}
+	ctx := t.Context()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	id, productID := uuid.New(), uuid.New()
+	if _, err = tx.Exec(ctx, `INSERT INTO products(id,version,code,name,purpose_tags,min_amount_kopecks,max_amount_kopecks,min_term_months,max_term_months,indicative_rate_bps) VALUES($1,1,$2,'Mixed purpose',ARRAY['OTHER'],1,1000000,1,36,1000)`, productID, productID.String()); err != nil {
+		t.Fatal(err)
+	}
+	description := "Ремонт, оборудование и сырьё"
+	formJSON, err := json.Marshal(map[string]any{"amount": map[string]any{"amount_kopecks": 1000, "currency": "RUB"}, "term_months": 12, "purpose": "PURPOSE_TAG_OTHER", "purpose_description": description})
+	if err != nil {
+		t.Fatal(err)
+	}
+	applied, err := New(tx).Apply(ctx, receive.Input{EventID: uuid.New(), ApplicationID: id, AggregateVersion: 1, OrgID: uuid.New(), ClientUserID: uuid.New(), ProductID: productID, ProductVersion: 1, CompanyINN: "7707083893", CompanyName: "Test", CompanyJSON: []byte(`{"inn":"7707083893","name":"Test","registered_at":"2020-01-01","okved":"47.11","revenue_12m":{"amount_kopecks":10000,"currency":"RUB"},"profit_12m":{"amount_kopecks":1000,"currency":"RUB"},"obligations":{"amount_kopecks":0,"currency":"RUB"}}`), FormJSON: formJSON, DocumentsJSON: []byte(`[]`), AmountKopecks: 1000, TermMonths: 12, PurposeTag: "OTHER"})
+	if err != nil || !applied {
+		t.Fatalf("applied=%v err=%v", applied, err)
+	}
+	got, found, err := caserepository.New(tx).GetCase(ctx, id)
+	if err != nil || !found || got.Application.Purpose != "OTHER" || got.Application.PurposeDescription != description {
+		t.Fatalf("bank application=%+v found=%v err=%v", got.Application, found, err)
 	}
 }

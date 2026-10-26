@@ -29,6 +29,7 @@ const (
 	PurposeTag_PURPOSE_TAG_WORKING_CAPITAL PurposeTag = 1
 	PurposeTag_PURPOSE_TAG_EQUIPMENT       PurposeTag = 2
 	PurposeTag_PURPOSE_TAG_EXPANSION       PurposeTag = 3
+	PurposeTag_PURPOSE_TAG_OTHER           PurposeTag = 4 // Multiple spending categories or another purpose; describe in the form.
 )
 
 // Enum value maps for PurposeTag.
@@ -38,12 +39,14 @@ var (
 		1: "PURPOSE_TAG_WORKING_CAPITAL",
 		2: "PURPOSE_TAG_EQUIPMENT",
 		3: "PURPOSE_TAG_EXPANSION",
+		4: "PURPOSE_TAG_OTHER",
 	}
 	PurposeTag_value = map[string]int32{
 		"PURPOSE_TAG_UNSPECIFIED":     0,
 		"PURPOSE_TAG_WORKING_CAPITAL": 1,
 		"PURPOSE_TAG_EQUIPMENT":       2,
 		"PURPOSE_TAG_EXPANSION":       3,
+		"PURPOSE_TAG_OTHER":           4,
 	}
 )
 
@@ -976,12 +979,13 @@ func (x *DocumentMetadata) GetCoveragePeriod() *DatePeriod {
 }
 
 type ApplicationForm struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Amount        *Money                 `protobuf:"bytes,1,opt,name=amount,proto3" json:"amount,omitempty"`
-	TermMonths    int32                  `protobuf:"varint,2,opt,name=term_months,json=termMonths,proto3" json:"term_months,omitempty"`
-	Purpose       PurposeTag             `protobuf:"varint,3,opt,name=purpose,proto3,enum=smartcredit.common.PurposeTag" json:"purpose,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Amount             *Money                 `protobuf:"bytes,1,opt,name=amount,proto3" json:"amount,omitempty"`
+	TermMonths         int32                  `protobuf:"varint,2,opt,name=term_months,json=termMonths,proto3" json:"term_months,omitempty"`
+	Purpose            PurposeTag             `protobuf:"varint,3,opt,name=purpose,proto3,enum=smartcredit.common.PurposeTag" json:"purpose,omitempty"`
+	PurposeDescription string                 `protobuf:"bytes,4,opt,name=purpose_description,json=purposeDescription,proto3" json:"purpose_description,omitempty"` // Required for OTHER, at most 1000 Unicode characters.
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ApplicationForm) Reset() {
@@ -1033,6 +1037,13 @@ func (x *ApplicationForm) GetPurpose() PurposeTag {
 		return x.Purpose
 	}
 	return PurposeTag_PURPOSE_TAG_UNSPECIFIED
+}
+
+func (x *ApplicationForm) GetPurposeDescription() string {
+	if x != nil {
+		return x.PurposeDescription
+	}
+	return ""
 }
 
 type Offer struct {
@@ -1749,12 +1760,13 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"uploadedAt\x12\x17\n" +
 	"\ais_mock\x18\x06 \x01(\bR\x06isMock\x12%\n" +
 	"\x0erequirement_id\x18\a \x01(\tR\rrequirementId\x12G\n" +
-	"\x0fcoverage_period\x18\b \x01(\v2\x1e.smartcredit.common.DatePeriodR\x0ecoveragePeriod\"\x9f\x01\n" +
+	"\x0fcoverage_period\x18\b \x01(\v2\x1e.smartcredit.common.DatePeriodR\x0ecoveragePeriod\"\xd0\x01\n" +
 	"\x0fApplicationForm\x121\n" +
 	"\x06amount\x18\x01 \x01(\v2\x19.smartcredit.common.MoneyR\x06amount\x12\x1f\n" +
 	"\vterm_months\x18\x02 \x01(\x05R\n" +
 	"termMonths\x128\n" +
-	"\apurpose\x18\x03 \x01(\x0e2\x1e.smartcredit.common.PurposeTagR\apurpose\"\x8c\x03\n" +
+	"\apurpose\x18\x03 \x01(\x0e2\x1e.smartcredit.common.PurposeTagR\apurpose\x12/\n" +
+	"\x13purpose_description\x18\x04 \x01(\tR\x12purposeDescription\"\x8c\x03\n" +
 	"\x05Offer\x12\x19\n" +
 	"\boffer_id\x18\x01 \x01(\tR\aofferId\x121\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x1d.smartcredit.common.OfferKindR\x04kind\x121\n" +
@@ -1832,13 +1844,14 @@ const file_proto_common_common_proto_rawDesc = "" +
 	"can_submit\x18\x03 \x01(\bR\tcanSubmit\x12;\n" +
 	"\x05route\x18\x04 \x01(\x0e2%.smartcredit.common.RequirementsRouteR\x05route\x12!\n" +
 	"\freason_codes\x18\x05 \x03(\tR\vreasonCodes\x125\n" +
-	"\x05items\x18\x06 \x03(\v2\x1f.smartcredit.common.RequirementR\x05items*\x80\x01\n" +
+	"\x05items\x18\x06 \x03(\v2\x1f.smartcredit.common.RequirementR\x05items*\x97\x01\n" +
 	"\n" +
 	"PurposeTag\x12\x1b\n" +
 	"\x17PURPOSE_TAG_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bPURPOSE_TAG_WORKING_CAPITAL\x10\x01\x12\x19\n" +
 	"\x15PURPOSE_TAG_EQUIPMENT\x10\x02\x12\x19\n" +
-	"\x15PURPOSE_TAG_EXPANSION\x10\x03*\xed\x02\n" +
+	"\x15PURPOSE_TAG_EXPANSION\x10\x03\x12\x15\n" +
+	"\x11PURPOSE_TAG_OTHER\x10\x04*\xed\x02\n" +
 	"\fDocumentType\x12\x1d\n" +
 	"\x19DOCUMENT_TYPE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cDOCUMENT_TYPE_BANK_STATEMENT\x10\x01\x12\x1f\n" +

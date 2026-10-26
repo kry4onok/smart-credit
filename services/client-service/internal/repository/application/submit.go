@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
@@ -189,14 +190,14 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 		SELECT id, client_user_id, product_id, product_version,
 		       company_snapshot, product_snapshot, requested_amount_kopecks,
 		       requested_term_months, purpose_tag, status, version,
-		       client_event_version, created_at, updated_at, requirements_reference_date
+		       client_event_version, created_at, updated_at, requirements_reference_date, purpose_description
 		FROM applications
 		WHERE id = $1 AND org_id = $2
 		FOR UPDATE`, params.ApplicationID, params.OrgID).Scan(
 		&result.application.ID, &clientUserID, &result.application.ProductID,
 		&result.application.ProductVersion, &companyRaw, &productRaw, &amount,
 		&term, &purpose, &result.application.Status, &result.application.Version,
-		&result.clientEventVersion, &result.application.CreatedAt, &result.application.UpdatedAt, &result.application.RequirementsReferenceDate)
+		&result.clientEventVersion, &result.application.CreatedAt, &result.application.UpdatedAt, &result.application.RequirementsReferenceDate, &result.application.PurposeDescription)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return submitSnapshot{}, domain.ErrApplicationNotFound
 	}
@@ -212,7 +213,7 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 		return submitSnapshot{}, fmt.Errorf("decode product snapshot for submission: %w", err)
 	}
 	// Preserve the fields that are present so validation can name only what is missing.
-	result.application.Form = &model.ApplicationForm{AmountKopecks: valueOrZero(amount), TermMonths: valueOrZero(term), Purpose: valueOrEmpty(purpose)}
+	result.application.Form = &model.ApplicationForm{AmountKopecks: valueOrZero(amount), TermMonths: valueOrZero(term), Purpose: valueOrEmpty(purpose), PurposeDescription: result.application.PurposeDescription}
 	rows, err := tx.Query(ctx, `
 		SELECT id, document_type, file_name, sha256, is_mock, uploaded_at, requirement_id, coverage_from, coverage_to
 		FROM application_documents
@@ -237,6 +238,9 @@ func (r *Repository) loadSubmitSnapshot(ctx context.Context, tx Tx, params model
 }
 
 func validateSubmitSnapshot(snapshot submitSnapshot) error {
+	if snapshot.application.Form != nil && snapshot.application.Form.Purpose == "OTHER" && strings.TrimSpace(snapshot.application.Form.PurposeDescription) == "" {
+		return domain.InvalidFields(domain.ErrInvalidApplication, "Опишите, на что нужны деньги.")
+	}
 	if snapshot.product.RequirementsPolicyVersion != nil {
 		p, err := buildPlan(snapshotCompany(snapshot.company), snapshot.product, snapshot.application.Form, snapshot.documents, snapshot.application.RequirementsReferenceDate)
 		if err != nil {
@@ -267,6 +271,8 @@ func validateSubmitSnapshot(snapshot submitSnapshot) error {
 	}
 	if !validPurpose(form.Purpose) {
 		issues = append(issues, "Укажите цель кредита.")
+	} else if !contains(snapshot.product.PurposeTags, form.Purpose) {
+		issues = append(issues, "Цель кредита не поддерживается выбранным продуктом.")
 	}
 	for _, required := range snapshot.product.RequiredDocumentTypes {
 		found := false
@@ -296,7 +302,7 @@ func documentLabel(value string) string {
 
 func validPurpose(value string) bool {
 	switch value {
-	case "WORKING_CAPITAL", "EQUIPMENT", "EXPANSION":
+	case "WORKING_CAPITAL", "EQUIPMENT", "EXPANSION", "OTHER":
 		return true
 	default:
 		return false
@@ -313,8 +319,9 @@ func moneyProto(value moneySnapshot) *commonpb.Money {
 
 func formProto(value model.ApplicationForm) *commonpb.ApplicationForm {
 	return &commonpb.ApplicationForm{
-		Amount:     moneyProto(moneySnapshot{AmountKopecks: value.AmountKopecks, Currency: "RUB"}),
-		TermMonths: int32(value.TermMonths), Purpose: commonpb.PurposeTag(commonpb.PurposeTag_value["PURPOSE_TAG_"+value.Purpose]),
+		Amount:             moneyProto(moneySnapshot{AmountKopecks: value.AmountKopecks, Currency: "RUB"}),
+		PurposeDescription: value.PurposeDescription,
+		TermMonths:         int32(value.TermMonths), Purpose: commonpb.PurposeTag(commonpb.PurposeTag_value["PURPOSE_TAG_"+value.Purpose]),
 	}
 }
 

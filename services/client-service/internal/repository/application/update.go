@@ -69,7 +69,8 @@ func (r *Repository) Update(ctx context.Context, params model.UpdateApplicationP
 	_, err = tx.Exec(ctx, `UPDATE applications SET requested_amount_kopecks=CASE WHEN $3::boolean THEN $4::bigint ELSE requested_amount_kopecks END,
  requested_term_months=CASE WHEN $5::boolean THEN $6::integer ELSE requested_term_months END,
  purpose_tag=CASE WHEN $7::boolean THEN $8::text ELSE purpose_tag END,
- company_snapshot=$9,version=version+1,updated_at=now() WHERE id=$1 AND org_id=$2`, params.ApplicationID, params.OrgID, patch.AmountKopecks != nil, valueOrZero(patch.AmountKopecks), patch.TermMonths != nil, valueOrZero(patch.TermMonths), patch.Purpose != nil, valueOrEmpty(patch.Purpose), companyRaw)
+ purpose_description=CASE WHEN $10::boolean THEN $11::text ELSE purpose_description END,
+ company_snapshot=$9,version=version+1,updated_at=now() WHERE id=$1 AND org_id=$2`, params.ApplicationID, params.OrgID, patch.AmountKopecks != nil, valueOrZero(patch.AmountKopecks), patch.TermMonths != nil, valueOrZero(patch.TermMonths), patch.Purpose != nil, valueOrEmpty(patch.Purpose), companyRaw, patch.PurposeDescription != nil, valueOrEmpty(patch.PurposeDescription))
 	if err != nil {
 		return model.Application{}, fmt.Errorf("update draft: %w", err)
 	}
