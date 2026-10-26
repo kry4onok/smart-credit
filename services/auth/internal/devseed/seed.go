@@ -31,6 +31,26 @@ const (
 	revokeSessionsQuery = `DELETE FROM refresh_tokens WHERE user_id = $1`
 )
 
+// organization is a synthetic company; its INN selects the bureau-mocks persona.
+type organization struct {
+	id   uuid.UUID
+	inn  string
+	name string
+}
+
+// personaClients are extra CLIENT accounts, one per demo outcome. They share the
+// client password; the INN of a company profile cannot be changed after the first
+// save, so every outcome needs its own organization.
+var personaClients = []struct {
+	userID, email, name string
+	org                 organization
+}{
+	{"30000000-0000-4000-8000-000000000002", "ip@smart-credit.test", "Демо ИП на патенте",
+		organization{uuid.MustParse("20000000-0000-4000-8000-000000000002"), "990000000115", "ИП Демо Предприниматель"}},
+	{"30000000-0000-4000-8000-000000000003", "closing@smart-credit.test", "Демо ликвидируемая компания",
+		organization{uuid.MustParse("20000000-0000-4000-8000-000000000003"), "1111111117", "ООО «Закрывающаяся мастерская»"}},
+}
+
 type Credentials struct {
 	AnalystPassword string
 	AdminPassword   string
@@ -73,6 +93,7 @@ func Run(ctx context.Context, db *pgxpool.Pool, credentials Credentials) ([]Acco
 		return nil, errors.New("auth database is required")
 	}
 	orgID := uuid.MustParse(organizationID)
+	organizations := []organization{{orgID, organizationINN, "ООО «Северная пекарня»"}}
 	identities := []identity{
 		{Account: Account{ID: uuid.MustParse(analystID), Email: "analyst@smart-credit.test", Role: "ANALYST"},
 			name: "Демо аналитик", secret: credentials.AnalystPassword},
@@ -81,13 +102,21 @@ func Run(ctx context.Context, db *pgxpool.Pool, credentials Credentials) ([]Acco
 		{Account: Account{ID: uuid.MustParse(clientID), Email: "client@smart-credit.test", Role: "CLIENT"},
 			name: "Демо клиент", orgID: orgID, canSubmit: true, secret: credentials.ClientPassword},
 	}
+	for _, persona := range personaClients {
+		organizations = append(organizations, persona.org)
+		identities = append(identities, identity{
+			Account: Account{ID: uuid.MustParse(persona.userID), Email: persona.email, Role: "CLIENT"},
+			name:    persona.name, orgID: persona.org.id, canSubmit: true, secret: credentials.ClientPassword})
+	}
 	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("start auth dev seed: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := ensureOrganization(ctx, tx, orgID); err != nil {
-		return nil, err
+	for _, org := range organizations {
+		if err := ensureOrganization(ctx, tx, org); err != nil {
+			return nil, err
+		}
 	}
 	accounts := make([]Account, 0, len(identities))
 	for _, person := range identities {
@@ -102,15 +131,15 @@ func Run(ctx context.Context, db *pgxpool.Pool, credentials Credentials) ([]Acco
 	return accounts, nil
 }
 
-func ensureOrganization(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
-	if _, err := tx.Exec(ctx, insertOrganizationQuery, id, organizationINN, "ООО «Северная пекарня»"); err != nil {
+func ensureOrganization(ctx context.Context, tx pgx.Tx, org organization) error {
+	if _, err := tx.Exec(ctx, insertOrganizationQuery, org.id, org.inn, org.name); err != nil {
 		return fmt.Errorf("insert demo organization: %w", err)
 	}
 	var inn string
-	if err := tx.QueryRow(ctx, selectOrganizationQuery, id).Scan(&inn); err != nil {
+	if err := tx.QueryRow(ctx, selectOrganizationQuery, org.id).Scan(&inn); err != nil {
 		return fmt.Errorf("read demo organization: %w", err)
 	}
-	if inn != organizationINN {
+	if inn != org.inn {
 		return errors.New("demo organization ID already belongs to another INN")
 	}
 	return nil

@@ -18,6 +18,8 @@ from bank_integration import verify_bank_integration
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_ID = "10000000-0000-4000-8000-000000000022"
+# Persona organizations created by auth-dev-seed; their INN is unique in auth_db.
+SEEDED_PERSONAS = {"990000000115": "ip@smart-credit.test", "1111111117": "closing@smart-credit.test"}
 
 
 def main():
@@ -155,12 +157,14 @@ def main():
                 profile = json.loads((ROOT / "seed/profile-requirements" / profile_file).read_text())
                 if inn:
                     profile["inn"] = inn
-                if profile["inn"] != "7707083893":
+                if profile["inn"] in SEEDED_PERSONAS:
+                    client = login(SEEDED_PERSONAS[profile["inn"]])
+                elif profile["inn"] != "7707083893":
                     organization, user = str(uuid.uuid4()), str(uuid.uuid4())
                     email = user + "@assessment.test"
                     sql = f"""INSERT INTO organizations(id,inn,name) VALUES('{organization}','{profile['inn']}','Synthetic assessment');
-                        INSERT INTO users(id,email,full_name,password_hash,role,org_id,is_active)
-                        SELECT '{user}','{email}','Synthetic client',password_hash,'CLIENT','{organization}',true
+                        INSERT INTO users(id,email,full_name,password_hash,role,org_id,is_active,can_submit)
+                        SELECT '{user}','{email}','Synthetic client',password_hash,'CLIENT','{organization}',true,true
                         FROM users WHERE email='client@smart-credit.test';"""
                     run(compose + ["exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "auth_db"], sql)
                     client = login(email)

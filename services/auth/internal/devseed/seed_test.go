@@ -43,7 +43,7 @@ func TestRunIntegration(t *testing.T) {
 	db := isolatedDatabase(t)
 	credentials := Credentials{AnalystPassword: uuid.NewString(), AdminPassword: uuid.NewString(), ClientPassword: uuid.NewString()}
 	accounts, err := Run(t.Context(), db, credentials)
-	if err != nil || len(accounts) != 3 {
+	if err != nil || len(accounts) != 3+len(personaClients) {
 		t.Fatalf("seed accounts = %+v, err = %v", accounts, err)
 	}
 	firstHashes := readUsers(t, db, credentials)
@@ -102,6 +102,11 @@ func readUsers(t *testing.T, db *pgxpool.Pool, credentials Credentials) map[uuid
 		"admin@smart-credit.test":   credentials.AdminPassword,
 		"client@smart-credit.test":  credentials.ClientPassword,
 	}
+	personas := make(map[string]string)
+	for _, persona := range personaClients {
+		secrets[persona.email] = credentials.ClientPassword
+		personas[persona.email] = persona.org.id.String()
+	}
 	result := make(map[uuid.UUID]string)
 	for rows.Next() {
 		var id uuid.UUID
@@ -132,14 +137,18 @@ func readUsers(t *testing.T, db *pgxpool.Pool, credentials Credentials) map[uuid
 			if id.String() != clientID || role != "CLIENT" || orgID == nil || orgID.String() != organizationID || !canSubmit {
 				t.Fatalf("invalid client: %s %s %v %v", id, role, orgID, canSubmit)
 			}
+		default:
+			if role != "CLIENT" || orgID == nil || orgID.String() != personas[email] || !canSubmit {
+				t.Fatalf("invalid persona client %s: %s %v %v", email, role, orgID, canSubmit)
+			}
 		}
 		result[id] = hash
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 3 {
-		t.Fatalf("seeded %d accounts, want 3", len(result))
+	if len(result) != 3+len(personaClients) {
+		t.Fatalf("seeded %d accounts, want %d", len(result), 3+len(personaClients))
 	}
 	return result
 }
