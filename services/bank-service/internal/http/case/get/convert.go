@@ -31,11 +31,16 @@ func ToBankCase(output getcase.Output) generated.BankCase {
 	}
 	documents := make([]common.DocumentMetadata, 0, len(caseItem.Documents))
 	for _, document := range caseItem.Documents {
-		documents = append(documents, common.DocumentMetadata{
+		converted := common.DocumentMetadata{
 			Id: document.ID, DocumentType: common.DocumentType(document.DocumentType),
 			FileName: document.FileName, Sha256: document.SHA256,
 			UploadedAt: document.UploadedAt, IsMock: document.IsMock,
-		})
+		}
+		if document.RequirementID != "" {
+			converted.RequirementId = &document.RequirementID
+		}
+		converted.CoveragePeriod = toDatePeriod(document.CoveragePeriod)
+		documents = append(documents, converted)
 	}
 	triggeredRules := append([]string{}, caseItem.TriggeredRules...)
 
@@ -61,6 +66,12 @@ func ToBankCase(output getcase.Output) generated.BankCase {
 		CreatedAt:      caseItem.CreatedAt,
 		UpdatedAt:      caseItem.UpdatedAt,
 		Version:        caseItem.Version,
+	}
+	if caseItem.CompanyV2 != nil {
+		result.Company = toCompanyV2(caseItem.CompanyV2)
+	}
+	if caseItem.RequirementsPlan != nil {
+		result.RequirementsPlan = toRequirementsPlan(caseItem.RequirementsPlan)
 	}
 
 	if caseItem.Checks != nil {
@@ -175,13 +186,18 @@ func toInfoRequest(infoRequest model.InfoRequest) *common.InfoRequest {
 		documentTypes[index] = common.DocumentType(documentType)
 	}
 
-	return &common.InfoRequest{
+	result := &common.InfoRequest{
 		Id:                    infoRequest.ID,
 		Message:               infoRequest.Message,
 		RequiredFields:        fields,
 		RequiredDocumentTypes: documentTypes,
 		CreatedAt:             infoRequest.CreatedAt,
 	}
+	if len(infoRequest.Requirements) > 0 {
+		items := toRequirements(infoRequest.Requirements)
+		result.Requirements = &items
+	}
+	return result
 }
 
 func toOffer(offer model.Offer) *common.Offer {

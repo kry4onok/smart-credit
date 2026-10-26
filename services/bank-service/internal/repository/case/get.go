@@ -98,8 +98,21 @@ SELECT
     cases.audit_version,
     cases.created_at,
     cases.updated_at,
-    cases.version
+    cases.version,
+    cases.company_snapshot,
+    cases.requirements_reference_date,
+    COALESCE(pinned_product.requirements_policy_version, ''),
+    pinned_product.id IS NOT NULL,
+    COALESCE(pinned_product.purpose_tags, '{}'::text[]),
+    COALESCE(pinned_product.required_document_types, '{}'::text[]),
+    COALESCE(pinned_product.min_amount_kopecks, 0),
+    COALESCE(pinned_product.max_amount_kopecks, 0),
+    COALESCE(pinned_product.min_term_months, 0),
+    COALESCE(pinned_product.max_term_months, 0),
+    active_info_request.requirements
 FROM cases
+LEFT JOIN products AS pinned_product
+    ON pinned_product.id = cases.product_id AND pinned_product.version = cases.product_version
 LEFT JOIN LATERAL (
     SELECT id, outcome, result, error_code
     FROM enrichment_results
@@ -127,7 +140,7 @@ LEFT JOIN scoring_attempts AS current_attempt
     ON current_attempt.id = cases.current_scoring_attempt_id
     AND current_attempt.input_revision = cases.scoring_input_revision
 LEFT JOIN LATERAL (
-    SELECT id, message, required_fields, required_document_types, created_at
+    SELECT id, message, required_fields, required_document_types, created_at, requirements
     FROM info_requests
     WHERE case_id = cases.id AND status = 'OPEN'
     ORDER BY created_at DESC, id DESC

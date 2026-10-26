@@ -84,11 +84,11 @@ func TestEvaluateUnknownProductAndMalformedSnapshot(t *testing.T) {
 	}
 }
 
-func TestV2ProfileDoesNotUseLegacyDocumentPolicy(t *testing.T) {
+func TestLegacyProductKeepsLegacyPolicyWithV2Profile(t *testing.T) {
 	snapshot := completeSnapshot()
 	snapshot.CompanyJSON = []byte(strings.Replace(string(snapshot.CompanyJSON), `"inn":`, `"profile_schema_version":2,"inn":`, 1))
 	result := Evaluate(snapshot, testProduct())
-	if result.Status != model.CaseStatusManualReview || result.Reason != "PROFILE_V2_NOT_ENABLED" {
+	if result.Status != model.CaseStatusEnrichment || result.Plan != nil {
 		t.Fatalf("unexpected legacy processing: %+v", result)
 	}
 }

@@ -5,10 +5,32 @@ import (
 	"testing"
 	"time"
 
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	"github.com/google/uuid"
 )
+
+func TestToBankCaseV2PreservesAbsentAndZeroMoney(t *testing.T) {
+	version := int32(2)
+	date := time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC)
+	company := &commonpb.CompanySnapshot{Inn: "990000000115", Name: "ИП Демо", Okved: "47.11", RegisteredAt: "2020-01-01", ProfileSchemaVersion: &version, LegalForm: commonpb.LegalForm_LEGAL_FORM_IP, Revenue_12M: &commonpb.Money{AmountKopecks: 0, Currency: "RUB"}, TaxPeriods: []*commonpb.TaxPeriod{{From: "2020-01-01", Regimes: []commonpb.TaxRegime{commonpb.TaxRegime_TAX_REGIME_USN_INCOME}, VatStatus: commonpb.VatStatus_VAT_STATUS_UNKNOWN}}}
+	plan := &commonpb.RequirementsPlan{PolicyVersion: "sme-profile-v1", ReferenceDate: "2026-10-26", CanSubmit: true, Route: commonpb.RequirementsRoute_REQUIREMENTS_ROUTE_STANDARD, Items: []*commonpb.Requirement{{Id: "company_profit_12m", Code: "COMPANY_PROFIT_12M", Kind: commonpb.RequirementKind_REQUIREMENT_KIND_FIELD, RequiredAt: commonpb.RequirementStage_REQUIREMENT_STAGE_SUBMIT, Status: commonpb.RequirementStatus_REQUIREMENT_STATUS_MISSING, FieldPath: "company.profit_12m"}}}
+	item := model.Case{CompanyV2: company, RequirementsPlan: plan, Documents: []model.DocumentMetadata{{ID: uuid.New(), DocumentType: "BANK_STATEMENT", UploadedAt: date, RequirementID: "cash_flow:2025-10-01:2026-09-30:all", CoveragePeriod: &commonpb.DatePeriod{From: "2025-10-01", To: "2026-09-30"}}}}
+	got := ToBankCase(getcase.Output{Case: item})
+	if got.Company.Revenue12m == nil || got.Company.Revenue12m.AmountKopecks != 0 || got.Company.Profit12m != nil || got.Company.Obligations != nil {
+		t.Fatalf("money presence: %+v", got.Company)
+	}
+	if got.Company.LegalForm == nil || string(*got.Company.LegalForm) != "IP" || got.Company.TaxPeriods == nil || len(*got.Company.TaxPeriods) != 1 {
+		t.Fatalf("profile: %+v", got.Company)
+	}
+	if got.RequirementsPlan == nil || got.RequirementsPlan.CanSubmit || len(got.RequirementsPlan.Items) != 1 || got.RequirementsPlan.Items[0].Id != "company_profit_12m" {
+		t.Fatalf("plan: %+v", got.RequirementsPlan)
+	}
+	if got.Documents[0].RequirementId == nil || got.Documents[0].CoveragePeriod == nil {
+		t.Fatalf("document: %+v", got.Documents[0])
+	}
+}
 
 func TestToBankCaseIncludesDocumentMetadata(t *testing.T) {
 	documentID := uuid.New()
