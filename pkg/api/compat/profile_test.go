@@ -1,8 +1,9 @@
 package compat
 
 import (
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 	"testing"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
 )
 
 func TestLegacyProfilePresence(t *testing.T) {

@@ -3,12 +3,12 @@ package update
 import (
 	"context"
 	"fmt"
-	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/compat"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/common"
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/api/compat"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/domain"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/generated"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/client-service/internal/http/domainerror"
