@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	scoringpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/scoring"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -77,6 +79,14 @@ func scanCase(row rowScanner) (model.Case, error) {
 	var offerRateBPS *int
 	var offerExpiresAt *time.Time
 	var offerExplanation *string
+	var companyJSON []byte
+	var referenceDate *time.Time
+	var policyVersion string
+	var productFound bool
+	var productPurposeTags, productDocumentTypes []string
+	var productMinAmount, productMaxAmount int64
+	var productMinTerm, productMaxTerm int32
+	var activeRequirementsJSON []byte
 
 	err := row.Scan(
 		&item.ID,
@@ -137,6 +147,17 @@ func scanCase(row rowScanner) (model.Case, error) {
 		&item.CreatedAt,
 		&item.UpdatedAt,
 		&item.Version,
+		&companyJSON,
+		&referenceDate,
+		&policyVersion,
+		&productFound,
+		&productPurposeTags,
+		&productDocumentTypes,
+		&productMinAmount,
+		&productMaxAmount,
+		&productMinTerm,
+		&productMaxTerm,
+		&activeRequirementsJSON,
 	)
 	if err != nil {
 		return model.Case{}, err
@@ -207,6 +228,10 @@ func scanCase(row rowScanner) (model.Case, error) {
 			RequiredDocumentTypes: convertDocumentTypes(requiredDocumentTypes),
 			CreatedAt:             *infoRequestCreatedAt,
 		}
+		item.InfoRequest.Requirements, err = decodeRequirementsJSON(activeRequirementsJSON)
+		if err != nil {
+			return model.Case{}, fmt.Errorf("decode active requirements: %w", err)
+		}
 	}
 	if offerID != nil {
 		item.Offer = &model.Offer{
@@ -223,18 +248,47 @@ func scanCase(row rowScanner) (model.Case, error) {
 		}
 	}
 
+	companyV2 := new(commonpb.CompanySnapshot)
+	if err := protojson.Unmarshal(companyJSON, companyV2); err == nil && companyV2.GetProfileSchemaVersion() == 2 {
+		item.CompanyV2 = companyV2
+	}
+	if policyVersion != "" {
+		outcome := validation.Evaluate(validation.Snapshot{CompanyJSON: companyJSON, DocumentsJSON: documentsJSON, ReferenceDate: referenceDate, AmountKopecks: item.Application.AmountKopecks, TermMonths: int32(item.Application.TermMonths), PurposeTag: purpose}, validation.Product{Found: productFound, PolicyVersion: policyVersion, PurposeTags: productPurposeTags, RequiredDocumentTypes: productDocumentTypes, MinAmountKopecks: productMinAmount, MaxAmountKopecks: productMaxAmount, MinTermMonths: productMinTerm, MaxTermMonths: productMaxTerm})
+		item.RequirementsPlan = outcome.Plan
+	}
 	return item, nil
+}
+
+func decodeRequirementsJSON(data []byte) ([]*commonpb.Requirement, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+	items := make([]*commonpb.Requirement, 0, len(raw))
+	for _, part := range raw {
+		item := new(commonpb.Requirement)
+		if err := protojson.Unmarshal(part, item); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }
 
 func decodeCaseDocuments(raw []byte) ([]model.DocumentMetadata, error) {
 	var stored []struct {
-		DocumentID   uuid.UUID `json:"document_id"`
-		LegacyID     uuid.UUID `json:"id"`
-		DocumentType string    `json:"document_type"`
-		FileName     string    `json:"file_name"`
-		SHA256       string    `json:"sha256"`
-		UploadedAt   time.Time `json:"uploaded_at"`
-		IsMock       bool      `json:"is_mock"`
+		DocumentID     uuid.UUID            `json:"document_id"`
+		LegacyID       uuid.UUID            `json:"id"`
+		DocumentType   string               `json:"document_type"`
+		FileName       string               `json:"file_name"`
+		SHA256         string               `json:"sha256"`
+		UploadedAt     time.Time            `json:"uploaded_at"`
+		IsMock         bool                 `json:"is_mock"`
+		RequirementID  string               `json:"requirement_id"`
+		CoveragePeriod *commonpb.DatePeriod `json:"coverage_period"`
 	}
 	if err := json.Unmarshal(raw, &stored); err != nil {
 		return nil, err
@@ -251,6 +305,7 @@ func decodeCaseDocuments(raw []byte) ([]model.DocumentMetadata, error) {
 		documents = append(documents, model.DocumentMetadata{
 			ID: id, DocumentType: document.DocumentType, FileName: document.FileName,
 			SHA256: document.SHA256, UploadedAt: document.UploadedAt, IsMock: document.IsMock,
+			RequirementID: document.RequirementID, CoveragePeriod: document.CoveragePeriod,
 		})
 	}
 	return documents, nil

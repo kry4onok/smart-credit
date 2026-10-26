@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/google/uuid"
 )
 
@@ -38,35 +39,39 @@ type CaseListItem struct {
 }
 
 type Case struct {
-	ID             uuid.UUID
-	Status         CaseStatus
-	ProductID      uuid.UUID
-	ProductName    string
-	ProductVersion int64
-	Company        Company
-	Application    SubmittedApplication
-	Documents      []DocumentMetadata
-	Checks         *Checks
-	Score          *ScoreResult
-	TriggeredRules []string
-	Recommendation *CaseRecommendation
-	AssigneeID     *uuid.UUID
-	InfoRequest    *InfoRequest
-	Offer          *Offer
-	PublicReason   *string
-	AuditVersion   int64
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	Version        int64
+	ID               uuid.UUID
+	Status           CaseStatus
+	ProductID        uuid.UUID
+	ProductName      string
+	ProductVersion   int64
+	Company          Company
+	CompanyV2        *commonpb.CompanySnapshot
+	RequirementsPlan *commonpb.RequirementsPlan
+	Application      SubmittedApplication
+	Documents        []DocumentMetadata
+	Checks           *Checks
+	Score            *ScoreResult
+	TriggeredRules   []string
+	Recommendation   *CaseRecommendation
+	AssigneeID       *uuid.UUID
+	InfoRequest      *InfoRequest
+	Offer            *Offer
+	PublicReason     *string
+	AuditVersion     int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Version          int64
 }
 
 type DocumentMetadata struct {
-	ID           uuid.UUID `json:"document_id"`
-	DocumentType string    `json:"document_type"`
-	FileName     string    `json:"file_name"`
-	SHA256       string    `json:"sha256"`
-	UploadedAt   time.Time `json:"uploaded_at"`
-	IsMock       bool      `json:"is_mock"`
+	ID             uuid.UUID            `json:"document_id"`
+	DocumentType   string               `json:"document_type"`
+	FileName       string               `json:"file_name"`
+	SHA256         string               `json:"sha256"`
+	UploadedAt     time.Time            `json:"uploaded_at"`
+	IsMock         bool                 `json:"is_mock"`
+	RequirementID  string               `json:"requirement_id,omitempty"`
+	CoveragePeriod *commonpb.DatePeriod `json:"coverage_period,omitempty"`
 }
 
 type Company struct {
@@ -144,6 +149,7 @@ type InfoRequest struct {
 	RequiredFields        []InfoField
 	RequiredDocumentTypes []DocumentType
 	CreatedAt             time.Time
+	Requirements          []*commonpb.Requirement
 }
 
 type InfoField string

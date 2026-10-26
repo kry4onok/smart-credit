@@ -3,6 +3,7 @@ package validation
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/model"
@@ -12,6 +13,7 @@ import (
 type Snapshot struct {
 	CompanyJSON   []byte
 	DocumentsJSON []byte
+	ReferenceDate *time.Time
 	AmountKopecks int64
 	TermMonths    int32
 	PurposeTag    string
@@ -19,8 +21,13 @@ type Snapshot struct {
 
 type Product struct {
 	Found                 bool
+	PolicyVersion         string
 	PurposeTags           []string
 	RequiredDocumentTypes []string
+	MinAmountKopecks      int64
+	MaxAmountKopecks      int64
+	MinTermMonths         int32
+	MaxTermMonths         int32
 }
 
 type Outcome struct {
@@ -28,20 +35,22 @@ type Outcome struct {
 	Reason                string
 	RequiredFields        []string
 	RequiredDocumentTypes []string
+	Plan                  *commonpb.RequirementsPlan
+	RequestedRequirements []*commonpb.Requirement
+	PublicReason          string
 }
 
 func Evaluate(snapshot Snapshot, product Product) Outcome {
 	if !product.Found {
 		return Outcome{Status: model.CaseStatusManualReview, Reason: "UNKNOWN_PRODUCT"}
 	}
+	if product.PolicyVersion != "" {
+		return evaluateV2(snapshot, product)
+	}
 	company := &commonpb.CompanySnapshot{}
 	if err := protojson.Unmarshal(snapshot.CompanyJSON, company); err != nil ||
 		strings.TrimSpace(company.GetRegisteredAt()) == "" {
 		return Outcome{Status: model.CaseStatusManualReview, Reason: "VALIDATION_INVALID_SNAPSHOT"}
-	}
-	if company.ProfileSchemaVersion != nil || company.GetLegalForm() != commonpb.LegalForm_LEGAL_FORM_UNSPECIFIED ||
-		len(company.GetTaxPeriods()) > 0 || company.GetFinancialPeriod() != nil || company.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED || company.GetObligationsAsOf() != "" {
-		return Outcome{Status: model.CaseStatusManualReview, Reason: "PROFILE_V2_NOT_ENABLED"}
 	}
 	var documents []struct {
 		DocumentType string `json:"document_type"`

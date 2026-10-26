@@ -2,7 +2,8 @@ package validationrepository
 
 const claimNextQuery = `
 SELECT id, version, product_id, product_version, company_snapshot,
-       documents_snapshot, requested_amount_kopecks, requested_term_months, purpose_tag
+       documents_snapshot, requirements_reference_date,
+       requested_amount_kopecks, requested_term_months, purpose_tag
 FROM cases
 WHERE status = 'VALIDATION'
   AND (next_run_at IS NULL OR next_run_at <= now())
@@ -11,7 +12,8 @@ FOR UPDATE SKIP LOCKED
 LIMIT 1`
 
 const loadProductQuery = `
-SELECT purpose_tags, required_document_types
+SELECT COALESCE(requirements_policy_version, ''), purpose_tags, required_document_types,
+       min_amount_kopecks, max_amount_kopecks, min_term_months, max_term_months
 FROM products
 WHERE id = $1 AND version = $2`
 
@@ -31,6 +33,10 @@ RETURNING version`
 const insertInfoRequestQuery = `
 INSERT INTO info_requests (id, case_id, message, required_fields, required_document_types)
 VALUES ($1, $2, $3, $4, $5)`
+
+const insertV2InfoRequestQuery = `
+INSERT INTO info_requests (id, case_id, message, requirements)
+VALUES ($1, $2, $3, $4::jsonb)`
 
 const insertAuditQuery = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, details)
