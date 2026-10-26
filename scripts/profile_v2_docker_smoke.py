@@ -82,7 +82,7 @@ def main():
                  1800,true,'sme-profile-v1');
                 INSERT INTO product_rules (product_id,product_version,min_company_age_months,
                   max_amount_to_revenue_bps,max_overdue_days,rate_grade_a_bps,rate_grade_b_bps,offer_ttl_hours)
-                VALUES ('10000000-0000-4000-8000-000000000021',1,12,5000,30,1600,1800,168);
+                VALUES ('10000000-0000-4000-8000-000000000021',1,12,5000,30,1600,1800,72);
             """
             run(compose + ["exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1",
                            "-U", "postgres", "-d", "bank_db"], seed_sql)
