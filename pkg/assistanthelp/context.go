@@ -68,7 +68,12 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 	if v.Reason != "" {
 		decision += " " + v.Reason
 	}
-	add("decision", "Статус заявки", decision+" "+next, pb.TargetKind_TARGET_KIND_DECISION, pb.StatementTopic_STATEMENT_TOPIC_DECISION, pb.EvidenceKind_EVIDENCE_KIND_DECISION)
+	// The generic hint about opening the card is noise in the decision answer, which the
+	// client already reads inside that card.
+	if v.NextStep != "" {
+		decision += " " + v.NextStep
+	}
+	add("decision", "Статус заявки", decision, pb.TargetKind_TARGET_KIND_DECISION, pb.StatementTopic_STATEMENT_TOPIC_DECISION, pb.EvidenceKind_EVIDENCE_KIND_DECISION)
 	for _, q := range v.Requirements[:min(30, len(v.Requirements))] {
 		add("requirement:"+q.ID, q.Label, q.Label+". "+q.Reason, pb.TargetKind_TARGET_KIND_REQUIREMENT, pb.StatementTopic_STATEMENT_TOPIC_REQUIREMENT, pb.EvidenceKind_EVIDENCE_KIND_REQUIREMENT)
 	}

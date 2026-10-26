@@ -205,7 +205,7 @@ func TestDecisionStatementNamesStatusInRussianWithPublicReason(t *testing.T) {
 			continue
 		}
 		text := s.Variants[0].Text
-		if strings.Contains(text, "REJECTED") || !strings.Contains(text, "«отказ»") || !strings.Contains(text, v.Reason) {
+		if strings.Contains(text, "REJECTED") || !strings.Contains(text, "«отказ»") || !strings.Contains(text, v.Reason) || strings.Contains(text, "Откройте карточку") {
 			t.Fatalf("decision statement = %q", text)
 		}
 		return
