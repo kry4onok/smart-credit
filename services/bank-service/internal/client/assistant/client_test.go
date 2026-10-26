@@ -33,7 +33,7 @@ func (s *rpcStub) SummarizeCase(ctx context.Context, request *assistantpb.Summar
 }
 
 func TestSummarizeMapsFactsAndSetsDeadline(t *testing.T) {
-	rpc := &rpcStub{response: &assistantpb.TextResponse{Text: "Текст", ModelVersion: "qwen2.5:3b"}}
+	rpc := &rpcStub{response: &assistantpb.TextResponse{Text: "Текст", ModelVersion: "qwen2.5:7b"}}
 	facts := summary.Facts{
 		ApplicationID: "case-id", ProductName: "Продукт", Purpose: "WORKING_CAPITAL",
 		PurposeDescription: "Пополнение оборотных средств", Status: "MANUAL_REVIEW",
@@ -61,7 +61,7 @@ func TestSummarizeMapsFactsAndSetsDeadline(t *testing.T) {
 }
 
 func TestSummarizeUsesConfiguredTimeout(t *testing.T) {
-	rpc := &rpcStub{response: &assistantpb.TextResponse{Text: "Текст", ModelVersion: "qwen2.5:3b"}}
+	rpc := &rpcStub{response: &assistantpb.TextResponse{Text: "Текст", ModelVersion: "qwen2.5:7b"}}
 	client := New(rpc)
 	client.timeout = 20 * time.Second
 	before := time.Now()

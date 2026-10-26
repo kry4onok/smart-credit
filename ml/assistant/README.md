@@ -13,7 +13,7 @@ Python-сервис поддерживает `smartcredit.assistant.v2.Assistant
 Ollama запускается на компьютере отдельно от Docker. Установите [Ollama](https://ollama.com/download), запустите приложение или `ollama serve` и загрузите модель:
 
 ```bash
-ollama pull qwen2.5:3b
+ollama pull qwen2.5:7b
 ollama list
 ```
 
@@ -40,19 +40,19 @@ make assistant-smoke
 | `LLM_MODEL` | Имя установленной или доступной модели. |
 | `LLM_API_KEY` | Необязательный Bearer-ключ, который отправляется серверу модели. Для локальной Ollama оставьте пустым. |
 
-Пустые `LLM_BASE_URL` и `LLM_MODEL` берутся из прежних `OLLAMA_URL` и `OLLAMA_MODEL`; старый способ запуска работает. Пример своего локального Ollama: `LLM_PROVIDER=ollama`, `LLM_BASE_URL=http://host.docker.internal:11434`, `LLM_MODEL=qwen2.5:3b`, пустой `LLM_API_KEY`. Для OpenAI-совместимого локального сервера укажите `LLM_PROVIDER=openai`, `LLM_BASE_URL=http://host.docker.internal:8001/v1`, его модель и ключ, если нужен. Сервер должен поддерживать `response_format: {"type":"json_object"}`. Значение `LLM_API_KEY` храните только в локальном `.env`, не коммитьте. При обращении к удалённой модели используйте HTTPS и не передавайте туда реальные банковские данные без разрешения команды.
+Пустые `LLM_BASE_URL` и `LLM_MODEL` берутся из прежних `OLLAMA_URL` и `OLLAMA_MODEL`; старый способ запуска работает. Пример своего локального Ollama: `LLM_PROVIDER=ollama`, `LLM_BASE_URL=http://host.docker.internal:11434`, `LLM_MODEL=qwen2.5:7b`, пустой `LLM_API_KEY`. Для OpenAI-совместимого локального сервера укажите `LLM_PROVIDER=openai`, `LLM_BASE_URL=http://host.docker.internal:8001/v1`, его модель и ключ, если нужен. Сервер должен поддерживать `response_format: {"type":"json_object"}`. Значение `LLM_API_KEY` храните только в локальном `.env`, не коммитьте. При обращении к удалённой модели используйте HTTPS и не передавайте туда реальные банковские данные без разрешения команды.
 
 Ollama можно запустить у эксперта на его машине; постоянно держать вашу Ollama в интернете не требуется. Для проверки без любой модели используйте fallback-команду ниже. Основной кредитный конвейер работает и без assistant через шаблон bank-service.
 
 ## Локальный запуск без Docker
 
-Нужны Python 3.12 и запущенная [Ollama](https://ollama.com/download) с моделью `qwen2.5:3b`. Ollama работает вне Docker. Из корня репозитория создайте окружение и установите зависимости из `pyproject.toml`:
+Нужны Python 3.12 и запущенная [Ollama](https://ollama.com/download) с моделью `qwen2.5:7b`. Ollama работает вне Docker. Из корня репозитория создайте окружение и установите зависимости из `pyproject.toml`:
 
 ```bash
 python3.12 -m venv ml/assistant/.venv
 ml/assistant/.venv/bin/python -m pip install 'grpcio==1.78.0' 'protobuf==6.33.5'
-ollama pull qwen2.5:3b
-PYTHONPATH=proto/gen/python OLLAMA_MODEL=qwen2.5:3b ml/assistant/.venv/bin/python ml/assistant/server.py
+ollama pull qwen2.5:7b
+PYTHONPATH=proto/gen/python OLLAMA_MODEL=qwen2.5:7b ml/assistant/.venv/bin/python ml/assistant/server.py
 ```
 
 Если окружение уже создано, первую команду можно пропустить. Адрес gRPC по умолчанию — `127.0.0.1:50052`; адрес Ollama — `http://127.0.0.1:11434`. Их можно изменить через `ASSISTANT_ADDR` и `OLLAMA_URL`.
@@ -80,7 +80,7 @@ Backend выставляет `source=assistant`, когда получен те�
 
 ## Проверка качества текста
 
-1. Выполните `make assistant-smoke`. Для каждого номера проверьте, что в квадратных скобках стоит имя модели. `template` значит, что модель не дала принятый ответ; смотрите `make assistant-logs`. Чтобы отдельно проверить банковский дедлайн, запустите `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_smoke.py --timeout 5 --expect-version qwen2.5:3b` при запущенном assistant. На тестовом Mac Qwen2.5:3b прошла все девять вызовов с дедлайном 30 секунд; резюме дел №1, №2 и №4 в контейнере занимали 6,6–7,7 секунды. Поэтому для показа текста модели через bank-service на этом компьютере нужен `BANK_ASSISTANT_TIMEOUT=20s`. На другом оборудовании результат может отличаться.
+1. Выполните `make assistant-smoke`. Для каждого номера проверьте, что в квадратных скобках стоит имя модели. `template` значит, что модель не дала принятый ответ; смотрите `make assistant-logs`. Для прямой проверки модели запустите `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_smoke.py --timeout 30 --expect-version qwen2.5:7b` при запущенном assistant. Скорость Qwen2.5:7b зависит от оборудования; прежние замеры другой модели к ней не относятся. Если bank-service успевает получить только шаблон, задайте в `.env` `BANK_ASSISTANT_TIMEOUT=20s` и перезапустите bank-service; таймаут должен оставаться меньше `BANK_HTTP_WRITE_TIMEOUT` (по умолчанию 30 секунд).
 2. Прочитайте все девять строк. В №1, №2 и №4 должны быть переданные грейд, статус, цель и утверждённые описания причин и правил без выдуманных расшифровок. В №3 и №5–7 грейда, причин и правил скоринга быть не должно. В №3 клиенту можно сообщать только о выписке; в №4 — только о встречном предложении с переданной публичной причиной. В тексте №4 должны быть «Гибкий кредит», 4 000 000 ₽, 24 мес. и 18,50%; других условий, решений или обещаний быть не должно.
 3. При `template` проверьте, что основной сценарий остаётся понятным и безопасным. Для принудительной проверки задайте недоступный `OLLAMA_URL` (и пустой `LLM_BASE_URL`), пересоздайте assistant, затем запустите скрипт с `--expect-version template`.
 

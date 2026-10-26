@@ -85,11 +85,11 @@ class HelpTests(unittest.TestCase):
         return HelpService(provider, CATALOG, clock=lambda: NOW)
 
     def test_valid_plan_and_required_companion(self):
-        provider = Mock(return_value=(answer(), "qwen2.5:3b"))
+        provider = Mock(return_value=(answer(), "qwen2.5:7b"))
         result = self.service(provider).Help(request(), Context())
         self.assertEqual(result.source, help_pb2.RESPONSE_SOURCE_MODEL)
         self.assertEqual(result.catalog_version, "assistant-test-v0")
-        self.assertEqual(result.model_version, "qwen2.5:3b")
+        self.assertEqual(result.model_version, "qwen2.5:7b")
         self.assertEqual([item.statement_id for block in result.blocks for item in block.items], ["st-need", "st-not-verified"])
         self.assertEqual([item.id for item in result.evidence], ["ev-1"])
         self.assertEqual([item.id for item in result.actions], ["open-req"])
