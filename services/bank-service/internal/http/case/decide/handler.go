@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,18 @@ import (
 	getcase "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/get"
 	"github.com/google/uuid"
 )
+
+// ruleCodePattern finds the domain code inside a wrapped validation error such as
+// "decision violates a business rule: ASSESSMENT_REQUIRED: no rows in result set".
+var ruleCodePattern = regexp.MustCompile(`\b[A-Z][A-Z_]{3,}\b`)
+
+// ruleCode keeps only the domain code, so storage details stay out of the response.
+func ruleCode(err error) string {
+	if code := ruleCodePattern.FindString(err.Error()); code != "" {
+		return code
+	}
+	return "Решение не прошло проверку правил продукта."
+}
 
 type UseCase interface {
 	Execute(context.Context, decide.Input) (model.Case, error)
@@ -85,7 +98,7 @@ func (h *Handler) Handle(ctx context.Context, r generated.DecideCaseRequestObjec
 		case errors.Is(err, decide.ErrIdempotencyConflict):
 			return nil, domainerror.Conflict("IDEMPOTENCY_KEY_CONFLICT", err)
 		case errors.Is(err, decide.ErrValidation):
-			return nil, &domainerror.Error{Status: 422, Code: "DECISION_RULE_VIOLATION", Title: "Нарушено бизнес-правило", Detail: err.Error()}
+			return nil, &domainerror.Error{Status: 422, Code: "DECISION_RULE_VIOLATION", Title: "Нарушено бизнес-правило", Detail: ruleCode(err)}
 		default:
 			return nil, fmt.Errorf("execute decision: %w", err)
 		}

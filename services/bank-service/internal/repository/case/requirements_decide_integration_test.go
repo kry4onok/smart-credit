@@ -102,6 +102,11 @@ func TestV2ManualRequestSelectsFreshRequirementsAndReplays(t *testing.T) {
 	if result.Status != "NEEDS_INFO" || result.InfoRequest == nil || len(result.InfoRequest.Requirements) != 1 {
 		t.Fatalf("result=%+v", result)
 	}
+	// When the client answers, the case returns to the queue for any analyst.
+	var assignee *uuid.UUID
+	if err = tx.QueryRow(ctx, `SELECT assignee_id FROM cases WHERE id=$1`, caseID).Scan(&assignee); err != nil || assignee != nil {
+		t.Fatalf("assignee after REQUEST_INFO=%v err=%v", assignee, err)
+	}
 	replay, err := repo.Decide(ctx, in)
 	if err != nil || replay.Version != result.Version {
 		t.Fatalf("replay=%+v err=%v", replay, err)
@@ -132,5 +137,42 @@ func TestV2ManualRequestSelectsFreshRequirementsAndReplays(t *testing.T) {
 	state := event.GetApplicationPublicStatePublished()
 	if state.GetRequirementsPlan() == nil || len(state.GetActiveInfoRequest().GetRequirements()) != 1 || state.GetActiveInfoRequest().GetRequirements()[0].GetId() != id {
 		t.Fatalf("event=%v", state)
+	}
+}
+
+func TestRejectCaseWithUnknownProduct(t *testing.T) {
+	url := os.Getenv("BANK_DATABASE_URL")
+	if url == "" {
+		t.Skip("BANK_DATABASE_URL is not set")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	caseID, analystID := uuid.New(), uuid.New()
+	// The receive consumer keeps an application for an unknown product as a manual case.
+	company := []byte(`{"inn":"990000000115","name":"ИП Демо","okved":"47.11","registered_at":"2020-01-01"}`)
+	if _, err = tx.Exec(ctx, testV2DecisionCase, caseID, uuid.New(), uuid.New(), uuid.New(), company, analystID); err != nil {
+		t.Fatal(err)
+	}
+	repo := New(tx)
+	in := decide.Input{CaseID: caseID, AnalystID: analystID, IdempotencyKey: uuid.New(), ExpectedVersion: 1,
+		Outcome: "REJECT", Comment: "Продукт снят с продажи", PublicReason: "Выбранный продукт больше не доступен."}
+	if _, ok := repo.PrepareDecision(ctx, in); !ok {
+		t.Fatal("preview rejected a case with an unknown product")
+	}
+	result, err := repo.Decide(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "REJECTED" {
+		t.Fatalf("status=%s", result.Status)
 	}
 }

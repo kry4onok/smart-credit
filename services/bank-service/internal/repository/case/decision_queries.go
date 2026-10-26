@@ -25,17 +25,19 @@ WHERE actor_id=$1 AND route=$2 AND idempotency_key=$3`
 const previewDecisionCase = `
 SELECT c.status,c.assignee_id,c.version,c.company_snapshot,c.documents_snapshot,c.purpose_tag,c.product_name,
        c.requirements_reference_date,COALESCE(p.requirements_policy_version,''),p.purpose_tags,p.required_document_types,
-       p.min_amount_kopecks,p.max_amount_kopecks,p.min_term_months,p.max_term_months,c.requested_amount_kopecks,c.requested_term_months
-FROM cases c JOIN products p ON p.id=c.product_id AND p.version=c.product_version
+       COALESCE(p.min_amount_kopecks,0),COALESCE(p.max_amount_kopecks,0),COALESCE(p.min_term_months,0),COALESCE(p.max_term_months,0),
+       c.requested_amount_kopecks,c.requested_term_months
+FROM cases c LEFT JOIN products p ON p.id=c.product_id AND p.version=c.product_version
 WHERE c.id=$1`
 
 const lockDecisionCase = `
 SELECT c.status,c.assignee_id,c.version,c.company_snapshot,c.documents_snapshot,c.purpose_tag,
        c.requirements_reference_date,COALESCE(p.requirements_policy_version,''),p.purpose_tags,p.required_document_types,
-       p.min_amount_kopecks,p.max_amount_kopecks,p.min_term_months,p.max_term_months,c.requested_amount_kopecks,c.requested_term_months
-FROM cases c JOIN products p ON p.id=c.product_id AND p.version=c.product_version
+       COALESCE(p.min_amount_kopecks,0),COALESCE(p.max_amount_kopecks,0),COALESCE(p.min_term_months,0),COALESCE(p.max_term_months,0),
+       c.requested_amount_kopecks,c.requested_term_months
+FROM cases c LEFT JOIN products p ON p.id=c.product_id AND p.version=c.product_version
 WHERE c.id=$1
-FOR UPDATE`
+FOR UPDATE OF c`
 
 const loadDecisionProduct = `
 SELECT p.version,p.name,p.purpose_tags,p.required_document_types,p.min_amount_kopecks,p.max_amount_kopecks,
@@ -50,7 +52,8 @@ ORDER BY p.version DESC
 LIMIT 1`
 
 const updateDecisionCase = `
-UPDATE cases SET status=$2,recommendation=$3,public_reason=$4,triggered_rules='{}',version=version+1,audit_version=audit_version+1,next_run_at=NULL,lease_until=NULL,updated_at=now() 
+UPDATE cases SET status=$2,recommendation=$3,public_reason=$4,triggered_rules='{}',
+ assignee_id=CASE WHEN $2='NEEDS_INFO' THEN NULL ELSE assignee_id END,version=version+1,audit_version=audit_version+1,next_run_at=NULL,lease_until=NULL,updated_at=now() 
 WHERE id=$1`
 
 const insertDecision = `

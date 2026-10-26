@@ -229,8 +229,11 @@ func CheckCurrentOffer(ctx context.Context, q transaction.Queryer, id, productID
 	}
 	var raw []byte
 	err = q.QueryRow(ctx, `SELECT result FROM assessments WHERE case_id=$1 AND assessment_generation=$2 AND input_revision=$3`, id, in.Generation, in.InputRevision).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, errors.New("ASSESSMENT_REQUIRED")
+	}
 	if err != nil {
-		return 0, fmt.Errorf("ASSESSMENT_REQUIRED: %w", err)
+		return 0, fmt.Errorf("load current assessment: %w", err)
 	}
 	var result assessment.Result
 	if err = json.Unmarshal(raw, &result); err != nil {
