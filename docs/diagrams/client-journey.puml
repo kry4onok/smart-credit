@@ -1,0 +1,57 @@
+@startuml client-journey
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontColor #172033
+skinparam sequenceArrowColor #2563EB
+skinparam sequenceLifeLineBorderColor #CBD5E1
+skinparam sequenceParticipantBorderColor #2563EB
+skinparam sequenceParticipantBackgroundColor #EFF6FF
+skinparam sequenceGroupBorderColor #94A3B8
+skinparam sequenceGroupBackgroundColor #F1F5F9
+title Smart Credit — основной путь до демо-выдачи
+
+actor "Клиент" as User
+participant "web / Swagger" as UI
+participant "client-service" as Client
+queue "Kafka" as Kafka
+participant "bank-service" as Bank
+participant "bureau-mocks" as Bureau
+participant "scoring" as Scoring
+database "client_db" as CDB
+database "bank_db" as BDB
+
+User -> UI: Профиль, продукт, черновик, документ
+UI -> Client: HTTP create / upload / submit
+Client -> CDB: Заявка + ApplicationSubmitted в outbox
+Client -> Kafka: client.events: ApplicationSubmitted
+Kafka -> Bank: Доставка события
+Bank -> BDB: Дело: VALIDATION
+Bank -> Bureau: gRPC проверка компании и БКИ
+Bureau --> Bank: Синтетические ответы
+Bank -> Scoring: gRPC Score
+Scoring --> Bank: score / grade / причины
+Bank -> BDB: SCORING → DECISION → правила → OFFER
+note right of Bank: DECISION означает этап правил,\nне одобрение само по себе.
+Bank -> Kafka: bank.events: публичный снимок с офертой
+Kafka -> Client: Проекция
+Client -> CDB: OFFER_AVAILABLE
+UI -> Client: GET заявки (polling)
+Client --> UI: Оферта и следующий шаг
+User -> UI: Принять оферту
+UI -> Client: POST /offer/accept
+Client -> Kafka: client.events: OfferAccepted
+Kafka -> Bank: Подтверждение действия
+Bank -> BDB: OFFER_ACCEPTED
+Bank -> Kafka: bank.events: FORMALIZING
+Kafka -> Client: Обновление проекции
+User -> UI: Демо-подпись
+UI -> Client: POST /sign
+Client -> Kafka: client.events: ContractSigned
+Kafka -> Bank: Подтверждение подписи
+Bank -> BDB: SIGNING → DISBURSED (worker)
+Bank -> Kafka: bank.events: DISBURSED
+Kafka -> Client: Обновление проекции
+UI -> Client: GET заявки (polling)
+Client --> UI: DISBURSED — симуляция
+@enduml

@@ -1,0 +1,48 @@
+@startuml architecture
+!include <C4/C4_Container>
+
+LAYOUT_TOP_DOWN()
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontColor #172033
+skinparam ArrowColor #475569
+skinparam linetype ortho
+title Smart Credit — контейнеры MVP
+
+Person(client, "Клиент", "Подаёт заявку и принимает оферту")
+Person(analyst, "Аналитик", "Решает ручные дела")
+
+System_Boundary(sc, "Smart Credit / локальный Compose") {
+  Container(web, "web", "React + nginx", "Кабинет и backoffice")
+  Container(auth, "auth", "Go / HTTP", "Учётки, JWT, JWKS")
+  Container(clientSvc, "client-service", "Go / HTTP + Kafka", "Заявки и публичная проекция")
+  Container(bank, "bank-service", "Go / HTTP + Kafka", "Дела, правила, аудит, выдача")
+  ContainerDb(authDb, "auth_db", "PostgreSQL", "Пользователи и сессии")
+  ContainerDb(clientDb, "client_db", "PostgreSQL", "Клиентские данные, outbox")
+  ContainerDb(bankDb, "bank_db", "PostgreSQL", "Дела, outbox, аудит")
+  ContainerQueue(kafka, "Kafka", "KRaft", "client.events / bank.events")
+  Container(bureau, "bureau-mocks", "Go / gRPC", "Синтетические проверки")
+  Container(score, "scoring", "Python / gRPC", "Оценка риска")
+  Container(assistant, "assistant", "Python / gRPC", "Тексты и шаблон")
+}
+
+Rel(client, web, "Кабинет")
+Rel(analyst, web, "Backoffice")
+Rel(web, auth, "Логин", "HTTP")
+Rel(web, clientSvc, "Кабинет", "HTTP")
+Rel(web, bank, "Backoffice", "HTTP")
+Rel(auth, authDb, "SQL")
+Rel(clientSvc, clientDb, "SQL")
+Rel(bank, bankDb, "SQL")
+Rel(clientSvc, kafka, "client.events → / ← bank.events")
+Rel(bank, kafka, "← client.events / bank.events →")
+Rel(bank, bureau, "Профиль, БКИ", "gRPC")
+Rel(bank, score, "Оценка", "gRPC")
+Rel(bank, assistant, "Текст", "gRPC")
+
+note right of bank
+  Оригинал вложения банк читает
+  через защищённый HTTP GET клиента.
+end note
+@enduml
