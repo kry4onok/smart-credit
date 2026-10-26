@@ -39,9 +39,12 @@ const actionAnchor: Record<string, string> = {
 };
 
 // Some modes need the objects they talk about: options to compare, requirements to explain.
-const modeTargets: Partial<Record<Mode, string>> = {
-  COMPARE_OPTIONS: "TARGET_KIND_OPTION",
-  REQUIREMENT: "TARGET_KIND_REQUIREMENT",
+// Target counts follow the server's Validate: a mode without enough targets is answered with
+// a plain note instead of a request the server rejects with 400.
+const modeTargets: Partial<Record<Mode, { kind: string; min: number; max: number; missing: string }>> = {
+  COMPARE_OPTIONS: { kind: "TARGET_KIND_OPTION", min: 2, max: 3, missing: "Для сравнения нужно хотя бы два рассчитанных варианта." },
+  REQUIREMENT: { kind: "TARGET_KIND_REQUIREMENT", min: 1, max: 1, missing: "Сейчас банк не запрашивает документов." },
+  CHANGES: { kind: "TARGET_KIND_CHANGE", min: 1, max: 1, missing: "С прошлого расчёта ничего не изменилось." },
 };
 
 type Props = {
@@ -68,6 +71,9 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
     const response = await act.run(async () => {
       const send = async () => {
         const c = await context();
+        const rule = modeTargets[mode];
+        const targets = rule ? (c.targets ?? []).filter((t) => t.kind === rule.kind && t.id).slice(0, rule.max).map((t) => t.id ?? "") : [];
+        if (rule && targets.length < rule.min) throw new ApiError(0, rule.missing);
         return call(
           assessmentApi.POST(path, {
             params: { path: { application_id: applicationId } },
@@ -77,7 +83,7 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
               catalog_version: (c.catalog_version ?? "smart-credit-help-v1") as "smart-credit-help-v1",
               mode,
               detail: "DETAILED",
-              target_ids: modeTargets[mode] ? (c.targets ?? []).filter((t) => t.kind === modeTargets[mode]).slice(0, 3).map((t) => t.id ?? "").filter(Boolean) : [],
+              target_ids: targets,
               ...(text ? { question: text } : {}),
             },
           }),
