@@ -12,6 +12,7 @@ WORKDIR /app/ml/assistant
 COPY ml/assistant/pyproject.toml ml/assistant/uv.lock ml/assistant/.python-version ./
 RUN uv sync --locked --no-dev --no-editable --no-cache
 COPY ml/assistant/server.py ./server.py
+COPY ml/assistant/help ./help
 COPY ml/assistant/scenarios.json ./scenarios.json
 COPY scripts/assistant_smoke.py /app/scripts/assistant_smoke.py
 COPY proto/gen/python /app/proto/gen/python

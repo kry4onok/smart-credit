@@ -2,6 +2,12 @@
 
 `SummarizeCase` составляет короткое резюме для аналитика. `ExplainDecision` формирует уведомление клиенту по уже принятому банком решению. Ассистент не принимает решение и не меняет скоринг.
 
+## Новый метод Help
+
+Python-сервис поддерживает `smartcredit.assistant.v2.AssistantHelpService.Help` после появления сгенерированных `help_pb2`/`help_pb2_grpc` от backend-интеграции. Старые методы остаются доступными. Для `Help` задайте `ASSISTANT_CATALOG_PATH` с путём к согласованному каталогу. Если каталог отсутствует или версия в запросе не совпадает, сервис возвращает `FAILED_PRECONDITION` и причину `UNSUPPORTED_CATALOG_VERSION` в trailing metadata `assistant-error`.
+
+Пока утверждённый каталог и полные fixtures не переданы, `ml/assistant/tests/fixtures/test-catalog.json` служит только для локальных тестов. Его версия `assistant-test-v0` не является банковской версией `assistant-text-v1`. Прямой gRPC smoke: `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_help_smoke.py --target 127.0.0.1:50052 --expect-source template`. Для него сервер должен быть запущен с тестовым каталогом. Тесты нового метода автоматически пропускаются до появления generated-классов; после их поставки пропусков быть не должно.
+
 ## Запуск через Docker Compose
 
 Ollama запускается на компьютере отдельно от Docker. Установите [Ollama](https://ollama.com/download), запустите приложение или `ollama serve` и загрузите модель:
