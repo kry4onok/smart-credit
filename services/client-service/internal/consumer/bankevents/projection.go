@@ -207,9 +207,17 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 	if message == "" {
 		message = state.GetNextAction()
 	}
+	// Bank stages inside one client status (validation, sources, scoring) publish the same public
+	// state; the client timeline records it once. Only bank entries are compared: they share the
+	// bank's clock, while client entries use the database clock.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO timeline_entries (id, application_id, status, action, actor_type, message, event_id, occurred_at)
-		VALUES ($1, $2, $3, 'BANK_STATE', 'SYSTEM', $4, $5, $6)`,
+		SELECT $1, $2, $3::text, 'BANK_STATE', 'SYSTEM', $4::text, $5, $6
+		WHERE NOT EXISTS (
+			SELECT 1 FROM (
+				SELECT status, message FROM timeline_entries
+				WHERE application_id = $2 AND action = 'BANK_STATE' ORDER BY occurred_at DESC, id DESC LIMIT 1
+			) latest WHERE latest.status = $3::text AND latest.message = $4::text)`,
 		uuid.New(), applicationID, status, message, event.GetEventId(), event.GetOccurredAt().AsTime()); err != nil {
 		return fmt.Errorf("create bank state timeline: %w", err)
 	}

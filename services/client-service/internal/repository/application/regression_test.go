@@ -359,3 +359,27 @@ func TestRepeatedPublicSnapshotsIntegration(t *testing.T) {
 		})
 	}
 }
+
+func TestRepeatedBankStageRecordsOneTimelineEntryIntegration(t *testing.T) {
+	f := newApplicationFixture(t)
+	f.submit(t)
+	projection := bankevents.NewProjection(f.db)
+	review := &eventspb.ApplicationPublicStatePublished{Status: eventspb.ClientStatus_CLIENT_STATUS_UNDER_REVIEW, StageLabel: "Заявка на рассмотрении"}
+	for version := int64(1); version <= 3; version++ {
+		if applied, err := projection.Execute(t.Context(), bankStateEvent(f.draft.ID, version, review)); err != nil || !applied {
+			t.Fatalf("stage %d: applied=%v err=%v", version, applied, err)
+		}
+	}
+	rejected := &eventspb.ApplicationPublicStatePublished{Status: eventspb.ClientStatus_CLIENT_STATUS_REJECTED, StageLabel: "Решение банка"}
+	if _, err := projection.Execute(t.Context(), bankStateEvent(f.draft.ID, 4, rejected)); err != nil {
+		t.Fatal(err)
+	}
+	var reviews, total int
+	if err := f.db.QueryRow(t.Context(), `SELECT count(*) FILTER (WHERE status = 'UNDER_REVIEW'), count(*)
+		FROM timeline_entries WHERE application_id = $1 AND action = 'BANK_STATE'`, f.draft.ID).Scan(&reviews, &total); err != nil {
+		t.Fatal(err)
+	}
+	if reviews != 1 || total != 2 {
+		t.Fatalf("bank timeline entries: under review=%d, total=%d", reviews, total)
+	}
+}
