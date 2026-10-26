@@ -8,6 +8,7 @@ import (
 	"time"
 
 	eventspb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/events"
+	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/case/receive"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"google.golang.org/protobuf/proto"
 )
@@ -68,6 +69,12 @@ func (c *Consumer) Run(ctx context.Context, logger *slog.Logger) {
 		}
 		for ctx.Err() == nil {
 			eventID, applicationID, err := c.apply(ctx, record)
+			if errors.Is(err, receive.ErrEventSkipped) {
+				logger.Warn("client event skipped: it no longer matches the case state",
+					"partition", record.Partition, "offset", record.Offset,
+					"event_id", eventID, "application_id", applicationID, "error", err)
+				err = nil
+			}
 			if err == nil {
 				err = c.client.CommitRecords(ctx, record)
 			}

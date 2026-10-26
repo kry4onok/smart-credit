@@ -176,3 +176,14 @@ INSERT INTO audit_log (id, case_id, case_version, action, actor_type, actor_id, 
 VALUES ($1, $2, $3, $4, 'CLIENT', $5,
     jsonb_build_object('from_status', $6::text, 'to_status', $7::text,
                        'event_id', $8::text, 'offer_id', $9::text), $10)`
+
+const advanceSkippedClientEventQuery = `
+UPDATE cases
+SET client_event_version = CASE WHEN $2 = client_event_version + 1 THEN $2 ELSE client_event_version END
+WHERE id = $1
+RETURNING version`
+
+const insertSkippedEventAuditQuery = `
+INSERT INTO audit_log (id, case_id, case_version, action, actor_type, reason, details)
+VALUES ($1, $2, $3, 'CLIENT_EVENT_SKIPPED', 'CLIENT', $4,
+        jsonb_build_object('event_id', $5::text, 'event_type', $6::text))`

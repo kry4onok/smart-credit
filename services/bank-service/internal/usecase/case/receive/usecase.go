@@ -21,6 +21,15 @@ import (
 )
 
 var ErrInvalidEvent = errors.New("invalid client event")
+
+// ErrStaleEvent marks a well-formed client event that no longer matches the case,
+// for example a cancellation that arrives after the bank already rejected it.
+var ErrStaleEvent = errors.New("client event does not match the current case state")
+
+// ErrEventSkipped is returned after a stale event was recorded as processed, so the
+// consumer can commit its offset instead of retrying it forever.
+var ErrEventSkipped = errors.New("client event skipped")
+
 var innPattern = regexp.MustCompile(`^[0-9]{10}([0-9]{2})?$`)
 
 type Input struct {
@@ -55,6 +64,7 @@ type Input struct {
 
 type Repository interface {
 	Apply(context.Context, Input) (bool, error)
+	Skip(ctx context.Context, input Input, reason string) error
 }
 
 type TransactionManager interface {
@@ -81,6 +91,15 @@ func (uc *UseCase) Execute(ctx context.Context, event *eventspb.Event) (bool, er
 		applied, applyErr = uc.repository.Apply(txCtx, input)
 		return applyErr
 	})
+	if errors.Is(err, ErrStaleEvent) {
+		// The failed attempt is rolled back as a whole; the skip is recorded separately.
+		if skipErr := uc.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
+			return uc.repository.Skip(txCtx, input, err.Error())
+		}); skipErr != nil {
+			return false, fmt.Errorf("record skipped client event: %w", skipErr)
+		}
+		return false, fmt.Errorf("%w: %w", ErrEventSkipped, err)
+	}
 	if err != nil {
 		return false, fmt.Errorf("receive client event: %w", err)
 	}

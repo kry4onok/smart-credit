@@ -16,10 +16,10 @@ import (
 )
 
 var ErrEventConflict = errors.New("client event ID or aggregate version conflicts with a different event")
-var ErrInfoProvidedConflict = errors.New("InfoProvided does not match an open request on a NEEDS_INFO case")
-var ErrOfferResponseConflict = errors.New("offer response does not match a current, unexpired offer")
-var ErrCancellationConflict = errors.New("cancellation requires a current case before signing")
-var ErrSigningConflict = errors.New("contract signing requires the accepted offer and next client event version")
+var ErrInfoProvidedConflict = fmt.Errorf("%w: InfoProvided does not match an open request on a NEEDS_INFO case", receive.ErrStaleEvent)
+var ErrOfferResponseConflict = fmt.Errorf("%w: offer response does not match a current, unexpired offer", receive.ErrStaleEvent)
+var ErrCancellationConflict = fmt.Errorf("%w: cancellation requires a current case before signing", receive.ErrStaleEvent)
+var ErrSigningConflict = fmt.Errorf("%w: contract signing requires the accepted offer and next client event version", receive.ErrStaleEvent)
 
 type Repository struct {
 	db transaction.Queryer
@@ -128,6 +128,48 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 		return false, fmt.Errorf("audit submitted application: %w", err)
 	}
 	return true, nil
+}
+
+// Skip records a stale client event as processed without changing the case state.
+// The client event version still advances when it is the next one, so later events
+// from the same client keep passing the +1 check.
+func (r *Repository) Skip(ctx context.Context, input receive.Input, reason string) error {
+	q := transaction.QueryerFromContext(ctx, r.db)
+	var reserved int
+	err := q.QueryRow(ctx, reserveEventQuery,
+		input.EventID, input.ApplicationID, input.AggregateVersion).Scan(&reserved)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reserve skipped event: %w", err)
+	}
+	var caseVersion int64
+	err = q.QueryRow(ctx, advanceSkippedClientEventQuery, input.ApplicationID, input.AggregateVersion).Scan(&caseVersion)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("advance client event version: %w", err)
+	}
+	if _, err := q.Exec(ctx, insertSkippedEventAuditQuery, uuid.New(), input.ApplicationID, caseVersion,
+		reason, input.EventID.String(), clientEventType(input)); err != nil {
+		return fmt.Errorf("audit skipped client event: %w", err)
+	}
+	return nil
+}
+
+func clientEventType(input receive.Input) string {
+	switch {
+	case input.InfoProvided:
+		return "InfoProvided"
+	case input.Cancelled:
+		return "ApplicationCancelled"
+	case input.OfferAction != "":
+		return input.OfferAction
+	default:
+		return "ApplicationSubmitted"
+	}
 }
 
 func (r *Repository) applyCancellation(ctx context.Context, q transaction.Queryer, input receive.Input) (bool, error) {
