@@ -1,16 +1,16 @@
 # Диаграммы Smart Credit
 
-В корневом README используется [карта архитектуры](architecture.svg). Вертикальные схемы [клиента](client-flow.svg), [банка](bank-flow.svg) и [авторизации](auth-flow.svg) встроены в README соответствующих сервисов. В каждой показаны основной путь, статусы и боковые исходы.
+[Карта контейнеров и данных](architecture.svg) и [прямые вызовы с протоколами](integrations.svg) встроены в корневой README. Вертикальные карты [клиента](client-flow.svg), [банковского дела](bank-flow.svg) и [авторизации](auth-flow.svg) встроены в README соответствующих сервисов. Технические последовательности: [заявка → оферта](client-journey.svg) и [принятие → демо-выдача](fulfillment.svg). Схемы ключевых таблиц трёх баз: [auth_db](auth-db.svg), [client_db](client-db.svg), [bank_db](bank-db.svg); их полный состав описан в миграциях сервисов.
 
-Все схемы имеют редактируемые исходники `.puml` в этом каталоге: [архитектура](architecture.puml), [клиент](client-flow.puml), [банк](bank-flow.puml), [auth](auth-flow.puml). Для подробной технической последовательности сохранены [заявка → оферта](client-journey.puml) и [оферта → демо-выдача](fulfillment.puml). Публичные SVG построены на [D3](https://d3js.org/) скриптом [render.mjs](render.mjs); `.puml` фиксируют ту же логику в стандартном формате PlantUML. При изменении сценария обновляйте оба исходника.
+Все SVG в этом каталоге собираются **непосредственно из одноимённых `.puml`**. Карты контейнеров используют встроенную в PlantUML библиотеку [C4-PlantUML](https://github.com/plantuml-stdlib/C4-PlantUML); вертикальные карты показывают основной путь, статусы и развилки. Подача вдохновлена [диаграммами avito-kitchen](https://github.com/exf1kzz/avito-kitchen), содержание сверено с кодом Smart Credit.
 
 ## Обновление SVG
 
-Нужны Node.js 18+ и npm **только разработчику документации**. Из `docs/diagrams/`:
+Нужен PlantUML с C4-stdlib (проверено на версии `1.2026.8`) и Graphviz. Из корня репозитория:
 
 ```bash
-npm ci
-npm run render
+plantuml -checkonly docs/diagrams/*.puml
+plantuml -tsvg docs/diagrams/*.puml
 ```
 
-Зависимости зафиксированы в `package-lock.json`. Генератор пишет `architecture.svg`, `client-flow.svg`, `bank-flow.svg` и `auth-flow.svg`. Для проверки PlantUML из корня репозитория: `plantuml -checkonly docs/diagrams/*.puml`. Генерация SVG не входит в `make demo-up` — готовые файлы уже сохранены в репозитории.
+Если PlantUML установлен как JAR, замените `plantuml` на `java -jar /путь/к/plantuml.jar`. Сборка диаграмм нужна только при изменении документации; `make demo-up` использует готовые SVG из репозитория. После редактирования проверьте исходник, SVG и ссылки в README соответствующего сервиса.

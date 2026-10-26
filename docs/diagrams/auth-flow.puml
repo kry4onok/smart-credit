@@ -1,34 +1,66 @@
-@startuml auth-flow
-!theme plain
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName Arial
-skinparam ActivityBackgroundColor #EAF2FF
-skinparam ActivityBorderColor #2055A2
-skinparam ArrowColor #2055A2
+@startuml
 title Smart Credit — вход и сессия
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam roundcorner 10
+skinparam ArrowColor #526273
+skinparam activity {
+  BackgroundColor #FAFAFA
+  BorderColor #526273
+  FontColor #172234
+  DiamondBackgroundColor #FFF2CC
+  DiamondBorderColor #B38F00
+}
+skinparam partition {
+  BackgroundColor #F4F6F8
+  BorderColor #A9B4BF
+  FontColor #33414F
+  FontStyle bold
+}
+
 start
-:POST /auth/login;
-if (Пароль верный?) then (да)
-  :access JWT + HttpOnly refresh-cookie;
-else (нет)
-  :401;
-  stop
-endif
-:Bearer JWT → /auth/me и защищённые API;
-note right
-  client-service и bank-service
-  читают JWKS auth по HTTP.
-end note
-if (Требуется новый access?) then (да)
-  :POST /auth/refresh по cookie;
-  if (Cookie действительна?) then (да)
-    :новый access JWT;
-  else (нет)
-    :нужен повторный вход;
+partition "1. Вход" {
+  :Клиент или сотрудник вводит\nemail и пароль; <<#DCEBFF>>
+  :POST /auth/login; <<#DCEBFF>>
+  :auth проверяет учётку и хеш\nпароля в auth_db; <<#E5F4E3>>
+  if (Данные верны?) then (нет)
+    :401 без раскрытия причины; <<#FFE6E6>>
     stop
+  else (да)
+    :access JWT + HttpOnly refresh-cookie; <<#E5F4E3>>
   endif
-endif
-:POST /auth/logout → отзыв refresh;
-:access действует до exp;
+}
+partition "2. Доступ" {
+  :Bearer access JWT в защищённых API; <<#DCEBFF>>
+  :client-service и bank-service\nполучают JWKS auth по HTTP; <<#E5F4E3>>
+  if (Подпись, срок и роль подходят?) then (нет)
+    :401 или 403; <<#FFE6E6>>
+    stop
+  else (да)
+    :API доступен своей роли; <<#E5F4E3>>
+  endif
+}
+partition "3. Продление и выход" {
+  if (Access нужно обновить?) then (да)
+    :POST /auth/refresh с cookie; <<#DCEBFF>>
+    if (Refresh-сессия действует?) then (нет)
+      :Нужен повторный вход; <<#FFE6E6>>
+      stop
+    else (да)
+      :Новый access JWT; <<#E5F4E3>>
+    endif
+  endif
+  :POST /auth/logout; <<#DCEBFF>>
+  :Отзыв refresh в auth_db;\naccess действует до exp; <<#E5F4E3>>
+}
 stop
+legend right
+|= Цвет |= Значение |
+|<#DCEBFF>| Действие пользователя или браузера |
+|<#E5F4E3>| auth и проверяющие сервисы |
+|<#FFE6E6>| Отказ в доступе |
+endlegend
 @enduml

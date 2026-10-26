@@ -2,14 +2,14 @@
 
 ## Путь сотрудника банка и состояния дела
 
-![Вертикальный путь банка: проверки, автоматические и ручные решения, исходы](../../docs/diagrams/bank-flow.svg)
+![Вертикальный путь банка: проверки, решение аналитика и исходы](../../docs/diagrams/bank-flow.svg)
 
 [Исходник и сборка схемы](../../docs/diagrams/README.md). Сотрудник входит как `ANALYST` в `/bank`, открывает список и карточку дел. После `ApplicationSubmitted` банк создаёт дело в `VALIDATION`; неизвестная версия продукта направляет его в `MANUAL_REVIEW`. Полное дело проходит `ENRICHMENT` → `SCORING` → `DECISION`; последний статус означает **ожидание банковских правил**, а не одобрение.
 
 | Ветка | Банковские статусы и действие сотрудника | Публичный результат |
 |---|---|---|
 | Неполная заявка | `NEEDS_INFO`; ответ клиента `InfoProvided` возвращает дело в `VALIDATION`. | Запрос данных; затем новое рассмотрение. |
-| Автоматические правила | Из `DECISION` возможны `OFFER`, `NEEDS_INFO`, `MANUAL_REVIEW`, `REJECTED`. | Оферта, запрос данных, ручной разбор или отказ. |
+| Автоматическая оценка | Из `DECISION` возможны `NEEDS_INFO`, `MANUAL_REVIEW`, `REJECTED`. | Запрос данных, ручной разбор или отказ; автоматической оферты нет. |
 | Ручной разбор | Назначенный аналитик берёт `MANUAL_REVIEW` через `/take`, затем `/decision`: `APPROVE`/`COUNTER`, `REQUEST_INFO`, `REJECT`. | `OFFER`/`COUNTER_OFFER`, `NEEDS_INFO` или `REJECTED`. |
 | Принятая оферта | `OFFER_ACCEPTED` → `SIGNING` после события подписи → `DISBURSED` worker. | Оформление и демо-выдача. |
 | Отказ/отзыв/истечение | `OfferDeclined` или `ApplicationCancelled` → `CANCELLED`; worker срока → `EXPIRED`. | Клиент получает `CLOSED`. |
@@ -19,6 +19,10 @@
 Для продукта `SME_CASHFLOW_V2` действует дополнительный путь: экспертная оценка денежного потока формирует варианты со статусом `CALCULATED`, затем назначенный аналитик подтверждает актуальный вариант; только после этого возникает оферта. В рабочем месте банка доступны допуск и источники, факторы оценки, пересчёт и сравнение поколений. [Контракт Assessment API](../../api/assessment.yaml) · [подробные правила v2](../../docs/ASSESSMENT_V2.md) · [runbook](../../docs/ASSESSMENT_RUNBOOK.md).
 
 ## Данные и границы хранения
+
+![Ключевые таблицы bank_db и реальные связи](../../docs/diagrams/bank-db.svg)
+
+[Исходник PlantUML](../../docs/diagrams/bank-db.puml) · [Миграции](migrations/README.md).
 
 `bank-service` владеет `bank_db`: `products`, `product_rules`, `catalog_publication` — каталог и правила; `cases`, `enrichment_results`, `scoring_attempts`, `score_results` — дела и проверки; `assessments`, `assessment_commands` — неизменяемые оценки v2 и команды; `decisions`, `info_requests`, `offers`, `audit_log` — решения и аудит; `outbox`, `processed_events`, `idempotency_keys` — доставка и дедупликация. Банк хранит снимки клиентских данных, но не читает `client_db` напрямую. Таблицы, версии и миграции — в [README схемы](migrations/README.md).
 
@@ -33,12 +37,12 @@ Docker Compose — `http://auth:8080/.well-known/jwks.json`. `BANK_JWT_ISSUER` �
 `BANK_JWT_AUDIENCE` должны совпадать с настройками auth. Ключи кешируются на
 `BANK_JWKS_CACHE_TTL`, а неизвестный `kid` вызывает обновление JWKS.
 
-После успешного скоринга дело в `DECISION` обрабатывает автоматический worker.
-Он применяет правила зафиксированной версии продукта и сохраняет решение,
-оферту или запрос данных, аудит и публичное событие в одной транзакции.
-Порядок проверок: полнота данных, доступность БКИ и score, стоп-факторы,
-grade, затем диапазоны и ограничения продукта. `DECISION` сам по себе не
-означает одобрения. Проверка записи решения на PostgreSQL: `make bank-decision-test`.
+После этапа `SCORING` дело в `DECISION` обрабатывает автоматический worker.
+Он вызывает конвейер оценки `assessmentrepository.RunOnce` для зафиксированной
+версии продукта и сохраняет оценку, аудит и публичное событие в одной
+транзакции. Исход — `MANUAL_REVIEW`, `NEEDS_INFO` или `REJECTED`; оферту
+создаёт только подтверждение аналитика. `DECISION` сам по себе не означает
+одобрения. Проверка записи исхода на PostgreSQL: `make bank-decision-test`.
 
 `bank-service` читает protobuf `Event` из `client.events` (ключ Kafka —
 `aggregate_id`). Адреса брокеров задаёт `BANK_KAFKA_BROKERS` через запятую;

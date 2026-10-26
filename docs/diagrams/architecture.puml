@@ -1,62 +1,52 @@
-@startuml architecture
-!theme plain
-left to right direction
-skinparam backgroundColor #FFFFFF
-skinparam shadowing false
-skinparam defaultFontName Arial
-skinparam defaultFontSize 15
-skinparam componentStyle rectangle
-skinparam componentBackgroundColor #EAF2FF
-skinparam componentBorderColor #2055A2
-skinparam databaseBackgroundColor #FFFFFF
-skinparam queueBackgroundColor #FFF0EE
-skinparam ArrowColor #506174
-hide stereotype
-title Smart Credit — сервисы и протоколы MVP
+@startuml
+!include <C4/C4_Container>
 
-actor "Браузер" as browser
-component "web / nginx" as web
-component "gateway / nginx" as gateway
-component "Swagger UI" as swagger
-component "auth" as auth
-component "client-service" as client
-component "bank-service" as bank
-queue "Kafka\nclient.events / bank.events" as kafka
-database "auth_db" as authdb
-database "client_db" as clientdb
-database "bank_db" as bankdb
-component "bureau-mocks" as bureau
-component "scoring" as scoring
-component "assistant" as assistant
-component "Ollama (опция)" as ollama
+LAYOUT_WITH_LEGEND()
+UpdateBoundaryStyle("system", $bgColor="#F4F6F8", $borderColor="#A8B4C2")
+UpdateElementStyle("person", $bgColor="#DCEBFF", $fontColor="#172234", $borderColor="#4170A5")
+UpdateElementStyle("container", $bgColor="#EAF2FF", $fontColor="#172234", $borderColor="#4170A5")
+UpdateElementStyle("container_db", $bgColor="#E7F5EF", $fontColor="#172234", $borderColor="#18704D")
 
-browser --> web : HTTP
-browser --> gateway : HTTP
-web --> auth : HTTP /api/auth
-web --> client : HTTP /api/client
-web --> bank : HTTP /api/backoffice
-gateway --> auth : HTTP /api/auth
-gateway --> client : HTTP /api/client
-gateway --> bank : HTTP /api/backoffice
-gateway --> swagger : HTTP /docs
-client --> auth : HTTP JWKS
-bank --> auth : HTTP JWKS
-auth --> authdb : PostgreSQL
-client --> clientdb : PostgreSQL
-bank --> bankdb : PostgreSQL
-client --> kafka : Kafka client.events
-kafka --> bank : Kafka client.events
-bank --> kafka : Kafka bank.events
-kafka --> client : Kafka bank.events
-bank --> client : HTTP GET документа
-bank --> bureau : gRPC
-bank --> scoring : gRPC
-bank --> assistant : gRPC
-client --> assistant : gRPC Help
-assistant --> ollama : HTTP (опция)
+title Smart Credit — контейнеры и данные MVP
 
-note bottom of kafka
-  Изменения бизнес-состояния client ↔ bank идут через Kafka.
-  Три БД разделены; оригиналы файлов и ключ auth — Docker volumes.
-end note
+Person(customer, "Клиент", "Подаёт заявку и принимает оферту")
+Person(analyst, "Аналитик", "Рассматривает дела и подтверждает условия")
+System_Ext(ollama, "Ollama + Qwen2.5:7b", "На компьютере или отдельном сервере; тексты, не решения")
+
+System_Boundary(smart_credit, "Smart Credit / Docker Compose") {
+    Container(web, "web", "React + nginx", "Кабинет клиента и рабочее место банка")
+    Container(gateway, "gateway + Swagger UI", "nginx / OpenAPI", "Единая точка API и /docs")
+
+    Container(auth, "auth", "Go / HTTP", "Пользователи, роли, JWT, JWKS")
+    ContainerDb(auth_db, "auth_db", "PostgreSQL", "Учётки и refresh-сессии")
+    Container(client, "client-service", "Go / HTTP + Kafka", "Заявки и публичная проекция")
+    ContainerDb(client_db, "client_db", "PostgreSQL", "Заявки, outbox, processed_events")
+    Container(bank, "bank-service", "Go / HTTP + Kafka", "Дела, правила, решения и аудит")
+    ContainerDb(bank_db, "bank_db", "PostgreSQL", "Дела, outbox, processed_events")
+
+    ContainerQueue(kafka, "Kafka", "client.events / bank.events", "Асинхронный обмен бизнес-состоянием")
+    Container(bureau, "bureau-mocks", "Go / gRPC", "Синтетические проверки компании и БКИ")
+    Container(scoring, "scoring", "Python / gRPC", "Оценка риска")
+    Container(assistant, "assistant", "Python / gRPC", "Подсказки, резюме, объяснения")
+}
+
+Rel(customer, web, "Кабинет", "HTTPS/HTTP")
+Rel(analyst, web, "Backoffice", "HTTPS/HTTP")
+Rel(web, auth, "Вход", "HTTP")
+Rel(web, client, "Заявка", "HTTP")
+Rel(web, bank, "Backoffice", "HTTP")
+Rel(gateway, auth, "Auth API", "HTTP")
+Rel(gateway, client, "Client API", "HTTP")
+Rel(gateway, bank, "Bank API", "HTTP")
+
+Rel(auth, auth_db, "Читает и пишет", "SQL")
+Rel(client, client_db, "Читает и пишет", "SQL")
+Rel(bank, bank_db, "Читает и пишет", "SQL")
+Rel(client, kafka, "client.events / bank.events", "Kafka")
+Rel(bank, kafka, "client.events / bank.events", "Kafka")
+Rel(bank, bureau, "Проверки", "gRPC")
+Rel(bank, scoring, "Оценка", "gRPC")
+Rel(bank, assistant, "Тексты", "gRPC")
+Rel(assistant, ollama, "Генерация", "HTTP")
+
 @enduml

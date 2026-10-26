@@ -10,6 +10,10 @@
 
 ## Данные auth
 
+![Ключевые таблицы auth_db и реальные связи](../../docs/diagrams/auth-db.svg)
+
+[Исходник PlantUML](../../docs/diagrams/auth-db.puml) · [Миграция](migrations/00001_auth_init.sql).
+
 Отдельная `auth_db` содержит `organizations` (организации клиента), `users` (учётки и роли) и `refresh_tokens` (хеши refresh-сессий). Приватный RSA-ключ хранится в отдельном Docker volume `auth_keys`, публичная часть выдаётся через JWKS. Структура и миграции — в [README схемы](migrations/README.md).
 
 

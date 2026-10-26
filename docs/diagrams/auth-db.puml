@@ -1,0 +1,49 @@
+@startuml
+title Smart Credit — auth_db (ключевые поля)
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName "Segoe UI"
+skinparam entity {
+  BackgroundColor #F4F8FD
+  BorderColor #55708D
+  FontColor #172234
+}
+
+entity organizations {
+  * id : UUID <<PK>>
+  --
+  * inn : TEXT <<UNIQUE>>
+  * name : TEXT
+}
+entity users {
+  * id : UUID <<PK>>
+  --
+  org_id : UUID <<FK, CLIENT only>>
+  * email : TEXT <<UNIQUE, lower>>
+  * password_hash : TEXT <<Argon2id>>
+  * role : TEXT
+  * is_active : BOOLEAN
+}
+entity refresh_tokens {
+  * token_hash : BYTEA <<PK, SHA-256>>
+  --
+  * user_id : UUID <<FK>>
+  * expires_at : TIMESTAMPTZ
+  revoked_at : TIMESTAMPTZ
+}
+
+organizations ||--o{ users : org_id
+users ||--o{ refresh_tokens : user_id
+
+note right of users
+  CLIENT привязан к организации.
+  ANALYST и ADMIN не имеют org_id.
+end note
+legend bottom
+PK — первичный ключ; FK — реальный ключ в auth_db.
+Приватный RSA-ключ хранится в отдельном Docker volume auth_keys.
+endlegend
+@enduml

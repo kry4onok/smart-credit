@@ -22,6 +22,7 @@ participant "client-service" as Client #EAF2FF
 queue "Kafka" as Kafka #FFF2D9
 participant "bank-service" as Bank #EAF2FF
 participant "bureau-mocks\nи scoring" as Checks #E3F7F2
+actor "Аналитик" as Analyst
 
 == Подача ==
 User -> Web: Заполнить профиль и заявку
@@ -36,8 +37,15 @@ Kafka -> Bank: Новое дело
 Bank -> Bank: VALIDATION
 Bank -> Checks: БКИ и scoring (gRPC)
 Checks --> Bank: Данные и score
-Bank -> Bank: DECISION → правила → OFFER
-note right of Bank: DECISION — этап правил,\nа не одобрение.
+Bank -> Bank: DECISION — оценка → MANUAL_REVIEW
+note right of Bank: DECISION — не одобрение.\nПоложительные условия утверждает аналитик.
+opt SME_CASHFLOW_V2
+  Bank -> Bank: Варианты CALCULATED
+  note right of Bank: Варианты ещё не оферты.
+end
+Analyst -> Web: Открыть /bank и выбрать дело
+Web -> Bank: /take → подтверждение условий
+Bank -> Bank: OFFER после решения аналитика
 
 == Оферта у клиента ==
 Bank -> Kafka: bank.events: оферта

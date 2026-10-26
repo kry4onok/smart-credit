@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Container>
+
+LAYOUT_WITH_LEGEND()
+UpdateBoundaryStyle("system", $bgColor="#F4F6F8", $borderColor="#A8B4C2")
+UpdateElementStyle("container", $bgColor="#EAF2FF", $fontColor="#172234", $borderColor="#4170A5")
+
+title Smart Credit — прямые вызовы и протоколы
+
+System_Ext(ollama, "Ollama + Qwen2.5:7b", "Отдельный процесс или сервер")
+System_Boundary(smart_credit, "Smart Credit / HTTP и gRPC") {
+  Container(web, "web", "nginx", "Кабинет и backoffice")
+  Container(gateway, "gateway / Swagger", "nginx", "API /docs")
+  Container(auth, "auth", "Go / HTTP", "Логин и JWKS")
+  Container(client, "client-service", "Go / HTTP", "Заявки")
+  Container(bank, "bank-service", "Go / HTTP", "Дела")
+  Container(bureau, "bureau-mocks", "Go / gRPC", "Синтетические проверки")
+  Container(scoring, "scoring", "Python / gRPC", "Оценка риска")
+  Container(assistant, "assistant", "Python / gRPC", "Тексты и подсказки")
+}
+
+Rel(web, auth, "/api/auth", "HTTP")
+Rel(web, client, "/api/client", "HTTP")
+Rel(web, bank, "/api/backoffice", "HTTP")
+Rel(gateway, auth, "Auth API", "HTTP")
+Rel(gateway, client, "Client API", "HTTP")
+Rel(gateway, bank, "Bank API", "HTTP")
+Rel(client, auth, "JWKS", "HTTP")
+Rel(bank, auth, "JWKS", "HTTP")
+Rel(bank, client, "Оригинал документа, без изменения состояния", "HTTP GET")
+Rel(bank, bureau, "Компания и БКИ", "gRPC")
+Rel(bank, scoring, "Score и причины", "gRPC")
+Rel(bank, assistant, "Резюме и объяснение", "gRPC")
+Rel(client, assistant, "Help по оценке", "gRPC")
+Rel(assistant, ollama, "Модель, если доступна", "HTTP :11434")
+
+@enduml
