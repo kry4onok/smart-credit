@@ -12,14 +12,14 @@
 
 Для клиентской части нужна миграция `00002_profile_requirements.sql`.
 Банк принимает события профиля v2, сохраняет контекст требований и публикует
-запросы недостающих данных после валидации. Web и остальные этапы банковского
-workflow подключаются своими задачами; наличие endpoints не означает готовность
-всего конвейера. Общие контрактные исходники в клиентской реализации не менялись.
+запросы недостающих данных после валидации. Web показывает профиль v2, план
+требований и оценку денежного потока (`assessment.yaml`).
 
 Сиды, порядок загрузки и разделение ответственности:
 [профильные сценарии](../seed/profile-requirements/README.md).
-Продукт политики `sme-profile-v1` сидируется неактивным; миграция банка `00004`
-запрещает его активацию до отдельного изменения вместе с модулем требований.
+Запрет активации продуктов с политикой требований из миграции банка `00004` снят
+миграцией `00006`; демо-сид публикует `SME_PROFILE_V2` (`sme-profile-v1`) и
+`SME_CASHFLOW_V2` (`sme-profile-v2`) активными.
 
 Для обновления всех типов:
 
@@ -39,11 +39,13 @@ make profile-seed-check
 
 - `common.yaml` — общий HTTP-словарь: деньги, роли, статусы, продукт, ошибки и заголовки.
 - `auth.yaml`, `client.yaml`, `bank.yaml` — публичные HTTP API. Внешний URL: `/api` + путь из OpenAPI; nginx убирает `/api` перед сервисом.
+- `assessment.yaml` — дополнение к ним: пожелания к условиям (`assessment-input`), оценка денежного потока, история оценок и `recheck` для аналитика, помощник `help` для клиента и аналитика. OpenAPI 3.0.3 в JSON; Go-обработчики в `services/*/internal/http/assessment` написаны вручную, TS-типы генерирует `make web-gen`.
 - `codegen/*.yaml` — конфигурации `oapi-codegen` для общего Go-пакета и трёх HTTP-сервисов. Их `output` считается от корня репозитория.
 - `../proto/common/common.proto` — общие protobuf-сообщения.
 - `../proto/events/events.proto` — Kafka envelope и payload двух топиков.
 - `../proto/scoring/scoring.proto`, `../proto/bureau/bureau.proto` — обязательные gRPC вызовы банка.
 - `../proto/assistant/assistant.proto` — gRPC сервис объяснений и резюме для MVP.
+- `../proto/assistant/help.proto` — gRPC `AssistantHelpService.Help` для помощника в карточке.
 
 Для `BureauService` неизвестный валидный ИНН даёт gRPC `NOT_FOUND`, неверная
 контрольная сумма — `INVALID_ARGUMENT`; настроенный сбой источника даёт
@@ -76,7 +78,7 @@ Generated Go находится в `proto/gen/go`, Python — в `proto/gen/pyth
 
 ## Принятые решения
 
-- Публичные API описаны OpenAPI 3.1.0. Проверена генерация типов и chi/strict-server с `oapi-codegen v2.8.0`; сборка Go проверяется командой `go test ./...`.
+- Публичные API описаны OpenAPI 3.1.0 (кроме `assessment.yaml`, 3.0.3). Проверена генерация типов и chi/strict-server с `oapi-codegen v2.8.0`; сборка Go проверяется командой `go test ./...`.
 - Один корневой Go module `github.com/alfabank-hackathon-2026/smart-credit`, чтобы сервисы делили `pkg/` и `proto/gen/go/`.
 - HTTP суммы и protobuf суммы — `int64` копейки + `RUB`; процент — basis points; время — UTC.
 - В HTTP денежная сумма ограничена точным целым диапазоном JavaScript (`±(2^53-1)` копеек); реальный продуктовый лимит намного ниже и проверяется отдельно.
@@ -88,14 +90,15 @@ Generated Go находится в `proto/gen/go`, Python — в `proto/gen/pyth
 - В `bank.events` нет score, внутренних правил, комментариев аналитика и данных БКИ.
 - Health routes обслуживаются напрямую сервисами и могут быть недоступны снаружи nginx.
 - Состояние в браузере обновляется polling через GET.
-- `assistant` вызывается только bank-service: резюме дела для аналитика и текст публичного объяснения решения. При таймауте используется шаблон; решение, score и условия оферты не меняются. Отдельного клиентского чата в текущем объёме нет.
+- `SummarizeCase` и `ExplainDecision` вызывает только bank-service: резюме дела для аналитика и текст публичного объяснения решения. `Help` вызывают client-service и bank-service для помощника в карточке; backend передаёт только проверенные факты заявки. При таймауте используется шаблон; решение, score и условия оферты не меняются.
 - Для публичного объяснения bank-service вычисляет решение, затем вызывает `ExplainDecision` вне SQL-транзакции. Решение, текст (или шаблон) и outbox-событие сохраняются вместе с проверкой версии дела.
 - У ручного решения внутренний `comment` остаётся в аудите; для отказа и контрпредложения аналитик вводит отдельный `public_reason`. В assistant уходит только эта безопасная причина и публичные коды, а не внутренний комментарий.
 - `GET /client/applications/{application_id}` возвращает понятное название этапа и допустимые действия; `GET /backoffice/applications/{application_id}` возвращает активный запрос данных и текст, опубликованный клиенту. Web не вычисляет эти поля по локальным догадкам.
 - `InfoField` в HTTP передаётся без префикса; одноимённые значения protobuf имеют префикс `INFO_FIELD_`. Adapter явно конвертирует их и отклоняет `UNSPECIFIED`.
 - Генератор выдаёт `*multipart.Reader` для `POST /documents`; HTTP adapter ограничивает файл 5 MiB (с запасом на multipart-обёртку для тела), читает `document_type`, считает SHA-256 и записывает файл в volume.
 - Ручная оферта обязана содержать `product_id`; это позволяет банку предложить другой продукт, сумму, срок и ставку. Публичная оферта несёт снимок названия и версии предложенного продукта.
-- Для заявки используются `PurposeTag` и `DocumentType` из общих схем. Grades и причины scoring определены в `proto/scoring/scoring.proto` и [README scoring](../ml/scoring/README.md). Продуктовые данные и правила принадлежат bank-service; демо-каталог находится в `services/bank-service/seeds/demo.sql`.
-- Целевой `bank.yaml` описывает доменный ответ scoring v1 в `BankCase.score`: `ASSESSED` всегда содержит числовой `score` (включая 0), а `INSUFFICIENT_DATA` и `UNSUPPORTED_INPUT` опускают его, возвращают `grade=UNSPECIFIED` и `data_issues`. Поле показывает только текущую оценку входа; при новой попытке старый результат скрывается, при gRPC-ошибке поле отсутствует и причина записывается в аудит. `attempt_id`, `input_revision` и `as_of_date` привязывают результат к попытке; `input_revision` не равен версии карточки. Поля метаданных и неполные исходы начнут заполняться после отдельной миграции и банковского adapter. Демо-строки сейчас дают только `ASSESSED` с сохранёнными score/grade/reasons/версиями.
+- Для заявки используются `PurposeTag` и `DocumentType` из общих схем. Целей четыре: `WORKING_CAPITAL`, `EQUIPMENT`, `EXPANSION` и `OTHER`; для `OTHER` до отправки нужен непустой `purpose_description` (до 1000 символов), для остальных он необязателен; в PATCH отсутствие поля сохраняет значение, `""` очищает. `GET /client/products?purpose=` возвращает весь каталог, продукты под цель — первыми; `purpose_tags` продукта — жёсткое ограничение.
+- `DELETE /client/applications/{application_id}` с `If-Match` удаляет только собственный `DRAFT` (204; при этом `allowed_actions` содержит `DELETE_DRAFT`). Ошибки: 409 `APPLICATION_VERSION_CONFLICT`/`APPLICATION_STATE_CONFLICT`, 404 `APPLICATION_NOT_FOUND`. Файлы удаляет фоновый worker client-service; событие банку не публикуется. Grades и причины scoring определены в `proto/scoring/scoring.proto` и [README scoring](../ml/scoring/README.md). Продуктовые данные и правила принадлежат bank-service; демо-каталог находится в `services/bank-service/seeds/demo.sql`.
+- Целевой `bank.yaml` описывает доменный ответ scoring v1 в `BankCase.score`: `ASSESSED` всегда содержит числовой `score` (включая 0), а `INSUFFICIENT_DATA` и `UNSUPPORTED_INPUT` опускают его, возвращают `grade=UNSPECIFIED` и `data_issues`. Поле показывает только текущую оценку входа; при новой попытке старый результат скрывается, при gRPC-ошибке поле отсутствует и причина записывается в аудит. `attempt_id`, `input_revision` и `as_of_date` привязывают результат к попытке; `input_revision` не равен версии карточки. Метаданные и неполные исходы берутся из `scoring_attempts` (миграция банка `00002`); у демо-строк из seed есть только `ASSESSED` с сохранёнными score/grade/reasons/версиями.
 - Токен обновления не ротируется при каждом refresh: БД хранит хеш, срок 7 дней, logout отзывает токен.
 - Автоматического DLQ нет: consumer не подтверждает offset при необработанном событии, повторяет с ограниченной задержкой и выводит ошибку в логи/readiness. Сообщение нельзя молча пропустить.

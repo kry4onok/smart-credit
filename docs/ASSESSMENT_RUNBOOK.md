@@ -2,7 +2,7 @@
 
 ## Окружение
 
-Используются существующие Compose, Makefile, PostgreSQL, Kafka, auth/client/bank, Python scoring, bureau-mocks и assistant. Frontend в этот объём не входит. Не заменяйте существующий `.env`: для нового окружения скопируйте `.env.example` и задайте локальные значения.
+Используются существующие Compose, Makefile, PostgreSQL, Kafka, auth/client/bank, Python scoring, bureau-mocks и assistant. Экраны оценки есть в `web` (кабинет клиента и `/bank`); браузерный сценарий — в [TEST_SCENARIOS.md](TEST_SCENARIOS.md#7-браузерный-сценарий). Не заменяйте существующий `.env`: для нового окружения скопируйте `.env.example` и задайте локальные значения.
 
 ```sh
 cp .env.example .env  # только если файла ещё нет
@@ -11,13 +11,13 @@ make demo-up
 
 Swagger: `http://localhost:8000/docs/`, выбрать **Assessment and Help API**. Описание новых ручек: `api/assessment.yaml`, существующего процесса: `api/client.yaml`, `api/bank.yaml`, `api/auth.yaml`. Демо-продукт нового процесса `10000000-0000-4000-8000-000000000022` / `SME_CASHFLOW_V2` / `sme-profile-v2`. Прежний `sme-profile-v1` сохраняет свой перечень обязательных полей.
 
-Миграции: bank `00007_assessment.sql`, client `00003_assessment.sql`, применяются штатными `bank-db-up`/`client-db-up`. Они добавляют поля и таблицы, не пересчитывают старые оценки. Down отказывается удалять сохранённые новые данные; откат заполненного окружения требует заранее проверенного восстановления резервной копии. Не используйте `down --volumes` для рабочего проекта.
+Миграции оценки: bank `00007_assessment.sql`, client `00003_assessment.sql` (цели финансирования и удаление черновиков — bank `00008`, client `00004`–`00005`), применяются штатными `bank-db-up`/`client-db-up`. Они добавляют поля и таблицы, не пересчитывают старые оценки. Down отказывается удалять сохранённые новые данные; откат заполненного окружения требует заранее проверенного восстановления резервной копии. Не используйте `down --volumes` для рабочего проекта.
 
 Внешние сведения в MVP синтетические; значения не являются полученными из реальных реестров. Предварительный маршрут использует данные источников перед запросом документов. Загруженный файл считается PROVIDED, но не доказанно VERIFIED: извлечения произвольной отчётности и OCR нет.
 
 ## Qwen и автономная работа
 
-Для Qwen 2.5-7B на CPU задайте `OLLAMA_MODEL=qwen2.5:7b`, `BANK_ASSISTANT_TIMEOUT=25s` и `ASSISTANT_HELP_TIMEOUT=45s`. Последняя настройка применяется к Help API обоих backend; по умолчанию остаётся `5s`. Допустим положительный Go duration не больше `45s`; неверное значение возвращает лимит `5s`. Внутренний вызов модели в Help ограничен 40 секундами. Задайте `BANK_HTTP_WRITE_TIMEOUT=60s` и `CLIENT_HTTP_WRITE_TIMEOUT=60s`; timeout прокси тоже должен быть больше RPC timeout. После изменения выполните реальный прогон модели и проверьте поле `source`: доступность контейнера не доказывает, что ответ получен от Qwen.
+Для Qwen 2.5-7B на CPU локально задайте `OLLAMA_MODEL=qwen2.5:7b`, `BANK_ASSISTANT_TIMEOUT=20s` и `ASSISTANT_HELP_TIMEOUT=25s`. Последняя настройка применяется к Help API обоих backend; по умолчанию остаётся `5s`. Допустим положительный Go duration не больше `45s`; неверное значение возвращает лимит `5s` (`pkg/assistanthelp/timeout.go`). Внутренний вызов модели в Help ограничен 40 секундами. Локально больше 25 секунд не ставьте: `proxy_read_timeout` в `deploy/nginx/nginx.conf` и `web.conf` и `BANK_HTTP_WRITE_TIMEOUT`/`CLIENT_HTTP_WRITE_TIMEOUT` по умолчанию равны 30 секундам, а bank-service не стартует, если `BANK_ASSISTANT_TIMEOUT` не меньше `BANK_HTTP_WRITE_TIMEOUT`. Значения до `45s` требуют одновременно увеличить write timeout сервисов и timeout прокси; так настроен публичный сервер (deployer поднимает proxy-таймауты nginx до 65 секунд, env задаётся отдельно). После изменения выполните реальный прогон модели и проверьте поле `source`: доступность контейнера не доказывает, что ответ получен от Qwen.
 
 Банковский `BANK_ASSISTANT_GRPC_ADDR` и клиентский `CLIENT_ASSISTANT_TARGET` указывают на `assistant:50052` в Compose. У assistant используется существующий Ollama HTTP API и настройки `OLLAMA_URL`, `OLLAMA_MODEL` из `.env.example`. Модель должна быть заранее доступна на выбранном Ollama сервере. Сервис не обучает и не скачивает модель автоматически.
 

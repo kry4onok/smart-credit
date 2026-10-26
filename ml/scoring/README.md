@@ -4,6 +4,9 @@ Python gRPC-сервис оценки риска бизнеса: `monotone-score
 `borrower-features-v1`. Возвращает индекс 0..1000 (больше — ниже риск), grade
 A–E и объяснения сотруднику банка. Это экспертная модель без обучающих данных
 и калибровки вероятности дефолта. Кредитное решение принимает bank-service.
+Для продукта `SME_CASHFLOW_V2` основной расчёт — Go-скоркарта
+`expert-cashflow-scorecard-v2` в `pkg/assessment` ([описание v2](../../docs/ASSESSMENT_V2.md));
+результат этого сервиса там показывается аналитику отдельно как `baseline_v1`.
 
 ## Запуск и контракты
 
@@ -29,7 +32,7 @@ Health: стандартный `grpc.health.v1.Health/Check`, имя серви�
 - Пример работающего Go-клиента: `cmd/scoring-smoke/main.go`.
 - Общие исходные профили и ожидаемые ответы: `seed/scoring/personas.json`.
 
-`make gen-proto` генерирует Go/Python для всех пяти proto;
+`make gen-proto` генерирует Go/Python для всех `proto/*/*.proto`;
 `make gen-proto-check` проверяет отсутствие расхождений. Версии инструментов
 закреплены в `scripts/proto-tools.json`; generated код вручную не менять.
 В bureau producer и scoring consumer обновлять presence одновременно.
@@ -101,8 +104,8 @@ baseline и checksum остаются. Неуказанный `assessment_status
 Только ASSESSED записывается в существующий `score_results`, где score NOT NULL;
 остальные исходы сохраняются отдельно как outcome попытки.
 
-Bank OpenAPI поддерживает представление доменного ответа без score. Хранение
-outcome и чтение актуальной попытки должны предшествовать его отображению.
+Bank OpenAPI поддерживает представление доменного ответа без score. Банк хранит
+попытки в `scoring_attempts` (миграция банка `00002`) и показывает текущую.
 Grade не обходит стоп-факторы, документы и продуктовые правила. Внутренние
 оценки/причины не передаются клиенту в `bank.events`. Логи — идентификаторы,
 версии, длительность и outcome, без финансового payload и документов.

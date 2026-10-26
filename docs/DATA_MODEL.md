@@ -1,6 +1,6 @@
 # Модель данных
 
-Схемы построены по итоговому состоянию goose-миграций: `services/auth/migrations/00001`, `services/client-service/migrations/00001–00003`, `services/bank-service/migrations/00001–00007`. Показаны ключи, статусы, версии, деньги и связи; полный список колонок и `CHECK` — в миграциях.
+Схемы построены по итоговому состоянию goose-миграций: `services/auth/migrations/00001`, `services/client-service/migrations/00001–00005`, `services/bank-service/migrations/00001–00008`. Показаны ключи, статусы, версии, деньги и связи; полный список колонок и `CHECK` — в миграциях.
 
 Общие правила:
 
@@ -8,6 +8,7 @@
 * межбазовых внешних ключей нет; ID пользователей, организаций и заявок совпадают по значению, но целостность между БД обеспечивают события;
 * деньги — `bigint` в копейках (`*_kopecks`), ставки — `integer` в базисных пунктах (`*_bps`);
 * оптимистическая блокировка — колонка `version`; порядок событий — `aggregate_version`, `client_event_version`, `bank_event_version`;
+* цели финансирования (`purpose_tag`, `purpose_tags`) — `WORKING_CAPITAL`, `EQUIPMENT`, `EXPANSION`, `OTHER` (client 00005, bank 00008);
 * типы массивов на схемах записаны как `text_array`.
 
 ## auth_db
@@ -43,7 +44,7 @@ erDiagram
 
 ## client_db
 
-Владелец — `client-service`. Источник истины для профиля компании, черновика, загруженных файлов и действий клиента. Таблицы `products`, `info_requests`, `offers` и `applications.status` — проекции из `bank.events`; клиентская часть не видит скоринг, бюро и комментарии аналитика. Содержимое файлов лежит в volume по `storage_key`, в БД — метаданные и SHA-256.
+Владелец — `client-service`. Источник истины для профиля компании, черновика, загруженных файлов и действий клиента. Таблицы `products`, `info_requests`, `offers` и `applications.status` — проекции из `bank.events`; клиентская часть не видит скоринг, бюро и комментарии аналитика. Содержимое файлов лежит в volume по `storage_key`, в БД — метаданные и SHA-256. Удаление черновика (`DELETE /client/applications/{id}`, только `DRAFT`) стирает строку заявки, её документы и ленту и оставляет запись в `deleted_drafts`; по ней worker удаляет файлы из volume.
 
 ```mermaid
 erDiagram
@@ -72,6 +73,7 @@ erDiagram
         uuid id PK "проекция каталога банка"
         bigint version
         text code UK
+        text_array purpose_tags "жёсткое ограничение целей"
         bigint min_amount_kopecks
         bigint max_amount_kopecks
         integer indicative_rate_bps
@@ -88,16 +90,23 @@ erDiagram
         jsonb company_snapshot
         bigint requested_amount_kopecks
         integer requested_term_months
-        text purpose_tag
+        text purpose_tag "WORKING_CAPITAL ... OTHER"
+        text purpose_description "до 1000 символов, обязателен для OTHER"
         text status "DRAFT ... CLOSED"
         text pending_action "INFO_SENT, ACCEPT_PENDING, ..."
         date requirements_reference_date
         jsonb bank_requirements_plan
-        jsonb assessment_input "Submission v1"
+        jsonb assessment_input "Submission v1, в т.ч. минимальная сумма"
         jsonb public_assessment "PublicResult"
         bigint version
         bigint client_event_version
         bigint bank_event_version
+    }
+    deleted_drafts {
+        uuid application_id PK "без FK, заявка удалена"
+        uuid org_id
+        timestamptz deleted_at
+        timestamptz documents_cleaned_at "очистка файлов worker'ом"
     }
     application_documents {
         uuid id PK
@@ -189,6 +198,7 @@ erDiagram
         uuid id PK
         bigint version PK
         text code
+        text_array purpose_tags
         bigint min_amount_kopecks
         bigint max_amount_kopecks
         integer indicative_rate_bps
@@ -213,9 +223,11 @@ erDiagram
         bigint product_version
         text company_inn
         jsonb company_snapshot
+        jsonb application_snapshot "в т.ч. purpose_description"
         jsonb documents_snapshot
         bigint requested_amount_kopecks
         integer requested_term_months
+        text purpose_tag
         text status "VALIDATION ... EXPIRED"
         text recommendation
         uuid assignee_id "из auth_db"
@@ -302,7 +314,7 @@ erDiagram
         uuid id PK
         uuid case_id FK
         bigint case_version
-        text action
+        text action "в т.ч. CLIENT_EVENT_SKIPPED"
         text actor_type "SYSTEM, ANALYST, CLIENT"
         jsonb details
     }

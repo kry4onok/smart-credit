@@ -2,11 +2,11 @@
 
 Перечень сторонних компонентов, моделей, данных, сервисов и смоделированных интеграций проекта «Умный кредитный кабинет». Точные версии закреплены в `go.mod`/`go.sum`, `web/package-lock.json`, `ml/*/uv.lock`, `Makefile`, `scripts/proto-tools.json`, `deploy/docker-compose.yml` и `deploy/docker/*.Dockerfile`. Лицензии сторонних дистрибутивов действуют в их исходной редакции.
 
-Платные API и внешние облачные сервисы не используются. Языковая модель — открытые веса, запускается через Ollama на хосте стенда или отдельном сервере. Все данные синтетические.
+Платные API и внешние облачные сервисы не используются. Языковая модель — открытые веса, запускается через Ollama: локально на хосте вне Docker, на публичном стенде — контейнером `ollama/ollama` (`deploy/server/compose.server.yml`). Все данные синтетические.
 
 ## Qwen2.5 7B через Ollama
 
-- Модель: `qwen2.5:7b` (открытые веса; хранится на сервере Ollama, не включена в Docker-образ проекта).
+- Модель: `qwen2.5:7b` (`OLLAMA_MODEL` в `.env.example` и `deploy/docker-compose.yml`; открытые веса хранятся на сервере Ollama и не включены в Docker-образы проекта).
 - Правообладатель весов: Alibaba Cloud.
 - Лицензия тега `qwen2.5:7b`: **Apache License 2.0**; см. [карточку модели](https://ollama.com/library/qwen2.5%3A7b).
 - Полный текст лицензии установленной модели: `ollama show qwen2.5:7b --license`.
@@ -18,7 +18,7 @@
 
 | Компонент | Лицензия | Назначение |
 |---|---|---|
-| Ollama | MIT | Локальный runtime модели на хосте (`OLLAMA_URL`, по умолчанию `http://host.docker.internal:11434`). Не входит в compose и образы проекта. |
+| Ollama | MIT | Runtime модели (`OLLAMA_URL`, по умолчанию `http://host.docker.internal:11434`). Локально работает на хосте и не входит в `deploy/docker-compose.yml`; на публичном стенде — образ `ollama/ollama` в `deploy/server/compose.server.yml`. |
 
 Настройка `LLM_PROVIDER=openai` в `ml/assistant/server.py` предназначена только для OpenAI-совместимого сервера, запущенного локально (`LLM_BASE_URL`); в поставке не используется. Ключи платных API проект не требует.
 
@@ -108,11 +108,13 @@ Buf в проекте не используется.
 | `node:22.12.0-alpine` | MIT | стадия сборки web |
 | `python:3.12.12-slim-bookworm` | PSF-2.0; пакеты Debian под собственными лицензиями | runtime scoring и assistant |
 | `ghcr.io/astral-sh/uv:0.12.3` | MIT OR Apache-2.0 | копирование `uv` в образы scoring и assistant |
+| `ollama/ollama` (закреплён digest) | MIT | runtime модели на публичном стенде (`deploy/server/compose.server.yml`) |
+| `certbot/certbot:v5.8.0` | Apache-2.0 | TLS-сертификаты публичного стенда (`deploy/server/compose.server.yml`) |
 
 ## Модели и данные
 
 - Скоринг: `monotone-scorecard-v1` (`ml/scoring/models/scorecard-v1.json`) и экспертная скоркарта `expert-cashflow-scorecard-v2` (`pkg/assessment`) — оригинальные артефакты команды, детерминированные правила без обучения. Внешние датасеты и предобученные веса для скоринга не используются; отдельной лицензии на скоркарты нет, действует политика лицензирования репозитория.
-- Внешние датасеты не используются. Все данные синтетические и созданы командой: персоны `seed/personas.yaml`, `seed/scoring/personas.json`, `seed/profile-requirements/*`, демо-продукты и дела `services/bank-service/seeds/demo.sql`, сценарии `ml/assistant/scenarios.json`, каталог и fixtures Help `pkg/assistanthelp/`, демо-выписки `services/bank-service/internal/document/statement/testdata/example.txt` и `postman/fixtures/bank-statement.txt`, данные демо-режима `web/src/mock/`. ИНН, названия организаций, суммы и операции вымышлены.
+- Внешние датасеты не используются. Все данные синтетические и созданы командой: персоны `seed/personas.yaml`, `seed/scoring/personas.json`, `seed/profile-requirements/*`, демо-продукты и дела `services/bank-service/seeds/demo.sql`, сценарии `ml/assistant/scenarios.json`, каталог и fixtures Help `pkg/assistanthelp/`, демо-выписки `docs/demo-bank-statement.txt`, `services/bank-service/internal/document/statement/testdata/example.txt` и `postman/fixtures/bank-statement.txt`, данные демо-режима `web/src/mock/`. ИНН, названия организаций, суммы и операции вымышлены.
 - Единственные сторонние веса — Qwen2.5 (раздел выше), используются только для формулировки текстов.
 
 ## Смоделированные интеграции

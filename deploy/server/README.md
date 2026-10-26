@@ -28,7 +28,8 @@ Adding a repository secret alone does not enable the workflow.
 4. Merge new non-secret `.env.example` defaults into the persistent server env.
    Existing values win. Missing existing database/account secrets, demo defaults,
    insecure cookies or a different model stop deployment.
-5. Validate Compose, build images and check Python imports as their non-root users.
+5. Validate Compose, require at least 12 GiB free disk, build images and check
+   Python imports as their non-root users.
 6. Back up all three databases, check archive catalogs and apply forward migrations.
 7. Update containers and wait for health checks. A short interruption is possible.
 8. Verify HTTPS login, role, protected API, refresh-cookie recovery and logout for

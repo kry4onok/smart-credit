@@ -2,15 +2,17 @@
 
 `SummarizeCase` составляет короткое резюме для аналитика. `ExplainDecision` формирует уведомление клиенту по уже принятому банком решению. Ассистент не принимает решение и не меняет скоринг.
 
-## Новый метод Help
+## Метод Help
 
-Python-сервис поддерживает `smartcredit.assistant.v2.AssistantHelpService.Help` после появления сгенерированных `help_pb2`/`help_pb2_grpc` от backend-интеграции. Старые методы остаются доступными. Для `Help` задайте `ASSISTANT_CATALOG_PATH` с путём к согласованному каталогу. Если каталог отсутствует или версия в запросе не совпадает, сервис возвращает `FAILED_PRECONDITION` и причину `UNSUPPORTED_CATALOG_VERSION` в trailing metadata `assistant-error`.
+Сервис также обслуживает `smartcredit.assistant.v2.AssistantHelpService.Help` (`proto/assistant/help.proto`, generated-классы в `proto/gen/python/proto/assistant`). Его вызывают client-service и bank-service для помощника в карточке заявки (`/client/applications/{id}/help` и `/backoffice/applications/{id}/help` в `api/assessment.yaml`). Каталог формулировок по умолчанию — `pkg/assistanthelp/catalog.json` версии `smart-credit-help-v1`, он копируется в образ; `ASSISTANT_CATALOG_PATH` задаёт другой файл. Если версия в запросе не совпадает с каталогом, сервис возвращает `FAILED_PRECONDITION` и причину `UNSUPPORTED_CATALOG_VERSION` в trailing metadata `assistant-error`.
 
-Пока утверждённый каталог и полные fixtures не переданы, `ml/assistant/tests/fixtures/test-catalog.json` служит только для локальных тестов. Его версия `assistant-test-v0` не является банковской версией `assistant-text-v1`. Прямой gRPC smoke: `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_help_smoke.py --target 127.0.0.1:50052 --expect-source template`. Для него сервер должен быть запущен с тестовым каталогом. Тесты нового метода автоматически пропускаются до появления generated-классов; после их поставки пропусков быть не должно.
+`ml/assistant/tests/fixtures/test-catalog.json` (версия `assistant-test-v0`) служит только для тестов. Прямой gRPC smoke: `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_help_smoke.py --target 127.0.0.1:50052 --expect-source template`. Его fixture использует тестовую версию, поэтому сервер для него запускается с `ASSISTANT_CATALOG_PATH=ml/assistant/tests/fixtures/test-catalog.json`.
+
+Дедлайн Help задаёт backend через `ASSISTANT_HELP_TIMEOUT`: по умолчанию 5 секунд, значения больше 45 секунд или неверные заменяются на 5 секунд (`pkg/assistanthelp/timeout.go`). Модель при этом ждут не дольше 40 секунд, затем отвечает шаблон.
 
 ## Запуск через Docker Compose
 
-Ollama запускается на компьютере отдельно от Docker. Установите [Ollama](https://ollama.com/download), запустите приложение или `ollama serve` и загрузите модель:
+Локально Ollama запускается на компьютере отдельно от Docker (на публичном стенде она работает контейнером из `deploy/server/compose.server.yml`). Установите [Ollama](https://ollama.com/download), запустите приложение или `ollama serve` и загрузите модель:
 
 ```bash
 ollama pull qwen2.5:7b
@@ -35,7 +37,7 @@ make assistant-smoke
 
 | Переменная | Значение |
 |---|---|
-| `LLM_PROVIDER` | `ollama` (по умолчанию) или `openai` для совместимого `/v1/chat/completions` API. |
+| `LLM_PROVIDER` | `ollama` (по умолчанию) или `openai` — только протокол `/v1/chat/completions` для локального сервера с моделью открытых весов (vLLM, llama.cpp); платные облачные API не используются. |
 | `LLM_BASE_URL` | Базовый URL сервера модели. Для Ollama это адрес до `/api/generate`; для OpenAI-совместимого сервера — адрес с `/v1`, без `/chat/completions`. |
 | `LLM_MODEL` | Имя установленной или доступной модели. |
 | `LLM_API_KEY` | Необязательный Bearer-ключ, который отправляется серверу модели. Для локальной Ollama оставьте пустым. |
@@ -70,7 +72,7 @@ PYTHONPATH=proto/gen/python OLLAMA_MODEL=qwen2.5:7b ml/assistant/.venv/bin/pytho
 
 Аналитик вводит публичную причину; банк проверяет её наличие и длину до вызова `ExplainDecision`. Если клиенту нужно сообщить конкретную причину, её следует передать готовой фразой в `analyst_public_reason`. Внутренний `comment` аналитика, сырые персональные данные и внутренние причины скоринга передавать в клиентское объяснение нельзя. Для резюме аналитика банк сопоставляет статусы, цели и известные правила со своими описаниями; неизвестный код не получает придуманной расшифровки. Демокод `REVIEW_REQUIRED` означает только необходимость ручного разбора, без конкретной причины.
 
-Backend выставляет `source=assistant`, когда получен текст с версией модели; `model_version=template` отображает как `source=template`. При ошибке gRPC или истечении дедлайна backend формирует собственный шаблон и также ставит `source=template`. Дедлайн вызова из bank-service по умолчанию — 5 секунд. Для демо на компьютере с медленной моделью можно задать `BANK_ASSISTANT_TIMEOUT=20s` в `.env` и пересоздать bank-service; значение должно быть меньше `BANK_HTTP_WRITE_TIMEOUT` (по умолчанию 30 секунд). При отсутствии модели ожидание fallback тогда тоже может занять до 20 секунд. Вызов assistant не меняет score, решение или оферту. HTTP-метод резюме подключён. При ручном решении банк сохраняет ответ `ExplainDecision` в `public_reason`, а для оферты — также в `offer.explanation`, и публикует существующее клиентское событие. При недоступности ассистента банк сохраняет исходную публичную причину; для `APPROVE` без причины использует короткий шаблон. `REQUEST_INFO` оставляет исходное сообщение запроса документов. Название предложенного продукта, сумма, срок и ставка передаются только после предварительной проверки оферты банком. Ассистент выводит их из полей запроса без выдумывания условий.
+Backend выставляет `source=assistant`, когда получен текст с версией модели; `model_version=template` отображает как `source=template`. При ошибке gRPC или истечении дедлайна backend формирует собственный шаблон и также ставит `source=template`. Дедлайн вызова из bank-service по умолчанию — 5 секунд. Для демо на компьютере с медленной моделью можно задать `BANK_ASSISTANT_TIMEOUT=20s` в `.env` и пересоздать bank-service; значение должно быть меньше `BANK_HTTP_WRITE_TIMEOUT` (по умолчанию 30 секунд). При отсутствии модели ожидание fallback тогда тоже может занять до 20 секунд. Для помощника в карточке аналогично задайте `ASSISTANT_HELP_TIMEOUT=25s`; больше 25 секунд локально не ставьте: nginx (`proxy_read_timeout 30s` в `deploy/nginx/nginx.conf` и `web.conf`), `BANK_HTTP_WRITE_TIMEOUT` и `CLIENT_HTTP_WRITE_TIMEOUT` ждут ответа 30 секунд. Вызов assistant не меняет score, решение или оферту. HTTP-метод резюме подключён. При ручном решении банк сохраняет ответ `ExplainDecision` в `public_reason`, а для оферты — также в `offer.explanation`, и публикует существующее клиентское событие. При недоступности ассистента банк сохраняет исходную публичную причину; для `APPROVE` без причины использует короткий шаблон. `REQUEST_INFO` оставляет исходное сообщение запроса документов. Название предложенного продукта, сумма, срок и ставка передаются только после предварительной проверки оферты банком. Ассистент выводит их из полей запроса без выдумывания условий.
 
 ## Ограничение фактов и fallback
 
@@ -80,7 +82,7 @@ Backend выставляет `source=assistant`, когда получен те�
 
 ## Проверка качества текста
 
-1. Выполните `make assistant-smoke`. Для каждого номера проверьте, что в квадратных скобках стоит имя модели. `template` значит, что модель не дала принятый ответ; смотрите `make assistant-logs`. Для прямой проверки модели запустите `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_smoke.py --timeout 30 --expect-version qwen2.5:7b` при запущенном assistant. Скорость Qwen2.5:7b зависит от оборудования; прежние замеры другой модели к ней не относятся. Если bank-service успевает получить только шаблон, задайте в `.env` `BANK_ASSISTANT_TIMEOUT=20s` и перезапустите bank-service; таймаут должен оставаться меньше `BANK_HTTP_WRITE_TIMEOUT` (по умолчанию 30 секунд).
+1. Выполните `make assistant-smoke`. Для каждого номера проверьте, что в квадратных скобках стоит имя модели. `template` значит, что модель не дала принятый ответ; смотрите `make assistant-logs`. Для прямой проверки модели запустите `PYTHONPATH=proto/gen/python ml/assistant/.venv/bin/python scripts/assistant_smoke.py --timeout 30 --expect-version qwen2.5:7b` при запущенном assistant. Скорость Qwen2.5:7b зависит от оборудования; прежние замеры другой модели к ней не относятся. Если bank-service успевает получить только шаблон, задайте в `.env` `BANK_ASSISTANT_TIMEOUT=20s` (и `ASSISTANT_HELP_TIMEOUT=25s` для помощника) и перезапустите bank-service и client-service; таймауты должны оставаться меньше 30 секунд HTTP-серверов и nginx.
 2. Прочитайте все девять строк. В №1, №2 и №4 должны быть переданные грейд, статус, цель и утверждённые описания причин и правил без выдуманных расшифровок. В №3 и №5–7 грейда, причин и правил скоринга быть не должно. В №3 клиенту можно сообщать только о выписке; в №4 — только о встречном предложении с переданной публичной причиной. В тексте №4 должны быть «Гибкий кредит», 4 000 000 ₽, 24 мес. и 18,50%; других условий, решений или обещаний быть не должно.
 3. При `template` проверьте, что основной сценарий остаётся понятным и безопасным. Для принудительной проверки задайте недоступный `OLLAMA_URL` (и пустой `LLM_BASE_URL`), пересоздайте assistant, затем запустите скрипт с `--expect-version template`.
 
@@ -89,7 +91,7 @@ Backend выставляет `source=assistant`, когда получен те�
 Тесты без Ollama:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 ml/assistant/.venv/bin/python -m unittest discover -s ml/assistant/tests -v
+PYTHONPATH=proto/gen/python PYTHONDONTWRITEBYTECODE=1 ml/assistant/.venv/bin/python -m unittest discover -s ml/assistant/tests -v
 ```
 
 В контейнерном smoke используются снимки семи банковских demo-сценариев. Проверка fallback без остановки Ollama:

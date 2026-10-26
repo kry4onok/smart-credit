@@ -67,7 +67,7 @@ flowchart LR
 | Компонент | Порт на хосте | Ответственность |
 |---|---|---|
 | `web` | 3000 | Единая точка входа: статика React и прокси `/api/auth`, `/api/.well-known`, `/api/client`, `/api/backoffice` внутри compose-сети. Остальные `/api/*` → 404. |
-| `gateway` | 8000 | Dev-шлюз для Swagger и Postman: `/docs/` → swagger-ui, `/api/auth`, `/api/client`, `/api/backoffice`, `/internal/*` (readyz) внутри compose-сети. |
+| `gateway` | 8000 | Dev-шлюз для Swagger и Postman: `/docs/` → swagger-ui, спецификации `/api/{auth,client,bank,common,assessment}.yaml`, `/api/auth`, `/api/client`, `/api/backoffice`, `/internal/{auth,client,bank}/*` внутри compose-сети (`/internal/bank/*` → `bank-service:8080`). |
 | `swagger-ui` | 8081 | Swagger UI по `api/auth.yaml`, `client.yaml`, `bank.yaml`, `assessment.yaml`. |
 | `auth` | 8082 | Логин, refresh-cookie, `me`, выпуск RS256 JWT, `/.well-known/jwks.json`. Роли `CLIENT`, `ANALYST`, `ADMIN`. БД `auth_db`. |
 | `client-service` | 8083 | Профиль компании, каталог (проекция), черновики, документы, отправка и действия клиента, Help клиента, проекция публичной оценки. Файлы — в volume `client_documents`. БД `client_db`. |
@@ -77,15 +77,17 @@ flowchart LR
 | `assistant` | 50052 | Python gRPC: `AssistantService` (резюме дела, текст решения) и `AssistantHelpService/Help`. Вызывает Ollama, при сбое — детерминированный шаблон. |
 | `postgres` | 5432 | PostgreSQL 16.15, три БД с отдельными ролями (`deploy/postgres/init-dbs.sh`). |
 | `kafka` | 9092 (внутри 19092) | Apache Kafka 3.9.2 KRaft, топики `client.events` и `bank.events` по одной партиции (`make infra-up`). |
-| Ollama | 11434 | Запускается на хосте, не входит в compose. Модель по умолчанию `OLLAMA_MODEL=qwen2.5:7b`. |
+| Ollama | 11434 | Локально запускается на хосте и не входит в compose; на публичном сервере — контейнер из `deploy/server/compose.server.yml`. Модель по умолчанию `OLLAMA_MODEL=qwen2.5:7b`. |
 
-Swagger UI ссылается на `/api/assessment.yaml`; в `deploy/nginx/nginx.conf` статическая раздача спецификаций ограничена `auth|client|bank|common`, поэтому Assessment and Help API надёжно открывается напрямую на `http://localhost:8081`.
+Swagger UI открывается через gateway (`http://localhost:8000/docs/`) или напрямую на `http://localhost:8081` (`make docs-up`); gateway раздаёт спецификации `auth`, `client`, `bank`, `common` и `assessment`.
 
 ## Ключевые свойства
 
 * **Изоляция данных.** Каждый сервис владеет своей БД. Межбазовых внешних ключей нет (`org_id`, `client_user_id`, `assignee_id` — просто UUID). client-service и bank-service не читают чужие БД: состояние передаётся только событиями Kafka.
 * **Outbox и идемпотентность.** Бизнес-изменение и событие пишутся в одной транзакции в таблицу `outbox`; relay публикует сохранённый protobuf `Event` без изменений, соблюдая порядок `aggregate_version`. Получатель вставляет `event_id` в `processed_events` в той же транзакции, что и изменение, и подтверждает offset Kafka после commit. Повторы HTTP-команд защищены `idempotency_keys` (заголовок `Idempotency-Key`), конкурентные изменения — `If-Match` с версией.
 * **Защита документа.** Аналитик получает содержимое файла через bank-service: bank вызывает `GET /internal/client/applications/{id}/documents/{doc}/content` у client-service с токеном сотрудника (маршрут доступен только ролям staff) и сверяет SHA-256 с метаданными дела.
+* **Устаревшие события клиента.** Если команда клиента уже неприменима к делу (например, отзыв после отказа), bank-service помечает событие обработанным, пишет в `audit_log` действие `CLIENT_EVENT_SKIPPED` и не блокирует consumer (`repository/receive`, `Skip`).
+* **Черновики и каталог.** Черновик (`DRAFT`, ещё не отправлявшийся) клиент удаляет `DELETE /client/applications/{id}` с `If-Match`; событий в Kafka нет, файлы удаляет worker `documentcleanup` по таблице `deleted_drafts`. `GET /client/products?purpose=` возвращает весь каталог, продукты с подходящей целью — первыми; `purpose_tags` продукта остаются жёстким ограничением при отправке. Цель `OTHER` требует непустого `purpose_description`.
 * **JWT.** auth подписывает access-токены, client-service и bank-service проверяют подпись по JWKS (`CLIENT_JWKS_URL`, `BANK_JWKS_URL`) с кешем.
 * **Без автоматической оферты.** Конвейер v2 заканчивается в `MANUAL_REVIEW`, `NEEDS_INFO` или `REJECTED` (`services/bank-service/internal/repository/assessment/repository.go`, `RunOnce`). Положительный исход всегда подтверждает аналитик: решение `APPROVE`/`COUNTER` принимается только с условиями, совпадающими с актуальным кандидатом сохранённой оценки (`CheckCurrentOffer`); иначе 422. Прежний код автооферты в `repository/decision` не вызывается: worker решения делегирует в `assessmentrepository.RunOnce`.
 * **LLM не принимает решений.** Модель только формулирует текст резюме, пояснения и Help из фактов, переданных backend. Для Help Qwen выбирает лишь разрешённые ID утверждений и действий из каталога `pkg/assistanthelp/catalog.json`; Go заново рендерит текст. Статус дела, сумма, ставка и исход модель не меняет. При недоступности модели используется шаблон.
@@ -143,7 +145,7 @@ stateDiagram-v2
     EXPIRED --> [*]
 ```
 
-Отзыв (`ApplicationCancelled`) принимается из любого статуса от `SUBMITTED` до `OFFER_ACCEPTED` включительно (`cancellableStatus` в `repository/receive/repository.go`); на схеме показаны три представителя. После `SIGNING` отзыв невозможен. Истечение оферты выполняет `offerexpiry` worker; ответ клиента после `expires_at` также переводит дело в `EXPIRED`. Recheck (`POST /backoffice/applications/{id}/recheck`) доступен назначенному аналитику, увеличивает `assessment_generation`, закрывает открытый запрос данных и повторяет конвейер с `VALIDATION`.
+Отзыв (`ApplicationCancelled`) принимается из любого статуса от `SUBMITTED` до `OFFER_ACCEPTED` включительно (`cancellableStatus` в `repository/receive/repository.go`); на схеме показаны три представителя. После `SIGNING` отзыв невозможен. Истечение оферты выполняет `offerexpiry` worker; ответ клиента после `expires_at` также переводит дело в `EXPIRED`. Решение `REQUEST_INFO` снимает назначение (`assignee_id = NULL`), поэтому после ответа клиента дело может взять любой аналитик. Recheck (`POST /backoffice/applications/{id}/recheck`) доступен назначенному аналитику, увеличивает `assessment_generation`, закрывает открытый запрос данных и повторяет конвейер с `VALIDATION`.
 
 ### Отображение для клиента
 
