@@ -200,6 +200,11 @@ class AssistantTests(unittest.TestCase):
         self.assertEqual(payload["model"], "remote")
         self.assertEqual((data, version), ({"style": "empathetic"}, "remote"))
 
+    def test_provider_rejects_oversized_response(self):
+        with patch.object(server, "urlopen", return_value=BytesIO(b"x" * 65537)):
+            with self.assertRaises(server.ModelUnavailable):
+                server.generate_json("prompt", {}, server.STYLE_FORMAT, 1)
+
     def test_all_decision_outcomes_use_known_status(self):
         expected = {
             "APPROVE": "одобрении",

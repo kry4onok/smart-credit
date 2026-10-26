@@ -2,8 +2,10 @@ import json
 import logging
 import os
 import re
+import socket
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
+from urllib.error import URLError
 from urllib.parse import urlparse
 
 import grpc
@@ -47,6 +49,14 @@ class ModelUnavailable(Exception):
     pass
 
 
+class ModelTimeout(ModelUnavailable):
+    pass
+
+
+class ModelOutputError(ModelUnavailable):
+    pass
+
+
 def clean(value: str) -> str:
     return " ".join(value.split())
 
@@ -85,14 +95,25 @@ def generate_json(system_prompt: str, facts: dict, output_format: dict, timeout:
 
     try:
         with urlopen(request, timeout=timeout) as http_response:
-            result = json.load(http_response)
+            raw = http_response.read(65537)
+    except (socket.timeout, TimeoutError) as exc:
+        raise ModelTimeout("Model timeout") from exc
+    except URLError as exc:
+        if isinstance(exc.reason, (socket.timeout, TimeoutError)):
+            raise ModelTimeout("Model timeout") from exc
+        raise ModelUnavailable("Model unavailable") from exc
+    except OSError as exc:
+        raise ModelUnavailable("Model unavailable") from exc
+    if len(raw) > 65536:
+        raise ModelOutputError("Model response too large")
+    try:
+        result = json.loads(raw)
         content = result["response"] if LLM_PROVIDER == "ollama" else result["choices"][0]["message"]["content"]
         data = json.loads(content)
-    except (OSError, ValueError, KeyError, TypeError, IndexError) as exc:
-        raise ModelUnavailable("Модель недоступна или вернула некорректный JSON") from exc
-
+    except (ValueError, KeyError, TypeError, IndexError) as exc:
+        raise ModelOutputError("Invalid model JSON") from exc
     if not isinstance(data, dict):
-        raise ModelUnavailable("Модель вернула не объект JSON")
+        raise ModelOutputError("Model returned non-object JSON")
     return data, str(result.get("model") or LLM_MODEL)
 
 
@@ -369,6 +390,18 @@ def serve():
 
     server = grpc.server(ThreadPoolExecutor(max_workers=4))
     assistant_pb2_grpc.add_AssistantServiceServicer_to_server(AssistantService(), server)
+    try:
+        from proto.assistant import help_pb2_grpc
+    except ImportError:
+        LOGGER.warning("Assistant Help protobuf bindings are not installed")
+    else:
+        from help.catalog import load_catalog
+        from help.service import HelpService
+        catalog_path = os.getenv("ASSISTANT_CATALOG_PATH", "")
+        catalog = load_catalog(catalog_path) if catalog_path else None
+        help_pb2_grpc.add_AssistantHelpServiceServicer_to_server(
+            HelpService(generate_json, catalog, timeout_error=ModelTimeout, output_error=ModelOutputError), server
+        )
     port = server.add_insecure_port(ASSISTANT_ADDR)
     if port == 0:
         raise RuntimeError(f"Не удалось открыть адрес {ASSISTANT_ADDR}")
