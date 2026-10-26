@@ -83,6 +83,28 @@ func TestParseSubmittedEventAllowsMissingFinancialFields(t *testing.T) {
 	}
 }
 
+func TestParseSubmittedPinsProfileReferenceDate(t *testing.T) {
+	event := submittedEvent()
+	event.OccurredAt = timestamppb.New(time.Date(2026, 10, 26, 8, 0, 0, 0, time.UTC))
+	version := int32(2)
+	event.GetApplicationSubmitted().Company.ProfileSchemaVersion = &version
+	submitted := event.GetApplicationSubmitted()
+	submitted.RequirementsReferenceDate = "2026-10-01"
+	input, err := parse(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if input.RequirementsReferenceDate == nil || input.RequirementsReferenceDate.Format("2006-01-02") != "2026-10-01" {
+		t.Fatalf("reference date = %v", input.RequirementsReferenceDate)
+	}
+	for _, value := range []string{"", "2026-10-27", "2026-02-30"} {
+		submitted.RequirementsReferenceDate = value
+		if _, err := parse(event); !errors.Is(err, ErrInvalidEvent) {
+			t.Fatalf("date %q accepted: %v", value, err)
+		}
+	}
+}
+
 func TestParseRejectsInvalidSubmittedEvent(t *testing.T) {
 	tests := []struct {
 		name   string

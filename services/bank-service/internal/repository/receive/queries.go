@@ -22,14 +22,14 @@ INSERT INTO cases (
     company_inn, company_name, company_snapshot, application_snapshot,
     documents_snapshot, requested_amount_kopecks, requested_term_months,
     purpose_tag, status, recommendation, triggered_rules, next_run_at,
-    version, audit_version, client_event_version
+    version, audit_version, client_event_version, requirements_reference_date
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9::jsonb, $10::jsonb,
     $11::jsonb, $12, $13,
     $14, $15, $16, $17,
     CASE WHEN $18::boolean THEN now() ELSE NULL END,
-    1, 1, $19
+    1, 1, $19, $20
 )`
 
 const insertAuditQuery = `
