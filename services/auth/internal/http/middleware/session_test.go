@@ -71,3 +71,21 @@ func TestLoginConcurrentWorkIsBounded(t *testing.T) {
 		}
 	}
 }
+
+func TestLoginPeerUsesProxyAddressOnlyFromPrivateNetwork(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
+	r.RemoteAddr = "172.18.0.5:41000"
+	r.Header.Set("X-Real-IP", "192.168.65.1")
+	if got := loginPeer(r); got != "192.168.65.1" {
+		t.Fatalf("behind nginx peer = %q", got)
+	}
+	r.RemoteAddr = "203.0.113.7:5000"
+	if got := loginPeer(r); got != "203.0.113.7:5000" {
+		t.Fatalf("public client overrode its address: %q", got)
+	}
+	r.RemoteAddr = "172.18.0.5:41000"
+	r.Header.Set("X-Real-IP", "not-an-ip")
+	if got := loginPeer(r); got != "172.18.0.5:41000" {
+		t.Fatalf("invalid header was trusted: %q", got)
+	}
+}

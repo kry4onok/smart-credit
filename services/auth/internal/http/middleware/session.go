@@ -20,6 +20,8 @@ const (
 	loginAttempts = 10
 	maxLoginPeers = 4096
 	maxLoginBytes = 64 << 10
+	// loginQueueWait bounds how long a login waits for one of the Argon2id slots.
+	loginQueueWait = time.Second
 )
 
 type attempts struct {
@@ -46,14 +48,18 @@ func (s *Sessions) Wrap(next http.Handler) http.Handler {
 			w.Header().Set("Pragma", "no-cache")
 		}
 		if r.Method == http.MethodPost && r.URL.Path == "/auth/login" {
-			if !s.allow(r.RemoteAddr) {
+			if !s.allow(loginPeer(r)) {
 				rateLimited(w, r)
 				return
 			}
+			// A short wait absorbs a burst of simultaneous logins instead of failing them.
 			select {
 			case s.active <- struct{}{}:
 				defer func() { <-s.active }()
-			default:
+			case <-time.After(loginQueueWait):
+				rateLimited(w, r)
+				return
+			case <-r.Context().Done():
 				rateLimited(w, r)
 				return
 			}
@@ -65,6 +71,24 @@ func (s *Sessions) Wrap(next http.Handler) http.Handler {
 		ctx := sessioncookie.WithRequest(r.Context(), r, s.cookieName)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// loginPeer identifies the browser for the login limit. Behind the bundled nginx every
+// request comes from the proxy's private address, so the proxy-set X-Real-IP is used;
+// a client connecting from a public address cannot override its own address.
+func loginPeer(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	proxy := net.ParseIP(host)
+	if proxy == nil || !proxy.IsLoopback() && !proxy.IsPrivate() {
+		return r.RemoteAddr
+	}
+	if real := net.ParseIP(r.Header.Get("X-Real-IP")); real != nil {
+		return real.String()
+	}
+	return r.RemoteAddr
 }
 
 func (s *Sessions) allow(remote string) bool {
