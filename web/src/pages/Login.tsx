@@ -1,7 +1,7 @@
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { isMock } from "../api/http";
-import { errorMessage } from "../api/problem";
+import { ApiError, errorMessage } from "../api/problem";
 import { homeFor, useSession } from "../auth/session";
 import { Field, useTitle } from "../components/ui";
 
@@ -54,7 +54,8 @@ export function LoginPage() {
       const home = homeFor(me);
       navigate(from && from.startsWith(home) ? from : home, { replace: true });
     } catch (err) {
-      setError(errorMessage(err));
+      // Auth answers every rejected login with the same 401, so the form names the likely cause.
+      setError(err instanceof ApiError && err.status === 401 ? "Неверная почта или пароль." : errorMessage(err));
     } finally {
       setBusy(false);
     }
