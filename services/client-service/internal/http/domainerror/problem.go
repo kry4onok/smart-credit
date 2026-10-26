@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -40,7 +41,7 @@ func Map(ctx context.Context, err error) common.Problem {
 		case requirements.InvalidProfile, requirements.LegalFormINNMismatch, requirements.InvalidTaxPeriod, requirements.UnsupportedTaxCombination, requirements.RequirementsNotMet, requirements.InvalidDocumentCoverage, requirements.UnknownRequirement:
 			return Problem(ctx, http.StatusUnprocessableEntity, rule.Code, rule.Error())
 		default:
-			return Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
+			return internal(ctx, err)
 		}
 	}
 	if errors.Is(err, domain.ErrProfileIdentityImmutable) {
@@ -108,7 +109,15 @@ func Map(ctx context.Context, err error) common.Problem {
 	case errors.Is(err, domain.ErrInvalidDocumentUpload):
 		return Problem(ctx, http.StatusUnprocessableEntity, "INVALID_DOCUMENT", "Файл документа заполнен некорректно.")
 	}
-	return Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
+	return internal(ctx, err)
+}
+
+// internal logs the unmapped error under the response trace_id, so a 500 seen in the
+// browser can be found in the service log.
+func internal(ctx context.Context, err error) common.Problem {
+	p := Problem(ctx, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обработать запрос.")
+	slog.ErrorContext(ctx, "request failed", "trace_id", p.TraceId, "error", err)
+	return p
 }
 
 func Write(w http.ResponseWriter, p common.Problem) {

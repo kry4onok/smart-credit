@@ -18,6 +18,9 @@ func (h *Handler) Handle(ctx context.Context, request generated.SubmitApplicatio
 	if !ok {
 		return problemResponse{domainerror.Problem(ctx, http.StatusUnauthorized, "UNAUTHORIZED", "Требуется действительная сессия.")}, nil
 	}
+	if !client.CanSubmit {
+		return problemResponse{domainerror.Problem(ctx, http.StatusForbidden, "SUBMIT_NOT_ALLOWED", "У вашей учётной записи нет права отправлять заявки от имени компании.")}, nil
+	}
 	if request.ApplicationId == uuid.Nil || request.Params.IdempotencyKey == uuid.Nil {
 		return problemResponse{domainerror.Problem(ctx, http.StatusBadRequest, "INVALID_SUBMIT_REQUEST", "ID заявки и Idempotency-Key должны быть ненулевыми UUID.")}, nil
 	}

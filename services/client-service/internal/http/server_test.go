@@ -146,7 +146,7 @@ func TestRoutes(t *testing.T) {
 	handler := New(Params{
 		DB:                      pingerMock{},
 		ReadinessTimeout:        time.Second,
-		Verifier:                verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}},
+		Verifier:                verifierMock{model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT", CanSubmit: true}},
 		CompanyGet:              companyget.New(companyMock{}),
 		ApplicationCreate:       applicationcreate.New(applicationMock{}),
 		ApplicationCancel:       applicationcancel.New(applicationCancelMock{}),

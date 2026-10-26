@@ -101,10 +101,15 @@ func validRequest() generated.SubmitApplicationRequestObject {
 
 func withClient(t *testing.T) context.Context {
 	t.Helper()
+	return withPrincipal(t, true)
+}
+
+func withPrincipal(t *testing.T, canSubmit bool) context.Context {
+	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/client/applications/1/submit", nil)
 	request.Header.Set("Authorization", "Bearer test")
 	var captured context.Context
-	middleware.RequireClient(verifierMock{principal: model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT"}}, http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	middleware.RequireClient(verifierMock{principal: model.Principal{UserID: uuid.New(), OrgID: uuid.New(), Role: "CLIENT", CanSubmit: canSubmit}}, http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		captured = r.Context()
 	})).ServeHTTP(httptest.NewRecorder(), request)
 	if captured == nil {
@@ -128,4 +133,22 @@ type verifierMock struct{ principal model.Principal }
 
 func (m verifierMock) Verify(context.Context, string) (model.Principal, error) {
 	return m.principal, nil
+}
+
+func TestHandleRequiresSubmitPermission(t *testing.T) {
+	usecase := &usecaseMock{}
+	response, err := New(usecase).Handle(withPrincipal(t, false), generated.SubmitApplicationRequestObject{
+		ApplicationId: common.Id(uuid.New()),
+		Params:        generated.SubmitApplicationParams{IdempotencyKey: common.IdempotencyKey(uuid.New())},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	if err := response.VisitSubmitApplicationResponse(recorder); err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusForbidden || usecase.called {
+		t.Fatalf("status = %d, called = %v", recorder.Code, usecase.called)
+	}
 }
