@@ -14,7 +14,8 @@ FOR UPDATE`
 const listProductsQuery = `
 SELECT id, version, code, name, description, purpose_tags,
        required_document_types, min_amount_kopecks, max_amount_kopecks,
-       min_term_months, max_term_months, indicative_rate_bps
+       min_term_months, max_term_months, indicative_rate_bps,
+       COALESCE(requirements_policy_version,'')
 FROM products
 WHERE is_active
 ORDER BY code, id`

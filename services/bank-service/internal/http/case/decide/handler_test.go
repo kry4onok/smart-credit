@@ -3,6 +3,7 @@ package decidehandler
 import (
 	"context"
 	"errors"
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 	"testing"
 
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
@@ -54,5 +55,19 @@ func TestDecisionBadETagNeverCallsUseCase(t *testing.T) {
 	var de *domainerror.Error
 	if !errors.As(err, &de) || de.Status != 400 || stub.calls != 0 {
 		t.Fatalf("error=%v calls=%d", err, stub.calls)
+	}
+}
+
+func TestV2RequirementIDsAndRuleErrorMapping(t *testing.T) {
+	ids := []string{"document:2025-01-01:2025-12-31:all"}
+	stub := &useCaseStub{err: &requirements.RuleError{Code: requirements.UnknownRequirement}}
+	req := request()
+	req.Body.Outcome = "REQUEST_INFO"
+	req.Body.InfoRequest = &generated.InfoRequestDraft{Message: "Добавьте документ", RequirementIds: &ids}
+	_, err := New(stub).Handle(authmiddleware.WithAnalystID(t.Context(), uuid.New()), req)
+	var de *domainerror.Error
+	if !errors.As(err, &de) || de.Status != 422 || de.Code != requirements.UnknownRequirement ||
+		stub.input.InfoRequest == nil || !stub.input.InfoRequest.V2 || len(stub.input.InfoRequest.RequirementIDs) != 1 {
+		t.Fatalf("error=%v input=%+v", err, stub.input)
 	}
 }

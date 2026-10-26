@@ -29,6 +29,8 @@ type Offer struct {
 type InfoRequest struct {
 	Message                               string
 	RequiredFields, RequiredDocumentTypes []string
+	RequirementIDs                        []string
+	V2                                    bool
 }
 type Input struct {
 	CaseID, AnalystID, IdempotencyKey uuid.UUID
@@ -142,8 +144,17 @@ func Validate(in Input) error {
 		if in.Offer != nil || in.InfoRequest == nil {
 			return bad("info_request is required and offer is forbidden")
 		}
-		if strings.TrimSpace(in.InfoRequest.Message) == "" || len(in.InfoRequest.RequiredFields)+len(in.InfoRequest.RequiredDocumentTypes) == 0 {
+		if strings.TrimSpace(in.InfoRequest.Message) == "" {
 			return bad("info_request requires message and missing items")
+		}
+		if in.InfoRequest.V2 {
+			if len(in.InfoRequest.RequiredFields)+len(in.InfoRequest.RequiredDocumentTypes) != 0 || len(in.InfoRequest.RequirementIDs) == 0 {
+				return bad("requirement_ids must be nonempty and cannot be mixed with legacy fields")
+			}
+			return nil
+		}
+		if len(in.InfoRequest.RequiredFields)+len(in.InfoRequest.RequiredDocumentTypes) == 0 {
+			return bad("info_request requires missing items")
 		}
 		fields := map[string]bool{}
 		docs := map[string]bool{}

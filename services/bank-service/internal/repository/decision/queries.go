@@ -1,7 +1,7 @@
 package decisionrepository
 
 const claimCaseQuery = `
-SELECT id, version, product_id, product_version, company_snapshot, documents_snapshot,
+SELECT id, version, product_id, product_version, company_snapshot, documents_snapshot, requirements_reference_date,
        requested_amount_kopecks, requested_term_months, purpose_tag
 FROM cases
 WHERE status = 'DECISION' AND (next_run_at IS NULL OR next_run_at <= now())
@@ -13,7 +13,7 @@ const loadProductQuery = `
 SELECT p.name, p.version, p.purpose_tags, p.required_document_types,
        p.min_amount_kopecks, p.max_amount_kopecks, p.min_term_months, p.max_term_months,
        r.min_company_age_months, r.max_amount_to_revenue_bps, r.max_overdue_days,
-       r.rate_grade_a_bps, r.rate_grade_b_bps, r.offer_ttl_hours
+       r.rate_grade_a_bps, r.rate_grade_b_bps, r.offer_ttl_hours, COALESCE(p.requirements_policy_version,'')
 FROM products p JOIN product_rules r ON r.product_id=p.id AND r.product_version=p.version
 WHERE p.id=$1 AND p.version=$2 AND p.is_active`
 
@@ -55,6 +55,10 @@ VALUES ($1,$2,$3,'OFFER',$4,$5,$6,$7,$8,$9,$10,$11)`
 const insertInfoRequestQuery = `
 INSERT INTO info_requests (id,case_id,decision_id,message,required_fields,required_document_types)
 VALUES ($1,$2,$3,$4,$5,$6)`
+
+const insertV2InfoRequestQuery = `
+INSERT INTO info_requests (id,case_id,decision_id,message,requirements)
+VALUES ($1,$2,$3,$4,$5::jsonb)`
 
 const finishCaseQuery = `
 UPDATE cases SET status=$3,recommendation=$4,triggered_rules=$5,public_reason=$6,

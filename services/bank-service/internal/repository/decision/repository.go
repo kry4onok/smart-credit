@@ -15,6 +15,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,7 +38,7 @@ func (r *Repository) RunOnce(ctx context.Context) (bool, error) {
 		var version, productVersion int64
 		var snapshot validation.Snapshot
 		err := q.QueryRow(ctx, claimCaseQuery).Scan(&caseID, &version, &productID, &productVersion,
-			&snapshot.CompanyJSON, &snapshot.DocumentsJSON, &snapshot.AmountKopecks,
+			&snapshot.CompanyJSON, &snapshot.DocumentsJSON, &snapshot.ReferenceDate, &snapshot.AmountKopecks,
 			&snapshot.TermMonths, &snapshot.PurposeTag)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -83,7 +84,7 @@ func loadProduct(ctx context.Context, q transaction.Queryer, id uuid.UUID, versi
 	err := q.QueryRow(ctx, loadProductQuery, id, version).Scan(&p.Name, &p.Version,
 		&p.Purposes, &p.Documents, &p.MinAmount, &p.MaxAmount, &p.MinTerm, &p.MaxTerm,
 		&p.MinAgeMonths, &p.MaxAmountRevenueBP, &p.MaxOverdueDays,
-		&p.GradeARateBP, &p.GradeBRateBP, &p.OfferTTLHours)
+		&p.GradeARateBP, &p.GradeBRateBP, &p.OfferTTLHours, &p.PolicyVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return decision.Product{}, nil
 	}
@@ -135,12 +136,25 @@ func complete(ctx context.Context, q transaction.Queryer, caseID, productID uuid
 		payload, err = publicstate.Decision(eventID, caseID, version+1, now, "APPROVE", "", offer, nil)
 	case model.CaseStatusNeedsInfo:
 		requestID := uuid.New()
-		if _, err = q.Exec(ctx, insertInfoRequestQuery, requestID, caseID, decisionID,
-			result.PublicReason, result.RequiredFields, result.RequiredDocs); err != nil {
+		if result.Plan != nil {
+			var data []byte
+			data, err = encodeRequirements(result.Requirements)
+			if err != nil {
+				return fmt.Errorf("encode automatic requirements: %w", err)
+			}
+			_, err = q.Exec(ctx, insertV2InfoRequestQuery, requestID, caseID, decisionID, result.PublicReason, string(data))
+		} else {
+			_, err = q.Exec(ctx, insertInfoRequestQuery, requestID, caseID, decisionID,
+				result.PublicReason, result.RequiredFields, result.RequiredDocs)
+		}
+		if err != nil {
 			return fmt.Errorf("insert decision info request: %w", err)
 		}
 		payload, err = publicstate.NeedsInfo(eventID, caseID, requestID, version+1, now,
 			result.PublicReason, result.RequiredFields, result.RequiredDocs)
+		if err == nil && result.Plan != nil {
+			payload, err = publicstate.WithRequirements(payload, result.Plan, result.Requirements)
+		}
 	case model.CaseStatusRejected:
 		payload, err = publicstate.Decision(eventID, caseID, version+1, now, "REJECT", result.PublicReason, nil, nil)
 	case model.CaseStatusManualReview:
@@ -168,4 +182,19 @@ func complete(ctx context.Context, q transaction.Queryer, caseID, productID uuid
 		return fmt.Errorf("write automatic decision outbox: %w", err)
 	}
 	return nil
+}
+
+func encodeRequirements(items []*commonpb.Requirement) ([]byte, error) {
+	raw := make([]json.RawMessage, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			return nil, fmt.Errorf("nil requirement")
+		}
+		data, err := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(item)
+		if err != nil {
+			return nil, err
+		}
+		raw = append(raw, data)
+	}
+	return json.Marshal(raw)
 }

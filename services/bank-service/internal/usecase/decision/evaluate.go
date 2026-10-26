@@ -2,6 +2,7 @@ package decision
 
 import (
 	"encoding/json"
+	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"math/big"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ type Product struct {
 	GradeARateBP       int
 	GradeBRateBP       int
 	OfferTTLHours      int
+	PolicyVersion      string
 }
 
 type Result struct {
@@ -53,6 +55,8 @@ type Result struct {
 	RequiredFields []string
 	RequiredDocs   []string
 	RateBP         int
+	Plan           *commonpb.RequirementsPlan
+	Requirements   []*commonpb.Requirement
 }
 
 func Evaluate(in Input) Result {
@@ -63,14 +67,19 @@ func Evaluate(in Input) Result {
 		return manual("PRODUCT_RULES_UNAVAILABLE")
 	}
 	checked := validation.Evaluate(in.Snapshot, validation.Product{
-		Found: true, PurposeTags: in.Product.Purposes, RequiredDocumentTypes: in.Product.Documents,
+		Found: true, PolicyVersion: in.Product.PolicyVersion, PurposeTags: in.Product.Purposes, RequiredDocumentTypes: in.Product.Documents,
+		MinAmountKopecks: in.Product.MinAmount, MaxAmountKopecks: in.Product.MaxAmount,
+		MinTermMonths: int32(in.Product.MinTerm), MaxTermMonths: int32(in.Product.MaxTerm),
 	})
 	switch checked.Status {
 	case model.CaseStatusNeedsInfo:
 		return Result{Status: model.CaseStatusNeedsInfo, Outcome: "REQUEST_INFO", Rules: []string{checked.Reason},
-			PublicReason: InfoMessage, RequiredFields: checked.RequiredFields, RequiredDocs: checked.RequiredDocumentTypes}
+			PublicReason: InfoMessage, RequiredFields: checked.RequiredFields, RequiredDocs: checked.RequiredDocumentTypes,
+			Plan: checked.Plan, Requirements: checked.RequestedRequirements}
 	case model.CaseStatusManualReview:
-		return manual(checked.Reason)
+		result := manual(checked.Reason)
+		result.PublicReason = checked.PublicReason
+		return result
 	}
 	if !in.CompanyOK || !in.CreditOK {
 		return manual("BUREAU_RESULT_UNAVAILABLE")

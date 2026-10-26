@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 	"math/big"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/usecase/validation"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -30,8 +32,11 @@ func (r *Repository) PrepareDecision(ctx context.Context, in decide.Input) (deci
 	var version int64
 	var company, documents []byte
 	var purpose, requestedProductName string
+	var dossier decisionDossier
 	err := q.QueryRow(ctx, previewDecisionCase, in.CaseID).Scan(
 		&status, &assignee, &version, &company, &documents, &purpose, &requestedProductName,
+		&dossier.referenceDate, &dossier.policy, &dossier.purposes, &dossier.documents,
+		&dossier.minAmount, &dossier.maxAmount, &dossier.minTerm, &dossier.maxTerm, &dossier.amount, &dossier.term,
 	)
 	if err != nil || assignee == nil || *assignee != in.AnalystID ||
 		status != model.CaseStatusManualReview || version != in.ExpectedVersion {
@@ -39,7 +44,7 @@ func (r *Repository) PrepareDecision(ctx context.Context, in decide.Input) (deci
 	}
 	preview := decide.Preview{RequestedProductName: requestedProductName}
 	if in.Outcome == "APPROVE" || in.Outcome == "COUNTER" {
-		product, err := r.validateDecisionOffer(ctx, in, company, documents, purpose, time.Now().UTC())
+		product, err := r.validateDecisionOffer(ctx, in, company, documents, purpose, dossier, time.Now().UTC())
 		if err != nil {
 			return decide.Preview{}, false
 		}
@@ -54,6 +59,21 @@ type decisionProduct struct {
 	purposes, documents                                                      []string
 	minAmount, maxAmount                                                     int64
 	minTerm, maxTerm, gradeARate, gradeBRate, minAge, ratio, maxOverdue, ttl int
+	policy                                                                   string
+}
+
+type decisionDossier struct {
+	referenceDate                *time.Time
+	policy                       string
+	purposes, documents          []string
+	minAmount, maxAmount, amount int64
+	minTerm, maxTerm, term       int32
+}
+
+func (d decisionDossier) product() validation.Product {
+	return validation.Product{Found: true, PolicyVersion: d.policy, PurposeTags: d.purposes,
+		RequiredDocumentTypes: d.documents, MinAmountKopecks: d.minAmount, MaxAmountKopecks: d.maxAmount,
+		MinTermMonths: d.minTerm, MaxTermMonths: d.maxTerm}
 }
 
 func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, error) {
@@ -90,8 +110,11 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 	var version int64
 	var company, documents []byte
 	var purpose string
+	var dossier decisionDossier
 
-	err = q.QueryRow(ctx, lockDecisionCase, in.CaseID).Scan(&status, &assignee, &version, &company, &documents, &purpose)
+	err = q.QueryRow(ctx, lockDecisionCase, in.CaseID).Scan(&status, &assignee, &version, &company, &documents, &purpose,
+		&dossier.referenceDate, &dossier.policy, &dossier.purposes, &dossier.documents,
+		&dossier.minAmount, &dossier.maxAmount, &dossier.minTerm, &dossier.maxTerm, &dossier.amount, &dossier.term)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Case{}, decide.ErrNotFound
 	}
@@ -121,7 +144,7 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 
 	switch in.Outcome {
 	case "APPROVE", "COUNTER":
-		p, e := r.validateDecisionOffer(ctx, in, company, documents, purpose, now)
+		p, e := r.validateDecisionOffer(ctx, in, company, documents, purpose, dossier, now)
 		if e != nil {
 			return model.Case{}, e
 		}
@@ -152,14 +175,37 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 		}
 		offer = &commonpb.Offer{OfferId: offerID.String(), Kind: offerKind, Amount: &commonpb.Money{AmountKopecks: in.Offer.AmountKopecks, Currency: "RUB"}, TermMonths: int32(in.Offer.TermMonths), RateBps: int32(in.Offer.RateBPS), ExpiresAt: timestamppb.New(expires), Explanation: explanation, ProductId: in.Offer.ProductID.String(), ProductVersion: p.version, ProductName: p.name}
 	case "REQUEST_INFO":
+		if in.InfoRequest.V2 != (dossier.policy != "") {
+			return model.Case{}, &requirements.RuleError{Code: requirements.UnknownRequirement}
+		}
 		nextStatus = model.CaseStatusNeedsInfo
 		publicReason = in.InfoRequest.Message
+		requestID := uuid.New()
+		var selected []*commonpb.Requirement
+		var plan *commonpb.RequirementsPlan
+		var data []byte
+		if in.InfoRequest.V2 {
+			checked := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, ReferenceDate: dossier.referenceDate,
+				AmountKopecks: dossier.amount, TermMonths: dossier.term, PurposeTag: purpose}, dossier.product())
+			plan = checked.Plan
+			selected, err = requirements.SelectRequest(plan, in.InfoRequest.RequirementIDs)
+			if err != nil {
+				return model.Case{}, err
+			}
+			data, err = encodeDecisionRequirements(selected)
+			if err != nil {
+				return model.Case{}, err
+			}
+		}
 		_, err = q.Exec(ctx, insertDecision, decisionID, in.CaseID, in.AnalystID, in.Outcome, in.Comment, nil, nil, nil, nil)
 		if err != nil {
 			return model.Case{}, fmt.Errorf("insert decision: %w", err)
 		}
-		requestID := uuid.New()
-		_, err = q.Exec(ctx, insertDecisionInfo, requestID, in.CaseID, decisionID, in.InfoRequest.Message, in.InfoRequest.RequiredFields, in.InfoRequest.RequiredDocumentTypes)
+		if in.InfoRequest.V2 {
+			_, err = q.Exec(ctx, insertDecisionV2Info, requestID, in.CaseID, decisionID, in.InfoRequest.Message, string(data))
+		} else {
+			_, err = q.Exec(ctx, insertDecisionInfo, requestID, in.CaseID, decisionID, in.InfoRequest.Message, in.InfoRequest.RequiredFields, in.InfoRequest.RequiredDocumentTypes)
+		}
 		if err != nil {
 			return model.Case{}, fmt.Errorf("insert info request: %w", err)
 		}
@@ -169,6 +215,9 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 		}
 		for _, doc := range in.InfoRequest.RequiredDocumentTypes {
 			request.RequiredDocumentTypes = append(request.RequiredDocumentTypes, commonpb.DocumentType(commonpb.DocumentType_value["DOCUMENT_TYPE_"+doc]))
+		}
+		if in.InfoRequest.V2 {
+			request.Requirements = selected
 		}
 	case "REJECT":
 		nextStatus = model.CaseStatusRejected
@@ -195,6 +244,14 @@ func (r *Repository) Decide(ctx context.Context, in decide.Input) (model.Case, e
 	payload, err := publicstate.Decision(eventID, in.CaseID, version+1, now, in.Outcome, reason, offer, request)
 	if err != nil {
 		return model.Case{}, fmt.Errorf("encode decision event: %w", err)
+	}
+	if request != nil && in.InfoRequest.V2 {
+		checked := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, ReferenceDate: dossier.referenceDate,
+			AmountKopecks: dossier.amount, TermMonths: dossier.term, PurposeTag: purpose}, dossier.product())
+		payload, err = publicstate.WithRequirements(payload, checked.Plan, request.Requirements)
+		if err != nil {
+			return model.Case{}, fmt.Errorf("add decision requirements: %w", err)
+		}
 	}
 	_, err = q.Exec(ctx, insertDecisionOutbox, eventID, in.CaseID.String(), version+1, payload)
 	if err != nil {
@@ -225,10 +282,10 @@ func nullableReason(reason string) any {
 	return reason
 }
 
-func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input, company, documents []byte, purpose string, now time.Time) (decisionProduct, error) {
+func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input, company, documents []byte, purpose string, dossier decisionDossier, now time.Time) (decisionProduct, error) {
 	q := transaction.QueryerFromContext(ctx, r.db)
 	var p decisionProduct
-	err := q.QueryRow(ctx, loadDecisionProduct, in.Offer.ProductID).Scan(&p.version, &p.name, &p.purposes, &p.documents, &p.minAmount, &p.maxAmount, &p.minTerm, &p.maxTerm, &p.gradeARate, &p.gradeBRate, &p.minAge, &p.ratio, &p.maxOverdue, &p.ttl)
+	err := q.QueryRow(ctx, loadDecisionProduct, in.Offer.ProductID).Scan(&p.version, &p.name, &p.purposes, &p.documents, &p.minAmount, &p.maxAmount, &p.minTerm, &p.maxTerm, &p.gradeARate, &p.gradeBRate, &p.minAge, &p.ratio, &p.maxOverdue, &p.ttl, &p.policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, fmt.Errorf("%w: offer product is inactive or has no rules", decide.ErrValidation)
 	}
@@ -259,7 +316,10 @@ func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input,
 		return p, fmt.Errorf("%w: company status forbids an offer", decide.ErrValidation)
 	}
 
-	outcome := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, AmountKopecks: in.Offer.AmountKopecks, TermMonths: int32(in.Offer.TermMonths), PurposeTag: purpose}, validation.Product{Found: true, PurposeTags: p.purposes, RequiredDocumentTypes: p.documents})
+	if dossier.policy != p.policy {
+		return p, fmt.Errorf("%w: counter product policy differs from requested product", decide.ErrValidation)
+	}
+	outcome := validation.Evaluate(validation.Snapshot{CompanyJSON: company, DocumentsJSON: documents, ReferenceDate: dossier.referenceDate, AmountKopecks: in.Offer.AmountKopecks, TermMonths: int32(in.Offer.TermMonths), PurposeTag: purpose}, validation.Product{Found: true, PolicyVersion: p.policy, PurposeTags: p.purposes, RequiredDocumentTypes: p.documents, MinAmountKopecks: p.minAmount, MaxAmountKopecks: p.maxAmount, MinTermMonths: int32(p.minTerm), MaxTermMonths: int32(p.maxTerm)})
 	if outcome.Status != model.CaseStatusEnrichment {
 		return p, fmt.Errorf("%w: offer requires fields %v and documents %v (%s)", decide.ErrValidation, outcome.RequiredFields, outcome.RequiredDocumentTypes, outcome.Reason)
 	}
@@ -308,4 +368,16 @@ func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input,
 		return p, fmt.Errorf("load credit history: %w", err)
 	}
 	return p, nil
+}
+
+func encodeDecisionRequirements(items []*commonpb.Requirement) ([]byte, error) {
+	raw := make([]json.RawMessage, 0, len(items))
+	for _, item := range items {
+		data, err := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(item)
+		if err != nil {
+			return nil, err
+		}
+		raw = append(raw, data)
+	}
+	return json.Marshal(raw)
 }
