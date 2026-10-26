@@ -4,38 +4,59 @@ left to right direction
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName Arial
-skinparam defaultFontSize 18
-skinparam defaultFontColor #17233B
-skinparam ArrowColor #416791
-skinparam ArrowThickness 2
-skinparam roundCorner 16
+skinparam defaultFontSize 15
 skinparam componentStyle rectangle
-skinparam componentBorderColor #B8CBE6
-skinparam componentBackgroundColor #EDF4FF
-skinparam queueBorderColor #C48A23
-skinparam queueBackgroundColor #FFF2D9
+skinparam componentBackgroundColor #EAF2FF
+skinparam componentBorderColor #2055A2
+skinparam databaseBackgroundColor #FFFFFF
+skinparam queueBackgroundColor #FFF0EE
+skinparam ArrowColor #506174
 hide stereotype
-title Smart Credit — карта сервисов MVP
+title Smart Credit — сервисы и протоколы MVP
 
-actor "Клиент" as customer
-actor "Аналитик" as analyst
+actor "Браузер" as browser
+component "web / nginx" as web
+component "gateway / nginx" as gateway
+component "Swagger UI" as swagger
+component "auth" as auth
+component "client-service" as client
+component "bank-service" as bank
+queue "Kafka\nclient.events / bank.events" as kafka
+database "auth_db" as authdb
+database "client_db" as clientdb
+database "bank_db" as bankdb
+component "bureau-mocks" as bureau
+component "scoring" as scoring
+component "assistant" as assistant
+component "Ollama (опция)" as ollama
 
-component "<b>Вход и доступ</b>\nweb · gateway / Swagger\nauth · auth_db" as entry #E8F0FF
-component "<b>Клиентский контур</b>\nclient-service\nclient_db" as client #E8F0FF
-queue "<b>Kafka</b>\nclient.events\nbank.events" as kafka #FFF2D9
-component "<b>Банковский контур</b>\nbank-service\nbank_db" as bank #E8F0FF
-component "<b>Локальные проверки</b>\nbureau-mocks\nscoring · assistant" as deps #E3F7F2
+browser --> web : HTTP
+browser --> gateway : HTTP
+web --> auth : HTTP /api/auth
+web --> client : HTTP /api/client
+web --> bank : HTTP /api/backoffice
+gateway --> auth : HTTP /api/auth
+gateway --> client : HTTP /api/client
+gateway --> bank : HTTP /api/backoffice
+gateway --> swagger : HTTP /docs
+client --> auth : HTTP JWKS
+bank --> auth : HTTP JWKS
+auth --> authdb : PostgreSQL
+client --> clientdb : PostgreSQL
+bank --> bankdb : PostgreSQL
+client --> kafka : Kafka client.events
+kafka --> bank : Kafka client.events
+bank --> kafka : Kafka bank.events
+kafka --> client : Kafka bank.events
+bank --> client : HTTP GET документа
+bank --> bureau : gRPC
+bank --> scoring : gRPC
+bank --> assistant : gRPC
+client --> assistant : gRPC Help
+assistant --> ollama : HTTP (опция)
 
-customer --> entry
-analyst --> entry
-entry --> client : HTTP API
-client <--> kafka : события
-kafka <--> bank : события
-bank --> deps : gRPC
-
-legend bottom
-  <b>HTTP:</b> web и gateway маршрутизируют запросы к auth, client-service и bank-service.
-  <b>БД:</b> auth_db, client_db и bank_db — отдельные базы в одном PostgreSQL.
-  <b>Граница:</b> состояние client ↔ bank передаётся через Kafka; оригинал вложения банк читает по защищённому HTTP GET.
-endlegend
+note bottom of kafka
+  Изменения бизнес-состояния client ↔ bank идут через Kafka.
+  Три БД разделены; оригиналы файлов и ключ auth — Docker volumes.
+end note
 @enduml

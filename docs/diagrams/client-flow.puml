@@ -1,0 +1,53 @@
+@startuml client-flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ActivityBackgroundColor #EAF2FF
+skinparam ActivityBorderColor #2055A2
+skinparam ArrowColor #2055A2
+title Smart Credit — путь клиента
+start
+:DRAFT\nПрофиль, продукт, форма, документы;
+if (Заявка заполнена?) then (да)
+  :/submit → ApplicationSubmitted;
+else (нет)
+  :422 INVALID_APPLICATION\nостаётся DRAFT;
+  stop
+endif
+:SUBMITTED → UNDER_REVIEW;
+if (Банк просит данные?) then (да)
+  :NEEDS_INFO;
+  :/info → InfoProvided;
+  :UNDER_REVIEW — повторная проверка;
+endif
+if (Банк отказал?) then (да)
+  :REJECTED — публичная причина;
+  stop
+endif
+note right
+  MANUAL_REVIEW банка остаётся
+  UNDER_REVIEW для клиента.
+  Для SME_CASHFLOW_V2 варианты CALCULATED
+  не являются офертой; условия подтверждает аналитик.
+end note
+:OFFER_AVAILABLE;
+if (Оферта истекла?) then (да)
+  :CLOSED (банк EXPIRED);
+  stop
+endif
+if (Клиент отказался?) then (да)
+  :/offer/decline → DECLINE_PENDING;
+  :CLOSED (банк CANCELLED);
+  stop
+endif
+:/offer/accept → ACCEPT_PENDING;
+:FORMALIZING;
+if (Отзыв до подписи?) then (да)
+  :/cancel → CANCEL_PENDING;
+  :CLOSED (банк CANCELLED);
+  stop
+endif
+:/sign → SIGN_PENDING → ContractSigned;
+:DISBURSED — демо-выдача;
+stop
+@enduml

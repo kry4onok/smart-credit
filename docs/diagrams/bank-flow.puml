@@ -1,0 +1,56 @@
+@startuml bank-flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ActivityBackgroundColor #E7F5EF
+skinparam ActivityBorderColor #18704D
+skinparam ArrowColor #18704D
+title Smart Credit — путь банковского дела
+start
+:ApplicationSubmitted из client.events;
+note right
+  Неизвестная версия продукта → MANUAL_REVIEW.
+  SME_CASHFLOW_V2: оценка потока, варианты CALCULATED,
+  подтверждение актуального варианта аналитиком.
+end note
+:VALIDATION;
+if (Полнота данных?) then (да)
+else (нет)
+  :NEEDS_INFO → bank.events;
+  :InfoProvided → VALIDATION;
+endif
+:ENRICHMENT — bureau-mocks gRPC;
+:SCORING — scoring gRPC;
+:DECISION — банковские правила, не одобрение;
+if (Требуется аналитик?) then (да)
+  :MANUAL_REVIEW;
+  :/bank: список → карточка → /take;
+  :/decision с If-Match и Idempotency-Key;
+  note right
+    APPROVE / COUNTER → оферта
+    REQUEST_INFO → NEEDS_INFO
+    REJECT → REJECTED
+  end note
+endif
+if (Отказ?) then (да)
+  :REJECTED → bank.events;
+  stop
+endif
+if (Нужны сведения?) then (да)
+  :NEEDS_INFO → ожидание InfoProvided;
+  stop
+endif
+:OFFER / COUNTER_OFFER → bank.events;
+if (Отказ / отзыв?) then (да)
+  :CANCELLED → bank.events;
+  stop
+endif
+if (Истёк срок?) then (да)
+  :EXPIRED → bank.events;
+  stop
+endif
+:OfferAccepted → OFFER_ACCEPTED;
+:ContractSigned → SIGNING;
+:worker → DISBURSED (симуляция);
+stop
+@enduml

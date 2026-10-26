@@ -62,7 +62,7 @@ help:
 	@echo 'make docs-down        Остановить и удалить Swagger UI'
 	@echo 'make docs-logs        Показать логи Swagger UI'
 	@echo 'make gateway-up       Запустить nginx gateway и Swagger UI'
-	@echo 'make demo-up          Запустить сервисы и сиды для проверки API через Swagger'
+	@echo 'make demo-up          Запустить полный демо-стенд: web, API, Swagger и сиды'
 	@echo 'make gateway-down     Остановить и удалить gateway и Swagger UI'
 	@echo 'make gateway-reload   Проверить и перечитать конфигурацию nginx'
 	@echo 'make gateway-logs     Показать логи gateway'

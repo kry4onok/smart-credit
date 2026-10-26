@@ -1,0 +1,34 @@
+@startuml auth-flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ActivityBackgroundColor #EAF2FF
+skinparam ActivityBorderColor #2055A2
+skinparam ArrowColor #2055A2
+title Smart Credit — вход и сессия
+start
+:POST /auth/login;
+if (Пароль верный?) then (да)
+  :access JWT + HttpOnly refresh-cookie;
+else (нет)
+  :401;
+  stop
+endif
+:Bearer JWT → /auth/me и защищённые API;
+note right
+  client-service и bank-service
+  читают JWKS auth по HTTP.
+end note
+if (Требуется новый access?) then (да)
+  :POST /auth/refresh по cookie;
+  if (Cookie действительна?) then (да)
+    :новый access JWT;
+  else (нет)
+    :нужен повторный вход;
+    stop
+  endif
+endif
+:POST /auth/logout → отзыв refresh;
+:access действует до exp;
+stop
+@enduml

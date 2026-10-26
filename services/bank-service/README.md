@@ -1,4 +1,26 @@
-# Приём `client.events`
+# bank-service
+
+## Путь сотрудника банка и состояния дела
+
+![Вертикальный путь банка: проверки, автоматические и ручные решения, исходы](../../docs/diagrams/bank-flow.svg)
+
+[Исходник и сборка схемы](../../docs/diagrams/README.md). Сотрудник входит как `ANALYST` в `/bank`, открывает список и карточку дел. После `ApplicationSubmitted` банк создаёт дело в `VALIDATION`; неизвестная версия продукта направляет его в `MANUAL_REVIEW`. Полное дело проходит `ENRICHMENT` → `SCORING` → `DECISION`; последний статус означает **ожидание банковских правил**, а не одобрение.
+
+| Ветка | Банковские статусы и действие сотрудника | Публичный результат |
+|---|---|---|
+| Неполная заявка | `NEEDS_INFO`; ответ клиента `InfoProvided` возвращает дело в `VALIDATION`. | Запрос данных; затем новое рассмотрение. |
+| Автоматические правила | Из `DECISION` возможны `OFFER`, `NEEDS_INFO`, `MANUAL_REVIEW`, `REJECTED`. | Оферта, запрос данных, ручной разбор или отказ. |
+| Ручной разбор | Назначенный аналитик берёт `MANUAL_REVIEW` через `/take`, затем `/decision`: `APPROVE`/`COUNTER`, `REQUEST_INFO`, `REJECT`. | `OFFER`/`COUNTER_OFFER`, `NEEDS_INFO` или `REJECTED`. |
+| Принятая оферта | `OFFER_ACCEPTED` → `SIGNING` после события подписи → `DISBURSED` worker. | Оформление и демо-выдача. |
+| Отказ/отзыв/истечение | `OfferDeclined` или `ApplicationCancelled` → `CANCELLED`; worker срока → `EXPIRED`. | Клиент получает `CLOSED`. |
+
+Версия дела (`ETag`/`If-Match`), `Idempotency-Key` и назначение аналитика обязательны для ручного решения; параметры описаны ниже. Оригинал уже отправленного документа банк получает защищённым HTTP GET от клиента; все изменения бизнес-состояния между контурами идут через Kafka.
+
+Для продукта `SME_CASHFLOW_V2` действует дополнительный путь: экспертная оценка денежного потока формирует варианты со статусом `CALCULATED`, затем назначенный аналитик подтверждает актуальный вариант; только после этого возникает оферта. В рабочем месте банка доступны допуск и источники, факторы оценки, пересчёт и сравнение поколений. [Контракт Assessment API](../../api/assessment.yaml) · [подробные правила v2](../../docs/ASSESSMENT_V2.md) · [runbook](../../docs/ASSESSMENT_RUNBOOK.md).
+
+## Данные и границы хранения
+
+`bank-service` владеет `bank_db`: `products`, `product_rules`, `catalog_publication` — каталог и правила; `cases`, `enrichment_results`, `scoring_attempts`, `score_results` — дела и проверки; `assessments`, `assessment_commands` — неизменяемые оценки v2 и команды; `decisions`, `info_requests`, `offers`, `audit_log` — решения и аудит; `outbox`, `processed_events`, `idempotency_keys` — доставка и дедупликация. Банк хранит снимки клиентских данных, но не читает `client_db` напрямую. Таблицы, версии и миграции — в [README схемы](migrations/README.md).
 
 ## Доступ к Bank API
 

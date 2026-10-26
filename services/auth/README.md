@@ -1,6 +1,17 @@
 # auth
 
-Сервис пользователей, сессий и публичных ключей по `api/auth.yaml`.
+Сервис пользователей, сессий и публичных ключей по [`api/auth.yaml`](../../api/auth.yaml).
+
+## Путь входа и сессии
+
+![Вертикальный путь авторизации: вход, доступ, обновление и выход](../../docs/diagrams/auth-flow.svg)
+
+[Исходник и сборка схемы](../../docs/diagrams/README.md). Клиент и сотрудник входят через `/auth/login`: успешный вход выдаёт короткий access JWT и HttpOnly refresh-cookie. С access JWT доступны `/auth/me` и защищённые API соответствующей роли; `client-service` и `bank-service` проверяют подпись через JWKS auth. `/auth/refresh` выдаёт новый access JWT по действующей cookie, `/auth/logout` отзывает refresh-сессию. Неверные учётные данные дают одинаковый `401`; отзыв refresh не аннулирует уже выданный access до его `exp`. Подробности TTL и cookie — ниже.
+
+## Данные auth
+
+Отдельная `auth_db` содержит `organizations` (организации клиента), `users` (учётки и роли) и `refresh_tokens` (хеши refresh-сессий). Приватный RSA-ключ хранится в отдельном Docker volume `auth_keys`, публичная часть выдаётся через JWKS. Структура и миграции — в [README схемы](migrations/README.md).
+
 
 - `GET /healthz` — `204 No Content`, если процесс отвечает; БД не проверяется.
 - `GET /readyz` — `204 No Content` при успешном ping `auth_db`, иначе `503`.
@@ -139,18 +150,18 @@ make auth-dev-seed
 
 Команда создаёт в `auth_db` организацию и три учётки с фиксированными UUID:
 
-| Роль | Email | UUID |
-|---|---|---|
-| ANALYST | `analyst@smart-credit.test` | `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa` |
-| ADMIN | `admin@smart-credit.test` | `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb` |
-| CLIENT | `client@smart-credit.test` | `30000000-0000-4000-8000-000000000001` |
+| Роль | Email | Демо-пароль в `.env` | UUID |
+|---|---|---|---|
+| ANALYST | `analyst@smart-credit.test` | `analyst` | `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa` |
+| ADMIN | `admin@smart-credit.test` | `admin` | `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb` |
+| CLIENT | `client@smart-credit.test` | `client` | `30000000-0000-4000-8000-000000000001` |
 
 У клиента организация `20000000-0000-4000-8000-000000000001` и ИНН
 `7707083893`; эти ID совпадают с банковским demo seed. Только клиент получает
 `org_id` и `can_submit=true`. Пароли хешируются штатным Argon2id-кодом auth и
 не печатаются. Повторный запуск сверяет существующие записи и пароли, не меняя
 их; несовпадение останавливает команду без частичных изменений. Пустые пароли
-отклоняются до подключения к БД. Не копируйте значения паролей в Git.
+отклоняются до подключения к БД. Значения `client`, `admin`, `analyst` — публичные демонстрационные пароли, указанные в корневом README; реальные пароли и другие секреты не добавляйте в Git.
 Команда изменяет только `auth_db`; профиль компании в `client_db` наполняется
 отдельно клиентским контуром.
 
