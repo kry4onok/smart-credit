@@ -116,7 +116,7 @@ func (r *Repository) SignContract(ctx context.Context, params model.SignContract
 	result, err := tx.Exec(ctx, `
 		UPDATE applications
 		SET pending_action = 'SIGN_PENDING', pending_since = $3,
-		    version = $4, client_event_version = $5, updated_at = $3
+		    version = $4, client_event_version = $5, updated_at = greatest($3, created_at)
 		WHERE id = $1 AND org_id = $2 AND status = 'FORMALIZING' AND pending_action IS NULL`,
 		params.ApplicationID, params.OrgID, now, version+1, clientEventVersion)
 	if err != nil {
