@@ -203,6 +203,12 @@ func Build(in Input) (*commonpb.RequirementsPlan, error) {
 		to, b = day(finance.GetTo())
 		validFinance = a && b && !to.Before(from)
 	}
+	if in.Product.GetRequirementsPolicyVersion() == SourceFirstPolicyVersion {
+		// Source-first assessment always uses the last twelve full calendar months.
+		from = time.Date(ref.Year(), ref.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -12, 0)
+		to = from.AddDate(1, 0, -1)
+		validFinance = true
+	}
 	if validFinance {
 		standardTo := time.Date(ref.Year(), ref.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
 		standardFrom := standardTo.AddDate(0, -12, 1)
@@ -213,10 +219,10 @@ func Build(in Input) (*commonpb.RequirementsPlan, error) {
 			manual("TAX_HISTORY_INCOMPLETE")
 		}
 	}
-	if c.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED && c.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_MANAGEMENT {
+	if in.Product.GetRequirementsPolicyVersion() != SourceFirstPolicyVersion && c.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_UNSPECIFIED && c.GetFinancialBasis() != commonpb.FinancialBasis_FINANCIAL_BASIS_MANAGEMENT {
 		manual("FINANCIAL_BASIS_UNSUPPORTED")
 	}
-	if d, ok := day(c.GetObligationsAsOf()); ok && ref.Sub(d) > 31*24*time.Hour {
+	if d, ok := day(c.GetObligationsAsOf()); in.Product.GetRequirementsPolicyVersion() != SourceFirstPolicyVersion && ok && ref.Sub(d) > 31*24*time.Hour {
 		manual("DEBT_DATE_STALE")
 	}
 	if active != nil && !supported(active.GetRegimes()) {

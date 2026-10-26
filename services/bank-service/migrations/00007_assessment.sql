@@ -1,6 +1,6 @@
 -- +goose Up
-ALTER TABLE products DROP CONSTRAINT products_requirements_policy_version_check;
-ALTER TABLE products ADD CONSTRAINT products_requirements_policy_version_check CHECK (requirements_policy_version IS NULL OR requirements_policy_version IN ('sme-profile-v1','sme-profile-v2'));
+ALTER TABLE products DROP CONSTRAINT products_requirements_policy_known;
+ALTER TABLE products ADD CONSTRAINT products_requirements_policy_known CHECK (requirements_policy_version IS NULL OR requirements_policy_version IN ('sme-profile-v1','sme-profile-v2'));
 ALTER TABLE cases ADD COLUMN assessment_generation bigint NOT NULL DEFAULT 1 CHECK (assessment_generation>0);
 ALTER TABLE cases ADD COLUMN assessment_as_of timestamptz NOT NULL DEFAULT now();
 ALTER TABLE cases ADD COLUMN assessment_input jsonb NOT NULL DEFAULT '{"schema_version":1,"preferences":{}}';
@@ -21,8 +21,15 @@ CREATE TABLE assessment_commands (
 );
 CREATE INDEX assessments_case_history ON assessments(case_id,assessment_generation DESC);
 -- +goose Down
-ALTER TABLE products DROP CONSTRAINT products_requirements_policy_version_check;
-ALTER TABLE products ADD CONSTRAINT products_requirements_policy_version_check CHECK (requirements_policy_version IS NULL OR requirements_policy_version='sme-profile-v1');
+-- +goose StatementBegin
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM assessments) OR EXISTS(SELECT 1 FROM assessment_commands)
+ OR EXISTS(SELECT 1 FROM cases WHERE assessment_sources IS NOT NULL OR assessment_input <> '{"schema_version":1,"preferences":{}}'::jsonb)
+ THEN RAISE EXCEPTION 'Cannot remove persisted assessments; restore a reviewed backup instead'; END IF;
+END $$;
+-- +goose StatementEnd
+ALTER TABLE products DROP CONSTRAINT products_requirements_policy_known;
+ALTER TABLE products ADD CONSTRAINT products_requirements_policy_known CHECK (requirements_policy_version IS NULL OR requirements_policy_version='sme-profile-v1');
 DROP TABLE assessment_commands;
 DROP TABLE assessments;
 ALTER TABLE enrichment_results DROP COLUMN assessment_generation;

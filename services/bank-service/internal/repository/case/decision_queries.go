@@ -45,7 +45,7 @@ SELECT p.version,p.name,p.purpose_tags,p.required_document_types,p.min_amount_ko
 FROM products p 
     JOIN product_rules r 
         ON r.product_id=p.id AND r.product_version=p.version
-WHERE p.id=$1 AND p.is_active 
+WHERE p.id=$1 AND p.is_active AND p.version=(SELECT max(version) FROM products WHERE id=$1)
 ORDER BY p.version DESC 
 LIMIT 1`
 

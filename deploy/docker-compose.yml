@@ -207,7 +207,8 @@ services:
         [
           { "url": "/api/auth.yaml", "name": "Auth API" },
           { "url": "/api/client.yaml", "name": "Client API" },
-          { "url": "/api/bank.yaml", "name": "Bank API" }
+          { "url": "/api/bank.yaml", "name": "Bank API" },
+          { "url": "/api/assessment.yaml", "name": "Assessment and Help API" }
         ]
       URLS_PRIMARY_NAME: Bank API
       DEEP_LINKING: "true"

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
 	pb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/assistant"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -150,5 +151,47 @@ func TestRendererNeverAcceptsUnknownStatementOrCompanionCycle(t *testing.T) {
 	c.Statements[0].CompanionIds = []string{c.Statements[0].Id}
 	if err := Validate(r, now); err == nil {
 		t.Fatal("accepted companion cycle")
+	}
+}
+
+func TestGeneratedContextContainsSafeSourceFactsAndNavigation(t *testing.T) {
+	now := time.Now().UTC()
+	v := View{ApplicationID: "22222222-2222-4222-8222-222222222222", Revision: "bank:12:1:2", Status: "OFFER_AVAILABLE", NextStep: "Откройте оферту", Checks: &assessment.CheckResult{Sources: []assessment.Source{{ID: "registry", Kind: "REGISTRY", Role: "BORROWER", Status: "UNAVAILABLE", Match: "EXACT", Conclusion: "REVIEW"}}}}
+	for _, audience := range []pb.Audience{pb.Audience_AUDIENCE_ANALYST, pb.Audience_AUDIENCE_CLIENT} {
+		c := Context(v, audience, now)
+		r := &pb.HelpRequest{RequestId: "11111111-1111-4111-8111-111111111111", Context: c, Mode: pb.HelpMode_HELP_MODE_DECISION, Detail: pb.Detail_DETAIL_CONCISE, Locale: "ru-RU"}
+		if err := Validate(r, now); err != nil {
+			t.Fatal(err)
+		}
+		answer, err := Fallback(r, pb.FallbackReason_FALLBACK_REASON_MODEL_UNAVAILABLE, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(answer.Actions) != 1 || answer.Actions[0].Kind != pb.ActionKind_ACTION_KIND_OPEN_OFFER {
+			t.Fatalf("unexpected actions: %v", answer.Actions)
+		}
+		hasSource := false
+		for _, s := range c.Statements {
+			if s.TargetId == "source:0" {
+				hasSource = true
+			}
+		}
+		if hasSource != (audience == pb.Audience_AUDIENCE_ANALYST) {
+			t.Fatal("source facts leaked or missing")
+		}
+	}
+}
+
+func TestContextCannotRenewAssessmentExpiry(t *testing.T) {
+	now := time.Now().UTC()
+	expiry := now.Add(10 * time.Second)
+	v := View{ApplicationID: "22222222-2222-4222-8222-222222222222", Revision: "case:1", Public: &assessment.PublicResult{ID: "calc", ValidUntil: expiry}}
+	c := Context(v, pb.Audience_AUDIENCE_CLIENT, now)
+	if !c.ValidUntil.AsTime().Equal(expiry) {
+		t.Fatal("help renewed source expiry")
+	}
+	expired := Context(v, pb.Audience_AUDIENCE_CLIENT, expiry.Add(time.Second))
+	if expired.Freshness != pb.Freshness_FRESHNESS_STALE {
+		t.Fatal("expired assessment considered current")
 	}
 }

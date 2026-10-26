@@ -9,6 +9,7 @@ import (
 
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/assessment"
 	"github.com/alfabank-hackathon-2026/smart-credit/pkg/creditcalc"
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
 	commonpb "github.com/alfabank-hackathon-2026/smart-credit/proto/gen/go/common"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/events/publicstate"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/infra/transaction"
@@ -47,7 +48,7 @@ func LoadInput(ctx context.Context, q transaction.Queryer, id uuid.UUID) (assess
 			return in, err
 		}
 	}
-	rows, err := q.Query(ctx, `SELECT p.id::text,p.version,p.name,p.purpose_tags,p.min_amount_kopecks,p.max_amount_kopecks,p.min_term_months,p.max_term_months,r.rate_grade_a_bps,r.rate_grade_b_bps FROM products p JOIN product_rules r ON r.product_id=p.id AND r.product_version=p.version WHERE p.is_active ORDER BY p.id,p.version DESC`)
+	rows, err := q.Query(ctx, `SELECT p.id::text,p.version,p.name,p.purpose_tags,p.min_amount_kopecks,p.max_amount_kopecks,p.min_term_months,p.max_term_months,r.rate_grade_a_bps,r.rate_grade_b_bps FROM (SELECT DISTINCT ON(id) * FROM products ORDER BY id,version DESC) p JOIN product_rules r ON r.product_id=p.id AND r.product_version=p.version JOIN cases c ON c.id=$1 JOIN products requested ON requested.id=c.product_id AND requested.version=c.product_version WHERE p.is_active AND p.requirements_policy_version IS NOT DISTINCT FROM requested.requirements_policy_version AND p.required_document_types=requested.required_document_types ORDER BY p.id,p.version DESC`, id)
 	if err != nil {
 		return in, err
 	}
@@ -194,6 +195,9 @@ func unmetRequirements(ctx context.Context, q transaction.Queryer, id uuid.UUID,
 		return nil, nil, err
 	}
 	p.Found = true
+	if p.PolicyVersion == requirements.SourceFirstPolicyVersion {
+		snap.ReferenceDate = &in.AsOf
+	}
 	checked := validation.Evaluate(snap, p)
 	plan := checked.Plan
 	if plan == nil {
@@ -218,35 +222,37 @@ func unmetRequirements(ctx context.Context, q transaction.Queryer, id uuid.UUID,
 	return missing, plan, nil
 }
 
-func CheckCurrentOffer(ctx context.Context, q transaction.Queryer, id, productID uuid.UUID, t creditcalc.Terms, now time.Time) error {
+func CheckCurrentOffer(ctx context.Context, q transaction.Queryer, id, productID uuid.UUID, t creditcalc.Terms, now time.Time) (int64, error) {
 	in, err := LoadInput(ctx, q, id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var raw []byte
 	err = q.QueryRow(ctx, `SELECT result FROM assessments WHERE case_id=$1 AND assessment_generation=$2 AND input_revision=$3`, id, in.Generation, in.InputRevision).Scan(&raw)
 	if err != nil {
-		return fmt.Errorf("ASSESSMENT_REQUIRED: %w", err)
+		return 0, fmt.Errorf("ASSESSMENT_REQUIRED: %w", err)
 	}
 	var result assessment.Result
 	if err = json.Unmarshal(raw, &result); err != nil {
-		return err
+		return 0, err
 	}
 	if !assessment.IsCurrent(result, in, now) {
-		return errors.New("ASSESSMENT_STALE")
+		return 0, errors.New("ASSESSMENT_STALE")
 	}
 	allowed := false
+	var productVersion int64
 	for _, c := range result.Candidates {
 		if c.ProductID == productID.String() && c.Schedule.Terms == t && c.ValidUntil.After(now) {
 			allowed = true
+			productVersion = c.ProductVersion
 			break
 		}
 	}
 	if !allowed {
-		return errors.New("CANDIDATE_NOT_FOUND")
+		return 0, errors.New("CANDIDATE_NOT_FOUND")
 	}
 	_, err = assessment.CheckOffer(in, productID.String(), t)
-	return err
+	return productVersion, err
 }
 
 func (r *Repository) Recheck(ctx context.Context, id, actor, key uuid.UUID, version int64) (int64, error) {

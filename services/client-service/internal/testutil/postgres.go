@@ -48,6 +48,7 @@ func Postgres(t *testing.T) *pgxpool.Pool {
 	}
 	applyMigration(t, pool, "00001_client_init.sql")
 	applyMigration(t, pool, "00002_profile_requirements.sql")
+	applyMigration(t, pool, "00003_assessment.sql")
 	return pool
 }
 

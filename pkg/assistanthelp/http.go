@@ -55,7 +55,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request, target string, audience p
 		httpjson.Problem(w, 409, "UNSUPPORTED_CATALOG_VERSION")
 		return
 	}
-	if input.ContextID != c.ContextId || input.SourceRevision != c.SourceRevision {
+	if input.ContextID != c.ContextId || input.SourceRevision != c.SourceRevision || c.Freshness == pb.Freshness_FRESHNESS_STALE {
 		httpjson.Problem(w, 409, "CONTEXT_STALE")
 		return
 	}

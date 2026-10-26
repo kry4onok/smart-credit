@@ -72,7 +72,9 @@ def fallback_plan(request) -> dict:
     if limits:
         blocks.append({"kind": "LIMITATIONS", "selections": limits})
     status = "PARTIAL" if request.mode == help_pb2.HELP_MODE_CASE_SUMMARY and limits else "ANSWERED"
-    return {"status": status, "blocks": blocks, "action_ids": [], "clarify_target_ids": []}
+    selected_targets = {statements[item["statement_id"]].target_id for item in main}
+    action_ids = [item.id for item in request.context.actions if item.target_id in selected_targets][:3]
+    return {"status": status, "blocks": blocks, "action_ids": action_ids, "clarify_target_ids": []}
 
 
 def _plan_proto(plan: dict):

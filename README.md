@@ -2,6 +2,12 @@
 
 Полное техническое задание: [TZ.md](TZ.md).
 
+## Оценка v2 и Help
+
+[Формулы, факторы и источники](docs/ASSESSMENT_V2.md),
+[запуск и проверки](docs/ASSESSMENT_RUNBOOK.md),
+[Assessment and Help API](api/assessment.yaml).
+
 ## Веб-интерфейс
 
 Кабинет клиента и рабочее место аналитика — в [web/](web/README.md). Быстрый просмотр

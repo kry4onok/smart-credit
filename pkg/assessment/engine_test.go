@@ -164,3 +164,68 @@ func TestVersioningAndRiskIndependence(t *testing.T) {
 		t.Fatal(r)
 	}
 }
+
+func TestNotRunAndExtremeRatiosAreExplicit(t *testing.T) {
+	in := demoInput()
+	in.Sources.CompanyStatus = "LIQUIDATING"
+	r := Evaluate(in)
+	if r.Risk.Status != "NOT_RUN" || r.Risk.Score != nil || r.Risk.ModelVersion != ModelVersion || r.Risk.ConfigChecksum == "" {
+		t.Fatal(r.Risk)
+	}
+	if got := ratio(-72_000_000_000_000, 1); got != -1_000_000_000 {
+		t.Fatal(got)
+	}
+}
+
+func TestScoreFactorThresholdsAndMissing(t *testing.T) {
+	in := demoInput()
+	f, issues := Normalize(in)
+	if len(issues) > 0 {
+		t.Fatal(issues)
+	}
+	for _, tc := range []struct{ dpd, want int }{{0, 400}, {1, 320}, {7, 320}, {8, 200}, {29, 200}, {30, 80}, {59, 80}, {60, 0}, {89, 0}} {
+		in.Sources.Credit.HistoricalMaxDPD = ptr(tc.dpd)
+		r := Score(f, in.Sources.Credit)
+		if r.Factors[0].Points != tc.want {
+			t.Fatalf("dpd %d: %v", tc.dpd, r)
+		}
+	}
+	for _, tc := range []struct{ bps, want int }{{-1, 0}, {0, 35}, {499, 35}, {500, 105}, {999, 105}, {1000, 210}, {1499, 210}, {1500, 280}, {1999, 280}, {2000, 350}} {
+		f.MarginBPS = tc.bps
+		r := Score(f, in.Sources.Credit)
+		if r.Factors[1].Points != tc.want {
+			t.Fatalf("margin %d: %v", tc.bps, r)
+		}
+	}
+	for _, tc := range []struct{ bps, want int }{{0, 250}, {2000, 250}, {2001, 200}, {3500, 200}, {3501, 125}, {5000, 125}, {5001, 50}, {7500, 50}, {7501, 0}, {10000, 0}} {
+		f.LargestCustomerShareBPS = ptr(tc.bps)
+		r := Score(f, in.Sources.Credit)
+		if r.Factors[2].Points != tc.want {
+			t.Fatalf("share %d: %v", tc.bps, r)
+		}
+	}
+	f.LargestCustomerShareBPS = nil
+	r := Score(f, in.Sources.Credit)
+	if r.Score != nil || r.Status != "INSUFFICIENT_DATA" {
+		t.Fatal(r)
+	}
+}
+
+func TestRelatedNegativeUnavailableAndConflictNeverBecomeBorrowerRejection(t *testing.T) {
+	for _, change := range []func(*Input){
+		func(in *Input) { in.Sources.Checks[5].Status = "SUCCESS"; in.Sources.Checks[5].Conclusion = "BLOCK" },
+		func(in *Input) { in.Sources.Checks[5].Status = "AMBIGUOUS"; in.Sources.Checks[5].Conclusion = "BLOCK" },
+		func(in *Input) { in.Sources.Checks[0].Status = "UNAVAILABLE"; in.Sources.RegisteredAt = "2026-10-25" },
+		func(in *Input) {
+			in.Sources.Credit.HistoricalMaxDPD = ptr(90)
+			in.Sources.Credit.OverdueEpisodes = ptr(0)
+		},
+	} {
+		in := demoInput()
+		change(&in)
+		r := Evaluate(in)
+		if r.Status != "MANUAL_REVIEW" || r.Risk.Score != nil || len(r.Candidates) != 0 {
+			t.Fatal(r)
+		}
+	}
+}

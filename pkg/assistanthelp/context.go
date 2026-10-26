@@ -21,6 +21,7 @@ type View struct {
 	Pending       bool
 	Public        *assessment.PublicResult
 	Risk          *assessment.RiskResult
+	Checks        *assessment.CheckResult
 	Requirements  []Requirement
 }
 
@@ -50,6 +51,12 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 	}
 	if v.Public != nil {
 		r := v.Public
+		if !r.ValidUntil.IsZero() && r.ValidUntil.Before(c.ValidUntil.AsTime()) {
+			c.ValidUntil = timestamppb.New(r.ValidUntil)
+		}
+		if !c.ValidUntil.AsTime().After(now) {
+			c.Freshness = pb.Freshness_FRESHNESS_STALE
+		}
 		c.CalculationId = &r.ID
 		if r.Financial != nil {
 			f := r.Financial
@@ -68,8 +75,58 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 			add(f.ID, "Фактор риска", fmt.Sprintf("%s: значение %d (%s), вклад %d из %d баллов. Период %s–%s. Это экспертная оценка, не вероятность дефолта.", f.ID, f.Value, f.Unit, f.Points, f.MaxPoints, f.PeriodFrom, f.PeriodTo), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_SCORE, pb.EvidenceKind_EVIDENCE_KIND_SCORE)
 		}
 	}
+	if audience == pb.Audience_AUDIENCE_ANALYST && v.Checks != nil {
+		for i, source := range v.Checks.Sources[:min(20, len(v.Checks.Sources))] {
+			id := fmt.Sprintf("source:%d", i)
+			add(id, "Проверка источника", fmt.Sprintf("Источник %s, вид %s, роль %s: состояние %s, совпадение %s, вывод %s. Недоступный ответ или неоднозначное совпадение не подтверждают нарушение компании.", source.ID, source.Kind, source.Role, source.Status, source.Match, source.Conclusion), pb.TargetKind_TARGET_KIND_FACTOR, pb.StatementTopic_STATEMENT_TOPIC_POLICY, pb.EvidenceKind_EVIDENCE_KIND_CHECK)
+			e := c.Evidence[len(c.Evidence)-1]
+			e.IsMock = source.Provenance.IsMock
+			if source.Provenance.SourceRef != "" {
+				e.SourceRef = source.Provenance.SourceRef
+			}
+			if !source.Provenance.ObservedAt.IsZero() {
+				e.ObservedAt = timestamppb.New(source.Provenance.ObservedAt)
+			}
+			if source.Status == "UNAVAILABLE" {
+				e.State = pb.EvidenceState_EVIDENCE_STATE_UNAVAILABLE
+			}
+			if source.Status == "AMBIGUOUS" || source.Match == "AMBIGUOUS" {
+				e.State = pb.EvidenceState_EVIDENCE_STATE_AMBIGUOUS
+			}
+			if source.Status == "STALE" {
+				e.State = pb.EvidenceState_EVIDENCE_STATE_UNAVAILABLE
+			}
+		}
+	}
+	// Navigation only: no action here accepts, signs, submits or disburses.
+	for _, target := range c.Targets {
+		kind := pb.ActionKind_ACTION_KIND_UNSPECIFIED
+		switch target.Kind {
+		case pb.TargetKind_TARGET_KIND_REQUIREMENT:
+			kind = pb.ActionKind_ACTION_KIND_OPEN_REQUIREMENT
+		case pb.TargetKind_TARGET_KIND_FACTOR:
+			kind = pb.ActionKind_ACTION_KIND_OPEN_FACTOR
+		case pb.TargetKind_TARGET_KIND_OPTION:
+			kind = pb.ActionKind_ACTION_KIND_OPEN_OPTIONS
+		case pb.TargetKind_TARGET_KIND_CHANGE:
+			kind = pb.ActionKind_ACTION_KIND_OPEN_TIMELINE
+		case pb.TargetKind_TARGET_KIND_PROFILE:
+			kind = pb.ActionKind_ACTION_KIND_OPEN_PROFILE
+		case pb.TargetKind_TARGET_KIND_DECISION:
+			if v.Status == "OFFER_AVAILABLE" || v.Status == "OFFERED" || v.Status == "FORMALIZING" {
+				kind = pb.ActionKind_ACTION_KIND_OPEN_OFFER
+			} else {
+				kind = pb.ActionKind_ACTION_KIND_OPEN_TIMELINE
+			}
+		}
+		if kind != pb.ActionKind_ACTION_KIND_UNSPECIFIED {
+			c.Actions = append(c.Actions, &pb.Action{Id: "open:" + target.Id, Kind: kind, TargetId: target.Id, Label: target.Label})
+		}
+	}
 	limitation := "Демонстрационные сведения синтетические. Расчёт не гарантирует одобрение или выдачу кредита."
-	if v.Pending {
+	if c.Freshness == pb.Freshness_FRESHNESS_STALE {
+		limitation += " Срок актуальности оценки истёк; требуется новая проверка."
+	} else if v.Pending {
 		limitation += " Выполняется обновление заявки; дождитесь подтверждения нового состояния."
 	}
 	c.Statements = append(c.Statements, &pb.Statement{Id: "limitations", Topic: pb.StatementTopic_STATEMENT_TOPIC_DATA_QUALITY, Required: true, Priority: 100, Variants: []*pb.StatementVariant{{Id: "concise", Text: limitation}, {Id: "detailed", Text: limitation}}})

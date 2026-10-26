@@ -286,11 +286,15 @@ func nullableReason(reason string) any {
 
 func (r *Repository) validateDecisionOffer(ctx context.Context, in decide.Input, _, _ []byte, _ string, _ decisionDossier, now time.Time) (decisionProduct, error) {
 	q := transaction.QueryerFromContext(ctx, r.db)
-	if err := assessmentrepository.CheckCurrentOffer(ctx, q, in.CaseID, in.Offer.ProductID, creditcalc.Terms{AmountKopecks: in.Offer.AmountKopecks, TermMonths: in.Offer.TermMonths, RateBPS: in.Offer.RateBPS}, now); err != nil {
+	checkedVersion, err := assessmentrepository.CheckCurrentOffer(ctx, q, in.CaseID, in.Offer.ProductID, creditcalc.Terms{AmountKopecks: in.Offer.AmountKopecks, TermMonths: in.Offer.TermMonths, RateBPS: in.Offer.RateBPS}, now)
+	if err != nil {
 		return decisionProduct{}, fmt.Errorf("%w: %w", decide.ErrValidation, err)
 	}
 	var p decisionProduct
-	err := q.QueryRow(ctx, loadDecisionProduct, in.Offer.ProductID).Scan(&p.version, &p.name, &p.purposes, &p.documents, &p.minAmount, &p.maxAmount, &p.minTerm, &p.maxTerm, &p.gradeARate, &p.gradeBRate, &p.minAge, &p.ratio, &p.maxOverdue, &p.ttl, &p.policy)
+	err = q.QueryRow(ctx, loadDecisionProduct, in.Offer.ProductID).Scan(&p.version, &p.name, &p.purposes, &p.documents, &p.minAmount, &p.maxAmount, &p.minTerm, &p.maxTerm, &p.gradeARate, &p.gradeBRate, &p.minAge, &p.ratio, &p.maxOverdue, &p.ttl, &p.policy)
+	if errors.Is(err, pgx.ErrNoRows) || err == nil && p.version != checkedVersion {
+		return decisionProduct{}, fmt.Errorf("%w: ASSESSMENT_STALE", decide.ErrValidation)
+	}
 	return p, err
 }
 

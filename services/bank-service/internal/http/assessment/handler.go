@@ -108,6 +108,7 @@ func (h *Handler) load(ctx context.Context, id uuid.UUID) (Snapshot, assistanthe
 		p.Changes = s.Assessment.Changes
 		v.Public = &p
 		v.Risk = &s.Assessment.Risk
+		v.Checks = &s.Assessment.Checks
 	}
 	rows, err := h.db.Query(ctx, `SELECT requirements FROM info_requests WHERE case_id=$1 AND status='OPEN'`, id)
 	if err != nil {

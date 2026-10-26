@@ -351,6 +351,22 @@ func FallbackPlan(r *pb.HelpRequest) *pb.AnswerPlan {
 			p.Status = pb.AnswerStatus_ANSWER_STATUS_PARTIAL
 		}
 	}
+	selectedTargets := map[string]bool{}
+	for _, selection := range main.Selections {
+		for _, statement := range r.Context.Statements {
+			if statement.Id == selection.StatementId {
+				selectedTargets[statement.TargetId] = true
+			}
+		}
+	}
+	for _, action := range r.Context.Actions {
+		if selectedTargets[action.TargetId] {
+			p.ActionIds = append(p.ActionIds, action.Id)
+			if len(p.ActionIds) == 3 {
+				break
+			}
+		}
+	}
 	return p
 }
 

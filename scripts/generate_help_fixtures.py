@@ -74,6 +74,9 @@ def main():
         limitation = "Данные синтетические. Расчёт не гарантирует одобрение или реальную выдачу."
         context["statements"].append(dict(id="limitation", topic="STATEMENT_TOPIC_DATA_QUALITY", required=True,
             priority=100, variants=[dict(id=v, text=limitation) for v in ("concise", "detailed")]))
+        if text:
+            action_kind = {"REQUIREMENT": "OPEN_REQUIREMENT", "FACTOR": "OPEN_FACTOR", "OPTION": "OPEN_OPTIONS", "CHANGE": "OPEN_TIMELINE", "PROFILE": "OPEN_PROFILE", "DECISION": "OPEN_OFFER" if name == "APPROVE" else "OPEN_TIMELINE"}[kind]
+            context["actions"] = [dict(id="open-target", kind="ACTION_KIND_"+action_kind, target_id="target-0", label="Открыть")]
         targets = [x["id"] for x in context["targets"]] if mode in ("REQUIREMENT", "ASSESSMENT", "CHANGES", "COMPARE_OPTIONS") else []
         if mode == "COMPARE_OPTIONS":
             context["calculation_id"] = "synthetic-calculation"

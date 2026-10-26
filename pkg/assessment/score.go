@@ -46,9 +46,9 @@ func Score(f FinancialSnapshot, c CreditHistory) RiskResult {
 		}
 	}
 	r.Factors = []Factor{
-		{ID: "payment_discipline", Value: dpd, Unit: "DAYS", WeightBPS: 4000, Points: payment, MaxPoints: 400, Status: "ASSESSED", ExplanationCode: "HISTORICAL_PAYMENT_DISCIPLINE", PeriodFrom: c.PeriodFrom, PeriodTo: c.PeriodTo, EvidenceRefs: []string{"CREDIT_HISTORY"}},
-		{ID: "operating_margin", Value: f.MarginBPS, Unit: "BASIS_POINTS", WeightBPS: 3500, Points: margin, MaxPoints: 350, Status: "ASSESSED", ExplanationCode: "CFADS_TO_OPERATING_RECEIPTS", PeriodFrom: f.PeriodFrom, PeriodTo: f.PeriodTo, EvidenceRefs: []string{f.Provenance.SourceRef}},
-		{ID: "customer_concentration", Value: *f.LargestCustomerShareBPS, Unit: "BASIS_POINTS", WeightBPS: 2500, Points: concentration, MaxPoints: 250, Status: "ASSESSED", ExplanationCode: "LARGEST_CUSTOMER_RECEIPTS_SHARE", PeriodFrom: f.PeriodFrom, PeriodTo: f.PeriodTo, EvidenceRefs: []string{f.Provenance.SourceRef}},
+		{ID: "payment_discipline", Value: dpd, Unit: "DAYS", WeightBPS: 4000, Points: payment, MaxPoints: 400, Status: "ASSESSED", Quality: "CALCULATED", ExplanationCode: "HISTORICAL_PAYMENT_DISCIPLINE", PeriodFrom: c.PeriodFrom, PeriodTo: c.PeriodTo, EvidenceRefs: []string{"CREDIT_HISTORY"}},
+		{ID: "operating_margin", Value: f.MarginBPS, Unit: "BASIS_POINTS", WeightBPS: 3500, Points: margin, MaxPoints: 350, Status: "ASSESSED", Quality: "CALCULATED", ExplanationCode: "CFADS_TO_OPERATING_RECEIPTS", PeriodFrom: f.PeriodFrom, PeriodTo: f.PeriodTo, EvidenceRefs: []string{f.Provenance.SourceRef}},
+		{ID: "customer_concentration", Value: *f.LargestCustomerShareBPS, Unit: "BASIS_POINTS", WeightBPS: 2500, Points: concentration, MaxPoints: 250, Status: "ASSESSED", Quality: "CALCULATED", ExplanationCode: "LARGEST_CUSTOMER_RECEIPTS_SHARE", PeriodFrom: f.PeriodFrom, PeriodTo: f.PeriodTo, EvidenceRefs: []string{f.Provenance.SourceRef}},
 	}
 	score := payment + margin + concentration
 	r.Score = &score

@@ -131,6 +131,13 @@ type Input struct {
 	Sources            Sources    `json:"sources"`
 	Products           []Product  `json:"products"`
 }
+type HistoricalCashMonth struct {
+	Period          string   `json:"period"`
+	CFADSKopecks    int64    `json:"cfads_kopecks"`
+	ReceiptsKopecks int64    `json:"operating_receipts_kopecks"`
+	Quality         string   `json:"quality"`
+	EvidenceRefs    []string `json:"evidence_refs"`
+}
 type CashMonth struct {
 	Period              string   `json:"period"`
 	CFADSKopecks        int64    `json:"cfads_kopecks"`
@@ -142,22 +149,23 @@ type CashMonth struct {
 	EvidenceRefs        []string `json:"evidence_refs"`
 }
 type FinancialSnapshot struct {
-	ID                      string      `json:"id"`
-	Currency                string      `json:"currency"`
-	Unit                    string      `json:"unit"`
-	PeriodFrom              string      `json:"period_from"`
-	PeriodTo                string      `json:"period_to"`
-	ForecastMethod          string      `json:"forecast_method"`
-	History                 []CashMonth `json:"history"`
-	Base                    []CashMonth `json:"base"`
-	Stress                  []CashMonth `json:"stress"`
-	InitialCashKopecks      int64       `json:"initial_cash_kopecks"`
-	MarginBPS               int         `json:"operating_margin_bps"`
-	LargestCustomerShareBPS *int        `json:"largest_customer_share_bps"`
-	BalanceStatus           string      `json:"balance_status"`
-	Provenance              Provenance  `json:"provenance"`
+	ID                      string                `json:"id"`
+	Currency                string                `json:"currency"`
+	Unit                    string                `json:"unit"`
+	PeriodFrom              string                `json:"period_from"`
+	PeriodTo                string                `json:"period_to"`
+	ForecastMethod          string                `json:"forecast_method"`
+	History                 []HistoricalCashMonth `json:"history"`
+	Base                    []CashMonth           `json:"base"`
+	Stress                  []CashMonth           `json:"stress"`
+	InitialCashKopecks      int64                 `json:"initial_cash_kopecks"`
+	MarginBPS               int                   `json:"operating_margin_bps"`
+	LargestCustomerShareBPS *int                  `json:"largest_customer_share_bps"`
+	BalanceStatus           string                `json:"balance_status"`
+	Provenance              Provenance            `json:"provenance"`
 }
 type Factor struct {
+	Quality         string   `json:"quality"`
 	ID              string   `json:"factor_id"`
 	Value           int      `json:"value"`
 	Unit            string   `json:"unit"`

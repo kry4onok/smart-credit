@@ -24,7 +24,16 @@ func ratio(n, d int64) int {
 	if d <= 0 {
 		return 0
 	}
-	return int(new(big.Int).Quo(new(big.Int).Mul(big.NewInt(n), big.NewInt(10000)), big.NewInt(d)).Int64())
+	v := new(big.Int).Quo(new(big.Int).Mul(big.NewInt(n), big.NewInt(10000)), big.NewInt(d))
+	// Saturate pathological ratios while preserving all decision thresholds.
+	const limit int64 = 1_000_000_000
+	if v.Cmp(big.NewInt(limit)) > 0 {
+		return int(limit)
+	}
+	if v.Cmp(big.NewInt(-limit)) < 0 {
+		return -int(limit)
+	}
+	return int(v.Int64())
 }
 func scale(n int64, bps int) int64 {
 	return new(big.Int).Quo(new(big.Int).Mul(big.NewInt(n), big.NewInt(int64(bps))), big.NewInt(10000)).Int64()
@@ -143,7 +152,7 @@ func Normalize(in Input) (FinancialSnapshot, []Issue) {
 	if len(issues) > 0 {
 		return FinancialSnapshot{}, issues
 	}
-	s := FinancialSnapshot{Currency: "RUB", Unit: "KOPECKS", PeriodFrom: start.Format(time.DateOnly), PeriodTo: month.AddDate(0, 0, -1).Format(time.DateOnly), ForecastMethod: "repeat-last-12-full-months-no-growth-v1", InitialCashKopecks: *f.InitialCashKopecks, LargestCustomerShareBPS: f.LargestCustomerShareBPS, Provenance: f.Provenance, BalanceStatus: "NOT_PROVIDED", History: []CashMonth{}, Base: []CashMonth{}, Stress: []CashMonth{}}
+	s := FinancialSnapshot{Currency: "RUB", Unit: "KOPECKS", PeriodFrom: start.Format(time.DateOnly), PeriodTo: month.AddDate(0, 0, -1).Format(time.DateOnly), ForecastMethod: "repeat-last-12-full-months-no-growth-v1", InitialCashKopecks: *f.InitialCashKopecks, LargestCustomerShareBPS: f.LargestCustomerShareBPS, Provenance: f.Provenance, BalanceStatus: "NOT_PROVIDED", History: []HistoricalCashMonth{}, Base: []CashMonth{}, Stress: []CashMonth{}}
 	if in.LegalForm == "IP" {
 		s.BalanceStatus = "NOT_APPLICABLE"
 	} else if f.BalanceSheet != nil {
@@ -154,13 +163,14 @@ func Normalize(in Input) (FinancialSnapshot, []Issue) {
 		cf := *m.Receipts - *m.VariableCosts - *m.FixedCosts - *m.Taxes - *m.Maintenance - *m.OwnerDrawings
 		receipts += *m.Receipts
 		total += cf
-		s.History = append(s.History, CashMonth{Period: m.Period, CFADSKopecks: cf, ReceiptsKopecks: *m.Receipts, Quality: m.Provenance.Quality, EvidenceRefs: []string{m.Provenance.SourceRef}})
+		s.History = append(s.History, HistoricalCashMonth{Period: m.Period, CFADSKopecks: cf, ReceiptsKopecks: *m.Receipts, Quality: m.Provenance.Quality, EvidenceRefs: []string{m.Provenance.SourceRef}})
 	}
 	if receipts <= 0 {
 		return FinancialSnapshot{}, []Issue{issue("ZERO_OPERATING_RECEIPTS", "financials.months", "Нет операционных поступлений для оценки устойчивого денежного потока")}
 	}
 	s.MarginBPS = ratio(total, receipts)
 	var delayed int64
+	baseCash, stressCash := s.InitialCashKopecks, s.InitialCashKopecks
 	for i := 1; i <= horizon; i++ {
 		future := month.AddDate(0, i, 0)
 		var m Month
@@ -181,9 +191,13 @@ func Normalize(in Input) (FinancialSnapshot, []Issue) {
 		stress := stressedReceipts - scale(*m.VariableCosts, 9000) - *m.FixedCosts - *m.Taxes - *m.Maintenance - *m.OwnerDrawings
 		period := future.Format("2006-01")
 		row := CashMonth{Period: period, CFADSKopecks: base, ReceiptsKopecks: *m.Receipts, ExistingDebtKopecks: debts[period], Quality: "PROJECTED", EvidenceRefs: []string{m.Provenance.SourceRef, f.Provenance.SourceRef}}
+		baseCash += base - debts[period]
+		row.ClosingCashKopecks = baseCash
 		s.Base = append(s.Base, row)
 		row.CFADSKopecks = stress
 		row.ReceiptsKopecks = stressedReceipts
+		stressCash += stress - debts[period]
+		row.ClosingCashKopecks = stressCash
 		s.Stress = append(s.Stress, row)
 	}
 	s.ID = hash(s)

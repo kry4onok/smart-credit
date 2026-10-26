@@ -37,6 +37,7 @@ func ValidateSubmission(s Submission, amount int64) error {
 
 func Evaluate(in Input) Result {
 	r := Result{SchemaVersion: 1, InputRevision: in.InputRevision, Generation: in.Generation, AsOf: in.AsOf, ValidUntil: validUntil(in), PolicyVersion: PolicyVersion, PolicyChecksum: hash(policyConfig), InputHash: hash(in), Status: "MANUAL_REVIEW", Candidates: []Candidate{}, Issues: []Issue{}, OriginalFailureCodes: []string{}, Changes: []Change{}}
+	r.Risk = RiskResult{Status: "NOT_RUN", ModelVersion: ModelVersion, ConfigChecksum: hash(scoreConfig), Factors: []Factor{}, Issues: []Issue{}}
 	r.ID = hash(struct {
 		Application          string
 		Revision, Generation int64
