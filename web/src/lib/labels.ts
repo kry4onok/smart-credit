@@ -174,6 +174,8 @@ export const ruleLabel: Record<string, string> = {
   SCORING_UNSUPPORTED_INPUT: "Данные вне области модели",
   UNKNOWN_PRODUCT: "Неизвестный продукт",
   REVIEW_REQUIRED: "Нужен ручной разбор",
+  READY_FOR_CONFIRMATION: "Вариант ждёт подтверждения менеджером",
+  NO_AFFORDABLE_OPTION: "Нет доступного варианта по денежному потоку",
   LARGE_REQUEST: "Крупный запрос",
 };
 
@@ -191,4 +193,143 @@ export const auditActionLabel: Record<string, string> = {
   CASE_RECEIVED: "Заявка получена",
   ANALYST_DECISION: "Решение аналитика",
   BUREAU_CALL: "Запрос в БКИ",
+  ASSESSMENT_COMPLETED: "Оценка денежного потока выполнена",
+  ASSESSMENT_RECHECK: "Запущен пересчёт оценки",
+  REQUEST_INFO: "Запрошены данные",
+  INFO_REQUESTED: "Запрошены данные",
+  OFFER_ACCEPTED: "Клиент принял оферту",
+  OFFER_DECLINED: "Клиент отказался от оферты",
+  OFFER_EXPIRED: "Срок оферты истёк",
+  CONTRACT_SIGNED: "Договор подписан",
+  DEMO_DISBURSED: "Деньги выданы (демо)",
+  APPLICATION_CANCELLED: "Клиент отозвал заявку",
+};
+
+// --- Profile v2: legal form, tax regimes, requirements ---
+
+export const legalFormLabel: Record<"IP" | "LLC", string> = {
+  IP: "Индивидуальный предприниматель",
+  LLC: "ООО",
+};
+
+export const taxRegimeLabel: Record<string, string> = {
+  OSNO: "ОСНО",
+  USN_INCOME: "УСН «Доходы»",
+  USN_INCOME_EXPENSE: "УСН «Доходы минус расходы»",
+  PSN: "Патент (ПСН)",
+  AUSN_INCOME: "АУСН «Доходы»",
+  AUSN_INCOME_EXPENSE: "АУСН «Доходы минус расходы»",
+  ESHN: "ЕСХН",
+  NPD: "Самозанятость (НПД)",
+  OTHER: "Другой режим",
+  UNKNOWN: "Не знаю",
+};
+
+// Regimes available to each legal form: a patent and NPD exist only for sole proprietors.
+export const taxRegimesFor: Record<"IP" | "LLC", string[]> = {
+  IP: ["USN_INCOME", "USN_INCOME_EXPENSE", "PSN", "OSNO", "AUSN_INCOME", "AUSN_INCOME_EXPENSE", "ESHN", "NPD", "UNKNOWN"],
+  LLC: ["USN_INCOME", "USN_INCOME_EXPENSE", "OSNO", "AUSN_INCOME", "AUSN_INCOME_EXPENSE", "ESHN", "UNKNOWN"],
+};
+
+export const financialBasisLabel: Record<string, string> = {
+  MANAGEMENT: "Управленческий учёт",
+  ACCOUNTING: "Бухгалтерская отчётность",
+  TAX: "Налоговая отчётность",
+  UNKNOWN: "Не знаю",
+};
+
+export const vatStatusLabel: Record<string, string> = {
+  UNKNOWN: "Не знаю",
+  EXEMPT: "Без НДС",
+  PAYER: "Плательщик НДС",
+};
+
+export const requiredAtLabel: Record<string, string> = {
+  SUBMIT: "Нужно до отправки",
+  ASSESSMENT: "Понадобится для оценки",
+  ON_REQUEST: "Банк может запросить",
+};
+
+// Reasons why the requirements engine sends a draft to a manual route.
+export const planReasonLabel: Record<string, string> = {
+  DEBT_DATE_STALE: "Сведения о долгах указаны на старую дату",
+  FINANCIAL_BASIS_UNSUPPORTED: "Источник финансовых данных требует проверки",
+  FINANCIAL_PERIOD_UNSUPPORTED: "Финансовый период не подходит для автоматической оценки",
+  TAX_HISTORY_INCOMPLETE: "История налоговых режимов неполная",
+  TAX_REGIME_REQUIRES_REVIEW: "Налоговый режим требует проверки специалистом",
+  UNSUPPORTED_TAX_COMBINATION: "Такое сочетание налоговых режимов проверяется вручную",
+  LEGAL_FORM_INN_MISMATCH: "Форма бизнеса не совпадает с ИНН",
+  INVALID_TAX_PERIOD: "Периоды налоговых режимов заполнены с ошибкой",
+};
+
+// --- Assessment v2 ---
+
+export const assessmentStatusLabel: Record<string, string> = {
+  READY_FOR_CONFIRMATION: "Банк рассчитал доступные условия",
+  NO_AFFORDABLE_OPTION: "Подходящих условий не нашлось",
+  NEEDS_INFO: "Для оценки нужны данные",
+  MANUAL_REVIEW: "Нужна проверка специалиста",
+  REJECT: "Кредит недоступен по политике банка",
+};
+
+export const priorityLabel: Record<string, { title: string; hint: string }> = {
+  KEEP_AMOUNT: { title: "Получить всю сумму", hint: "Срок и платёж подберём под запрошенную сумму" },
+  LOW_PAYMENT: { title: "Меньший платёж", hint: "Важно, чтобы ежемесячная нагрузка была ниже" },
+  LOW_TOTAL_COST: { title: "Меньше переплата", hint: "Короче срок — меньше процентов в сумме" },
+};
+
+export const v2FactorLabel: Record<string, string> = {
+  payment_discipline: "Платёжная дисциплина",
+  operating_margin: "Запас денежного потока",
+  customer_concentration: "Зависимость от крупнейшего покупателя",
+};
+
+export const sourceKindLabel: Record<string, string> = {
+  REGISTRY: "ЕГРЮЛ/ЕГРИП",
+  CREDIT_HISTORY: "Бюро кредитных историй",
+  BANKRUPTCY: "Банкротства (ЕФРСБ)",
+  ARBITRATION: "Арбитражные дела",
+  ENFORCEMENT: "Исполнительные производства (ФССП)",
+};
+
+export const subjectRoleLabel: Record<string, string> = {
+  BORROWER: "Заёмщик",
+  DIRECTOR: "Руководитель",
+  OWNER: "Владелец",
+};
+
+export const sourceStatusLabel: Record<string, string> = {
+  SUCCESS: "Ответ получен",
+  NOT_FOUND: "Записей нет",
+  UNAVAILABLE: "Источник недоступен",
+  STALE: "Данные устарели",
+  AMBIGUOUS: "Неоднозначное совпадение",
+};
+
+export const conclusionLabel: Record<string, string> = {
+  CLEAR: "Чисто",
+  REVIEW: "Проверить",
+  BLOCK: "Стоп-фактор",
+};
+
+export const checkCodeLabel: Record<string, string> = {
+  COMPANY_LIQUIDATION: "Компания ликвидируется",
+  HISTORICAL_DPD_90_12M: "Просрочка 90+ дней за год",
+  CURRENT_OVERDUE: "Есть текущая просрочка",
+  ACTIVITY_UNDER_12_MONTHS: "Бизнесу меньше 12 месяцев",
+  RELATED_OR_SOURCE_REVIEW: "Связанные лица или источники требуют проверки",
+  SOURCE_UNAVAILABLE: "Источник недоступен",
+  SOURCE_STALE: "Данные источника устарели",
+  SOURCE_CONFLICT: "Источники противоречат друг другу",
+  SUBJECT_MATCH_AMBIGUOUS: "Неоднозначное совпадение по лицу",
+  CREDIT_HISTORY_INCOMPLETE: "Кредитная история неполная",
+  CREDIT_HISTORY_CONFLICT: "Противоречия в кредитной истории",
+  COMPANY_STATUS_UNKNOWN: "Статус компании неизвестен",
+  REGISTRATION_UNKNOWN: "Дата регистрации неизвестна",
+};
+
+export const freshnessLabel: Record<string, string> = {
+  CURRENT: "Актуально",
+  PENDING: "Обновляется",
+  STALE: "Устарело",
 };

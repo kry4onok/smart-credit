@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { clientApi } from "../api/http";
 import { ApiError, call } from "../api/problem";
-import type { DocumentMetadata, DocumentType } from "../api/types";
-import { dateTime, parseRubles, rublesInput } from "../lib/format";
+import type { DocumentMetadata, DocumentType, LegalForm, Requirement } from "../api/types";
+import { date, dateTime, parseRubles, rublesInput } from "../lib/format";
+import { documentSource } from "../lib/external";
 import { documentHint, documentLabel } from "../lib/labels";
 import { uuid } from "../lib/util";
 import { ErrorNote, useAction } from "./ui";
@@ -54,19 +55,43 @@ const MAX_FILE = 5 * 1024 * 1024;
 
 type UploadProps = {
   applicationId: string;
-  type: DocumentType;
+  // Legacy slot: one document type required by the product.
+  type?: DocumentType;
+  // Profile v2 slot: one requirement from the bank's plan, with its accepted types and period.
+  requirement?: Requirement;
+  legalForm?: LegalForm;
   documents: DocumentMetadata[];
   enabled: boolean;
   onUploaded: (doc: DocumentMetadata) => void;
 };
 
-// DocumentSlot shows one required document type: what is attached and a button to attach a file.
-export function DocumentSlot({ applicationId, type, documents, enabled, onUploaded }: UploadProps) {
+function periodText(period: { from: string; to: string } | undefined): string | null {
+  if (!period) return null;
+  return period.from === period.to ? `на ${date(period.from)}` : `за ${date(period.from)} — ${date(period.to)}`;
+}
+
+// The backend reason says «за указанный период»; put the actual dates in its place.
+function requirementText(r: Requirement): string {
+  const period = periodText(r.period);
+  if (!period) return r.reason;
+  return r.reason.includes("за указанный период") ? r.reason.replace("за указанный период", period) : `${r.reason}, ${period}`;
+}
+
+// DocumentSlot shows one required document: what is attached, where to get it and a button to attach a file.
+export function DocumentSlot({ applicationId, type, requirement, legalForm, documents, enabled, onUploaded }: UploadProps) {
   const input = useRef<HTMLInputElement>(null);
   const upload = useAction();
-  const attached = documents.filter((d) => d.document_type === type);
+  const types = requirement ? requirement.accepted_document_types : type ? [type] : [];
+  const [chosen, setChosen] = useState<DocumentType | undefined>(types[0]);
+  const docType = chosen ?? types[0];
+  const attached = requirement
+    ? documents.filter((d) => d.requirement_id === requirement.id || requirement.document_ids.includes(d.id))
+    : documents.filter((d) => d.document_type === type);
+  const done = attached.length > 0 || requirement?.status === "PROVIDED";
+  const source = docType ? documentSource(docType, legalForm) : null;
 
   async function send(file: File) {
+    if (!docType) return;
     if (file.size === 0) {
       upload.setError(new ApiError(422, "Файл пустой. Выберите документ с содержимым."));
       return;
@@ -79,10 +104,17 @@ export function DocumentSlot({ applicationId, type, documents, enabled, onUpload
       call(
         clientApi.POST("/client/applications/{application_id}/documents", {
           params: { path: { application_id: applicationId }, header: { "Idempotency-Key": uuid() } },
-          body: { document_type: type, file: file as unknown as string },
+          body: { document_type: docType, file: file as unknown as string },
           bodySerializer: () => {
             const form = new FormData();
-            form.append("document_type", type);
+            form.append("document_type", docType);
+            if (requirement) {
+              form.append("requirement_id", requirement.id);
+              if (requirement.period) {
+                form.append("coverage_from", requirement.period.from);
+                form.append("coverage_to", requirement.period.to);
+              }
+            }
             form.append("file", file, file.name);
             return form;
           },
@@ -93,10 +125,38 @@ export function DocumentSlot({ applicationId, type, documents, enabled, onUpload
   }
 
   return (
-    <div className={`doc-slot${attached.length ? " doc-slot-done" : ""}`}>
+    <div className={`doc-slot${done ? " doc-slot-done" : ""}`}>
       <div className="doc-slot-text">
-        <strong>{documentLabel[type]}</strong>
-        <span>{documentHint[type]}</span>
+        <strong>{requirement?.label ?? (type ? documentLabel[type] : "Документ")}</strong>
+        <span>
+          {requirement ? requirementText(requirement) : type ? documentHint[type] : null}
+        </span>
+        {types.length > 1 && enabled && (
+          <label className="doc-type">
+            Подойдёт:
+            <select value={docType} onChange={(e) => setChosen(e.target.value as DocumentType)}>
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {documentLabel[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {types.length === 1 && requirement && documentLabel[types[0]] !== requirement.label && <span>Подойдёт: {documentLabel[types[0]]}</span>}
+        {source && !done && (
+          <span className="doc-source">
+            {source.how}
+            {source.service && (
+              <>
+                {" "}
+                <a href={source.service.url} target="_blank" rel="noreferrer noopener">
+                  {source.service.label} ↗
+                </a>
+              </>
+            )}
+          </span>
+        )}
         {attached.map((d) => (
           <span key={d.id} className="doc-file">
             {d.file_name}, загружен {dateTime(d.uploaded_at)}
@@ -106,7 +166,7 @@ export function DocumentSlot({ applicationId, type, documents, enabled, onUpload
         {attached.length > 0 && <span role="status">Файл сохранён. Данные из него не извлекаются — заполните поля формы вручную.</span>}
         {upload.error ? <ErrorNote error={upload.error} /> : null}
       </div>
-      {enabled && (
+      {enabled && docType && (
         <>
           <input
             ref={input}

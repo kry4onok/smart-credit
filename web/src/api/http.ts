@@ -2,6 +2,7 @@ import createClient from "openapi-fetch";
 import type { paths as AuthPaths } from "./generated/auth";
 import type { paths as ClientPaths } from "./generated/client";
 import type { paths as BankPaths } from "./generated/bank";
+import type { paths as AssessmentPaths } from "./generated/assessment";
 import type { AccessToken } from "./types";
 
 const MOCK = import.meta.env.VITE_API_MOCK === "true";
@@ -71,5 +72,6 @@ const options = { baseUrl: "/api", fetch: authFetch };
 export const authApi = createClient<AuthPaths>(options);
 export const clientApi = createClient<ClientPaths>(options);
 export const bankApi = createClient<BankPaths>(options);
+export const assessmentApi = createClient<AssessmentPaths>(options);
 
 export const isMock = MOCK;
