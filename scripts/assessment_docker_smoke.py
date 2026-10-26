@@ -13,6 +13,9 @@ from urllib.request import Request, urlopen
 import uuid
 
 
+from bank_integration import verify_bank_integration
+
+
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_ID = "10000000-0000-4000-8000-000000000022"
 
@@ -86,7 +89,7 @@ def main():
                 INSERT INTO products (id,version,code,name,description,purpose_tags,required_document_types,
                   min_amount_kopecks,max_amount_kopecks,min_term_months,max_term_months,indicative_rate_bps,
                   is_active,requirements_policy_version) VALUES
-                ('10000000-0000-4000-8000-000000000022',1,'SME_PROFILE_V2','Демо: профиль ИП/ООО',
+                ('10000000-0000-4000-8000-000000000022',1,'SME_CASHFLOW_V2','Демо: профиль ИП/ООО',
                  'Изолированный тест',ARRAY['WORKING_CAPITAL'],ARRAY[]::text[],10000000,500000000,6,36,
                  1800,true,'sme-profile-v2');
                 INSERT INTO product_rules (product_id,product_version,min_company_age_months,
@@ -282,6 +285,11 @@ def main():
             wait_app(rejected_id, "REJECTED")
             rejected = api("GET", f"/api/backoffice/applications/{rejected_id}/assessment", analyst)["assessment"]
             assert rejected["status"] == "REJECT" and "COMPANY_LIQUIDATION" in rejected["checks"]["codes"]
+            print("Bank CI: seeded enrichment and assessment routing", flush=True)
+            run(compose + ["exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1",
+                           "-U", "postgres", "-d", "bank_db"],
+                (ROOT / "services/bank-service/seeds/demo.sql").read_text())
+            verify_bank_integration(base + "/api", analyst)
             print("All assessment E2E scenarios passed", flush=True)
         except Exception:
             diagnostics = subprocess.run(compose + ["logs", "--no-color", "--tail=20",

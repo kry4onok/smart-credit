@@ -14,7 +14,8 @@ on:
       - "go.mod"
       - "go.sum"
       - "ml/scoring/**"
-      - "pkg/api/**"
+      - "pkg/**"
+      - "scripts/bank_integration.py"
       - "proto/**"
       - "seed/**"
       - "services/bank-service/**"
@@ -31,7 +32,8 @@ on:
       - "go.mod"
       - "go.sum"
       - "ml/scoring/**"
-      - "pkg/api/**"
+      - "pkg/**"
+      - "scripts/bank_integration.py"
       - "proto/**"
       - "seed/**"
       - "services/bank-service/**"
@@ -69,7 +71,7 @@ jobs:
         run: make scoring-up bank-up bank-demo-seed
       - name: Bank PostgreSQL integration tests
         run: make bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test
-      - name: Verify enrichment and automatic decision through bank API
+      - name: Verify enrichment and assessment routing through bank API
         run: |
           python3 - <<'PY'
           import base64
@@ -77,7 +79,6 @@ jobs:
           import subprocess
           import tempfile
           import time
-          import urllib.error
           import urllib.request
 
           config = dict(
@@ -116,34 +117,9 @@ jobs:
               ).stdout
           token = b".".join((unsigned, base64.urlsafe_b64encode(signature).rstrip(b"="))).decode()
 
-          cases = {
-              6: ("OFFER", None, True, True),
-              7: ("MANUAL_REVIEW", "BUREAU_TIMEOUT", False, False),
-          }
-          deadline = time.monotonic() + 120
-          while time.monotonic() < deadline:
-              pending = []
-              for number, (status, bureau_error, has_score, has_offer) in cases.items():
-                  case_id = f"10000000-0000-4000-8000-{number:012d}"
-                  url = f"http://127.0.0.1:8080/backoffice/applications/{case_id}"
-                  try:
-                      request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-                      with urllib.request.urlopen(request, timeout=5) as response:
-                          case = json.load(response)
-                  except (OSError, urllib.error.URLError, ValueError) as error:
-                      pending.append(f"{case_id}: {error}")
-                      continue
-                  checks = case.get("checks") or {}
-                  actual = (case.get("status"), checks.get("bureau_error"), bool(case.get("score")), bool(case.get("offer")))
-                  expected = (status, bureau_error, has_score, has_offer)
-                  if actual != expected:
-                      pending.append(f"{case_id}: got {actual}, want {expected}")
-              if not pending:
-                  print("Bank integration passed: automatic offer and bureau timeout cases")
-                  break
-              time.sleep(2)
-          else:
-              raise SystemExit("Bank integration failed: " + "; ".join(pending))
+          from scripts.bank_integration import verify_bank_integration
+
+          verify_bank_integration("http://127.0.0.1:8080", token)
           PY
       - name: Container logs on failure
         if: failure()
