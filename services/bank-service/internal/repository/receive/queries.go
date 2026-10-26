@@ -12,7 +12,7 @@ FROM processed_events
 WHERE event_id = $1`
 
 const selectProductQuery = `
-SELECT name
+SELECT name, requirements_policy_version
 FROM products
 WHERE id = $1 AND version = $2`
 
@@ -38,16 +38,23 @@ VALUES ($1, $2, 1, 'APPLICATION_SUBMITTED', 'CLIENT', $3, $4,
         jsonb_build_object('event_id', $5::text))`
 
 const selectCaseForInfoQuery = `
-SELECT status, client_event_version
+SELECT status, client_event_version, company_inn, documents_snapshot,
+       requirements_reference_date, product_id, product_version
 FROM cases
 WHERE id = $1
 FOR UPDATE`
 
 const selectOpenInfoRequestQuery = `
-SELECT id
+SELECT id, requirements
 FROM info_requests
 WHERE case_id = $1 AND status = 'OPEN'
 FOR UPDATE`
+
+const selectRequirementsProductQuery = `
+SELECT requirements_policy_version, purpose_tags, min_amount_kopecks,
+       max_amount_kopecks, min_term_months, max_term_months
+FROM products
+WHERE id = $1 AND version = $2`
 
 const fulfillInfoRequestQuery = `
 UPDATE info_requests
@@ -68,6 +75,43 @@ SET company_inn = $2, company_name = $3,
     audit_version = audit_version + 1, updated_at = now()
 WHERE id = $1 AND status = 'NEEDS_INFO' AND client_event_version < $10
 RETURNING version`
+
+const updateCaseFromV2InfoQuery = `
+UPDATE cases
+SET company_inn = $2, company_name = $3,
+    company_snapshot = $4::jsonb, application_snapshot = $5::jsonb,
+    documents_snapshot = $6::jsonb, requested_amount_kopecks = $7,
+    requested_term_months = $8, purpose_tag = $9,
+    status = $11, recommendation = CASE $11
+        WHEN 'NEEDS_INFO' THEN 'REQUEST_INFO'
+        WHEN 'MANUAL_REVIEW' THEN 'MANUAL_REVIEW'
+        ELSE NULL END,
+    public_reason = $12,
+    triggered_rules = CASE WHEN $13::text = '' THEN '{}'::text[] ELSE ARRAY[$13::text] END,
+    next_run_at = CASE WHEN $11 = 'VALIDATION' THEN now() ELSE NULL END,
+    lease_until = NULL,
+    scoring_input_revision = scoring_input_revision + 1,
+    current_scoring_attempt_id = NULL,
+    client_event_version = $10, version = version + 1,
+    audit_version = audit_version + 1, updated_at = now()
+WHERE id = $1 AND status = 'NEEDS_INFO' AND client_event_version = $10 - 1
+RETURNING version`
+
+const markV2InfoManualQuery = `
+UPDATE cases
+SET status = 'MANUAL_REVIEW', recommendation = 'MANUAL_REVIEW',
+    public_reason = $3, triggered_rules = ARRAY[$4::text],
+    next_run_at = NULL, lease_until = NULL,
+    scoring_input_revision = scoring_input_revision + 1,
+    current_scoring_attempt_id = NULL,
+    client_event_version = $2, version = version + 1,
+    audit_version = audit_version + 1, updated_at = now()
+WHERE id = $1 AND status = 'NEEDS_INFO' AND client_event_version = $2 - 1
+RETURNING version`
+
+const insertV2InfoRequestQuery = `
+INSERT INTO info_requests (id, case_id, message, requirements)
+VALUES ($1, $2, $3, $4::jsonb)`
 
 const insertInfoProvidedAuditQuery = `
 INSERT INTO audit_log (id, case_id, case_version, action, actor_type, details)

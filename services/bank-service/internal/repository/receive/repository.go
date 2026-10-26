@@ -69,19 +69,36 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 	var scheduleValidation bool
 	var triggeredRules []string
 	var productName string
-	err = q.QueryRow(ctx, selectProductQuery,
-		input.ProductID, input.ProductVersion).Scan(&productName)
-	if errors.Is(err, pgx.ErrNoRows) {
-		productName = "Неизвестный продукт"
-		status = "MANUAL_REVIEW"
+	var policyVersion *string
+	markManual := func(code string) {
+		status, scheduleValidation = "MANUAL_REVIEW", false
 		manualReview := "MANUAL_REVIEW"
 		recommendation = &manualReview
-		triggeredRules = []string{"UNKNOWN_PRODUCT"}
+		triggeredRules = []string{code}
+	}
+	err = q.QueryRow(ctx, selectProductQuery,
+		input.ProductID, input.ProductVersion).Scan(&productName, &policyVersion)
+	if errors.Is(err, pgx.ErrNoRows) {
+		productName = "Неизвестный продукт"
+		markManual("UNKNOWN_PRODUCT")
 	} else if err != nil {
 		return false, fmt.Errorf("load product: %w", err)
 	} else {
 		scheduleValidation = true
 		triggeredRules = []string{}
+		if policyVersion != nil && *policyVersion == "sme-profile-v1" {
+			if input.RequirementsReferenceDate == nil || input.ProfileSchemaVersion != 2 {
+				markManual("PROFILE_V2_INVALID")
+			} else if _, _, conflict, mergeErr := mergeDocumentSnapshots([]byte(`[]`), input.DocumentsJSON); mergeErr != nil {
+				return false, fmt.Errorf("validate submitted documents: %w", mergeErr)
+			} else if conflict {
+				markManual("DOCUMENT_METADATA_CONFLICT")
+			}
+		} else if policyVersion != nil {
+			markManual("UNKNOWN_REQUIREMENTS_POLICY")
+		} else if input.RequirementsReferenceDate != nil || input.ProfileSchemaVersion == 2 {
+			markManual("PROFILE_V2_POLICY_MISMATCH")
+		}
 	}
 
 	_, err = q.Exec(ctx, insertCaseQuery,
@@ -97,7 +114,7 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 
 	_, err = q.Exec(ctx, insertAuditQuery,
 		uuid.New(), input.ApplicationID, input.ClientUserID,
-		reason(status), input.EventID.String())
+		reason(status, triggeredRules), input.EventID.String())
 	if err != nil {
 		return false, fmt.Errorf("audit submitted application: %w", err)
 	}
@@ -241,7 +258,14 @@ func (r *Repository) applyOfferResponse(ctx context.Context, q transaction.Query
 func (r *Repository) applyInfoProvided(ctx context.Context, q transaction.Queryer, input receive.Input) (bool, error) {
 	var status string
 	var clientEventVersion int64
-	err := q.QueryRow(ctx, selectCaseForInfoQuery, input.ApplicationID).Scan(&status, &clientEventVersion)
+	var companyINN string
+	var storedDocuments []byte
+	var referenceDate *time.Time
+	var productID uuid.UUID
+	var productVersion int64
+	err := q.QueryRow(ctx, selectCaseForInfoQuery, input.ApplicationID).Scan(
+		&status, &clientEventVersion, &companyINN, &storedDocuments,
+		&referenceDate, &productID, &productVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, ErrInfoProvidedConflict
 	}
@@ -252,12 +276,20 @@ func (r *Repository) applyInfoProvided(ctx context.Context, q transaction.Querye
 		return false, ErrInfoProvidedConflict
 	}
 	var requestID uuid.UUID
-	err = q.QueryRow(ctx, selectOpenInfoRequestQuery, input.ApplicationID).Scan(&requestID)
+	var requestJSON []byte
+	err = q.QueryRow(ctx, selectOpenInfoRequestQuery, input.ApplicationID).Scan(&requestID, &requestJSON)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && requestID != input.RequestID) {
 		return false, ErrInfoProvidedConflict
 	}
 	if err != nil {
 		return false, fmt.Errorf("lock open info request: %w", err)
+	}
+	if referenceDate != nil && string(requestJSON) != "[]" {
+		return r.applyV2InfoProvided(ctx, q, input, companyINN, storedDocuments,
+			*referenceDate, productID, productVersion, requestJSON)
+	}
+	if input.InvalidDocumentMetadata {
+		return false, receive.ErrInvalidEvent
 	}
 	result, err := q.Exec(ctx, fulfillInfoRequestQuery, input.RequestID, input.ApplicationID)
 	if err != nil {
@@ -285,9 +317,9 @@ func (r *Repository) applyInfoProvided(ctx context.Context, q transaction.Querye
 	return true, nil
 }
 
-func reason(status string) string {
-	if status == "MANUAL_REVIEW" {
-		return "UNKNOWN_PRODUCT"
+func reason(status string, triggeredRules []string) string {
+	if status == "MANUAL_REVIEW" && len(triggeredRules) > 0 {
+		return triggeredRules[0]
 	}
 	return ""
 }

@@ -35,8 +35,11 @@ type Input struct {
 	ProductID                 uuid.UUID
 	ProductVersion            int64
 	RequirementsReferenceDate *time.Time
+	AnsweredRequirementIDs    []string
+	InvalidDocumentMetadata   bool
 	CompanyINN                string
 	CompanyName               string
+	ProfileSchemaVersion      int32
 	CompanyJSON               []byte
 	FormJSON                  []byte
 	DocumentsJSON             []byte
@@ -180,6 +183,7 @@ func parse(event *eventspb.Event) (Input, error) {
 			return Input{}, fmt.Errorf("%w: request_id", ErrInvalidEvent)
 		}
 		company, form, documentsInput = provided.GetCompany(), provided.GetForm(), provided.GetDocuments()
+		input.AnsweredRequirementIDs = append([]string(nil), provided.GetAnsweredRequirementIds()...)
 	}
 	if company == nil || form == nil {
 		return Input{}, fmt.Errorf("%w: snapshots", ErrInvalidEvent)
@@ -210,27 +214,48 @@ func parse(event *eventspb.Event) (Input, error) {
 		return Input{}, fmt.Errorf("encode application snapshot: %w", err)
 	}
 
-	documents := make([]documentSnapshot, 0, len(documentsInput))
+	documents := make([]DocumentSnapshot, 0, len(documentsInput))
 	for _, document := range documentsInput {
 		if document == nil || document.GetUploadedAt() == nil || document.GetUploadedAt().CheckValid() != nil {
+			if provided != nil && company.GetProfileSchemaVersion() == 2 {
+				input.InvalidDocumentMetadata = true
+				continue
+			}
 			return Input{}, fmt.Errorf("%w: document", ErrInvalidEvent)
 		}
 		if _, err := nonzeroUUID(document.GetDocumentId()); err != nil {
+			if provided != nil && company.GetProfileSchemaVersion() == 2 {
+				input.InvalidDocumentMetadata = true
+				continue
+			}
 			return Input{}, fmt.Errorf("%w: document_id", ErrInvalidEvent)
 		}
-		var documentType string
-		switch document.GetDocumentType() {
-		case commonpb.DocumentType_DOCUMENT_TYPE_BANK_STATEMENT:
-			documentType = "BANK_STATEMENT"
-		case commonpb.DocumentType_DOCUMENT_TYPE_BUSINESS_PLAN:
-			documentType = "BUSINESS_PLAN"
-		default:
+		documentType := strings.TrimPrefix(document.GetDocumentType().String(), "DOCUMENT_TYPE_")
+		_, known := commonpb.DocumentType_name[int32(document.GetDocumentType())]
+		if document.GetDocumentType() == commonpb.DocumentType_DOCUMENT_TYPE_UNSPECIFIED ||
+			!known {
+			if provided != nil && company.GetProfileSchemaVersion() == 2 {
+				input.InvalidDocumentMetadata = true
+				continue
+			}
 			return Input{}, fmt.Errorf("%w: document_type", ErrInvalidEvent)
 		}
-		documents = append(documents, documentSnapshot{
+		if document.GetRequirementId() != "" || document.GetCoveragePeriod() != nil {
+			coverage := document.GetCoveragePeriod()
+			if document.GetRequirementId() == "" || coverage == nil || !validDate(coverage.GetFrom()) ||
+				!validDate(coverage.GetTo()) || coverage.GetFrom() > coverage.GetTo() {
+				if provided != nil && company.GetProfileSchemaVersion() == 2 {
+					input.InvalidDocumentMetadata = true
+					continue
+				}
+				return Input{}, fmt.Errorf("%w: document coverage", ErrInvalidEvent)
+			}
+		}
+		documents = append(documents, DocumentSnapshot{
 			DocumentID: document.GetDocumentId(), DocumentType: documentType,
 			FileName: document.GetFileName(), SHA256: document.GetSha256(),
 			UploadedAt: document.GetUploadedAt().AsTime().UTC(), IsMock: document.GetIsMock(),
+			RequirementID: document.GetRequirementId(), CoveragePeriod: document.GetCoveragePeriod(),
 		})
 	}
 	documentsJSON, err := json.Marshal(documents)
@@ -238,18 +263,21 @@ func parse(event *eventspb.Event) (Input, error) {
 		return Input{}, fmt.Errorf("encode documents snapshot: %w", err)
 	}
 	input.CompanyINN, input.CompanyName = company.GetInn(), company.GetName()
+	input.ProfileSchemaVersion = company.GetProfileSchemaVersion()
 	input.CompanyJSON, input.FormJSON, input.DocumentsJSON = companyJSON, formJSON, documentsJSON
 	input.AmountKopecks, input.TermMonths, input.PurposeTag = form.GetAmount().GetAmountKopecks(), form.GetTermMonths(), purpose
 	return input, nil
 }
 
-type documentSnapshot struct {
-	DocumentID   string    `json:"document_id"`
-	DocumentType string    `json:"document_type"`
-	FileName     string    `json:"file_name"`
-	SHA256       string    `json:"sha256"`
-	UploadedAt   time.Time `json:"uploaded_at"`
-	IsMock       bool      `json:"is_mock"`
+type DocumentSnapshot struct {
+	DocumentID     string               `json:"document_id"`
+	DocumentType   string               `json:"document_type"`
+	FileName       string               `json:"file_name"`
+	SHA256         string               `json:"sha256"`
+	UploadedAt     time.Time            `json:"uploaded_at"`
+	IsMock         bool                 `json:"is_mock"`
+	RequirementID  string               `json:"requirement_id,omitempty"`
+	CoveragePeriod *commonpb.DatePeriod `json:"coverage_period,omitempty"`
 }
 
 func nonzeroUUID(value string) (uuid.UUID, error) {
