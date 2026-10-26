@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { assessmentApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
 import type { AssessmentFactor, AssessmentResult, BankAssessment, BankCase, Candidate } from "../../api/types";
-import { CashFlowChart, CoverageBar } from "../../components/CashFlowChart";
+import { CoverageBar } from "../../components/CashFlowChart";
+import { AssessmentCashFlow } from "../../components/AssessmentCashFlow";
 import { Badge, ErrorNote, useAction } from "../../components/ui";
 import { dateTime, money, months, rate, rub, shortId } from "../../lib/format";
 import {
@@ -265,11 +266,10 @@ export function BankAssessmentPanel({ kase, onUse, onChanged, onBasis }: { kase:
             </p>
           )}
           {result.financial && (
-            <CashFlowChart
-              caption={option ? `Поток и платежи по варианту ${money(rub(option.schedule.amount_kopecks))}` : "Денежный поток без нового кредита"}
-              history={result.financial.history}
-              base={option?.base ?? result.financial.base}
-              stress={option?.stress ?? result.financial.stress}
+            <AssessmentCashFlow
+              financial={result.financial}
+              option={option}
+              requestedAmount={kase.application.amount.amount_kopecks}
             />
           )}
           {candidates.length > 0 && (
