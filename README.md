@@ -34,7 +34,7 @@ make demo-up
 
 ![Карта сервисов Smart Credit](docs/diagrams/architecture.svg)
 
-[Исходник PlantUML](docs/diagrams/architecture.puml) · [как перерисовать схемы](docs/diagrams/README.md) · [Compose-конфигурация](deploy/docker-compose.yml)
+[PlantUML-схема](docs/diagrams/architecture.puml) · [исходник SVG на D3](docs/diagrams/render.mjs) · [как обновить схемы](docs/diagrams/README.md) · [Compose-конфигурация](deploy/docker-compose.yml)
 
 | Компонент | Ответственность и входы → выходы | Подробности |
 |---|---|---|
@@ -51,17 +51,9 @@ make demo-up
 
 ## Путь клиента
 
-### 1. Заявка → оферта
+![Шесть шагов от подачи заявки до демо-выдачи](docs/diagrams/client-journey.svg)
 
-![Подача заявки, проверка и оферта](docs/diagrams/client-journey.svg)
-
-[Исходник PlantUML](docs/diagrams/client-journey.puml). После submit ответ клиента может показывать отправку, пока банк не опубликует следующую версию публичного состояния: интерфейс обновляет его через GET.
-
-### 2. Принятие → демо-выдача
-
-![Принятие оферты, подпись и демо-выдача](docs/diagrams/fulfillment.svg)
-
-[Исходник PlantUML](docs/diagrams/fulfillment.puml).
+Это обзорный маршрут. Подробные последовательности сообщений сохранены в PlantUML: [заявка → оферта](docs/diagrams/client-journey.puml) и [принятие → демо-выдача](docs/diagrams/fulfillment.puml). После submit ответ клиенту может показывать отправку, пока банк не опубликует следующую версию публичного состояния: интерфейс обновляет его через GET.
 
 ### Другие исходы
 

@@ -1,12 +1,16 @@
 # Диаграммы
 
-Исходники находятся рядом с опубликованными SVG: `architecture.puml`, `client-journey.puml`, `fulfillment.puml`. Корневой README встраивает SVG, поэтому схемы видны в обычном просмотрщике Markdown без сервера рендера; `.puml` остаются редактируемыми.
+Корневой README показывает два обзорных SVG: [архитектуру](architecture.svg) и [путь заявки](client-journey.svg). Их делает [D3 7.9](https://d3js.org/) из данных и примитивов в [render.mjs](render.mjs). Цвета взяты из `web/src/styles.css`; SVG открываются в обычном просмотрщике Markdown и не требуют браузерного JavaScript.
 
-Схемы используют штатный синтаксис PlantUML и общую палитру: синий — сервисы, янтарный — Kafka, мятный — локальные проверки. На карте архитектуры показаны основные связи; детали HTTP-маршрутов и отдельных БД остаются в таблице корневого README. Длинный путь клиента разделён на два sequence-фрагмента, а короткие альтернативы даны таблицей. Внешних URL в исходниках нет. SVG проверены на PlantUML `1.2026.8` с Graphviz. Чтобы обновить их после изменения `.puml`, установите [официальный PlantUML](https://github.com/plantuml/plantuml/releases) и выполните из корня проекта:
+Подробные технические схемы остаются исходниками PlantUML: [архитектура](architecture.puml), [заявка → оферта](client-journey.puml), [принятие → демо-выдача](fulfillment.puml). Обзорные SVG и `.puml` описывают одни и те же контуры на разном уровне детализации; при изменении сценария обновляйте оба представления.
+
+## Обновить SVG
+
+Нужны Node.js 18+ и npm. Из каталога `docs/diagrams/`:
 
 ```bash
-plantuml -tsvg docs/diagrams/*.puml
-plantuml -checkonly docs/diagrams/*.puml
+npm ci
+npm run render
 ```
 
-Коммитьте изменённый `.puml` вместе с соответствующим `.svg`.
+Зависимости зафиксированы в `package-lock.json`. Генератор пишет `architecture.svg` и `client-journey.svg`; полученные файлы коммитьте вместе с `render.mjs`. Для проверки PlantUML отдельно выполните из корня проекта `plantuml -checkonly docs/diagrams/*.puml`. Команда `plantuml -tsvg` поверх обзорных SVG не нужна: она заменит D3-версию техническим рендером.

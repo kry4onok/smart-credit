@@ -1,0 +1,12 @@
+{
+  "name": "smart-credit-diagrams",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "d3": "7.9.0",
+    "jsdom": "26.1.0"
+  }
+}
