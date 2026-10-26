@@ -42,10 +42,8 @@ def main():
         env_file = temp / "smoke.env"
         env_file.write_text("".join(f"{key}={value}\n" for key, value in settings.items()))
         nginx = temp / "nginx.conf"
-        nginx.write_text((ROOT / "deploy/nginx/nginx.conf").read_text().replace(
-            "host.docker.internal:8080", "bank_backend").replace(
-            "    server {\n", "    upstream bank_backend {\n        zone bank_backend 64k;\n"
-            "        server bank-service:8080 resolve;\n    }\n\n    server {\n", 1))
+        # The gateway already routes the bank through the Compose network.
+        nginx.write_text((ROOT / "deploy/nginx/nginx.conf").read_text())
         override = temp / "override.yml"
         override.write_text("services:\n"
                             "  postgres:\n    ports: !override [\"127.0.0.1::5432\"]\n"

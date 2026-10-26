@@ -32,7 +32,7 @@ OPENAPI_OUTPUT_DIRS := \
 	services/client-service/internal/generated \
 	services/bank-service/internal/generated
 
-.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs demo-up infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test bank-offer-test bank-cancel-test bank-signing-test bank-offer-expiry-test
+.PHONY: help require-env gen gen-openapi lint docs-up docs-down docs-logs gateway-up gateway-down gateway-reload gateway-logs demo-up demo-reset infra-up infra-down infra-ps infra-logs bank-run bank-up bank-down bank-logs bank-db-up bank-db-down bank-db-status bank-demo-seed bank-submitted-smoke bank-info-smoke bank-outbox-test bank-decision-test bank-audit-test bank-catalog-test bank-offer-test bank-cancel-test bank-signing-test bank-offer-expiry-test
 .PHONY: web-install web-gen web-dev web-mock web-build web-up web-down web-logs
 .PHONY: client-up client-down client-logs client-test assistant-up assistant-down assistant-logs assistant-smoke bureau-up bureau-down bureau-logs bureau-smoke
 
@@ -107,6 +107,7 @@ help:
 	@echo 'make client-db-down   Откатить миграцию client_db'
 	@echo 'make client-db-status Показать состояние миграций client_db'
 	@echo 'make infra-down       Остановить контейнеры, сохранив данные'
+	@echo 'make demo-reset       Остановить стек и удалить его данные (тома БД, ключ, документы)'
 	@echo 'make web-mock         Запустить web без backend (демо-данные в браузере)'
 	@echo 'make web-dev          Запустить web с прокси /api на gateway'
 	@echo 'make web-gen          Сгенерировать TS-типы web из OpenAPI'
@@ -264,6 +265,7 @@ demo-up: require-env
 	@$(MAKE) bank-up
 	@$(MAKE) bank-demo-seed
 	@$(MAKE) gateway-up
+	@$(MAKE) web-up
 	@echo 'Swagger: http://localhost:$(GATEWAY_PORT)/docs/'
 
 infra-up: require-env
@@ -273,6 +275,10 @@ infra-up: require-env
 
 infra-down: require-env
 	$(COMPOSE) down
+
+# Удаляет контейнеры и тома этого Compose-проекта: БД, ключ auth, загруженные документы.
+demo-reset: require-env
+	$(COMPOSE) down --volumes --remove-orphans
 
 infra-ps: require-env
 	$(COMPOSE) ps
