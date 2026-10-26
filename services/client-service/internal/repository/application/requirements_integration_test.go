@@ -154,6 +154,42 @@ func (f applicationFixture) infoParams(request *commonpb.InfoRequest) model.Prov
 	hash := sha256.Sum256([]byte(request.RequestId))
 	return model.ProvideInfoParams{OrgID: f.params.OrgID, UserID: f.params.UserID, ApplicationID: f.draft.ID, RequestID: uuid.MustParse(request.RequestId), IdempotencyID: uuid.New(), DocumentsSpecified: true, RequestHash: hash[:]}
 }
+
+func TestOrphanBankEventDoesNotBlockNextApplication(t *testing.T) {
+	f := newV2Fixture(t)
+	app := f.submitV2(t)
+	projection := bankevents.NewProjection(f.db)
+	publicState := &eventspb.ApplicationPublicStatePublished{
+		Status:     eventspb.ClientStatus_CLIENT_STATUS_UNDER_REVIEW,
+		StageLabel: "На рассмотрении", NextAction: "Ожидайте решения банка",
+	}
+	makeEvent := func(id uuid.UUID, version int64) *eventspb.Event {
+		return &eventspb.Event{
+			EventId: uuid.NewString(), AggregateType: "APPLICATION", AggregateId: id.String(),
+			AggregateVersion: version, OccurredAt: timestamppb.Now(), CorrelationId: app.ID.String(),
+			Payload: &eventspb.Event_ApplicationPublicStatePublished{ApplicationPublicStatePublished: publicState},
+		}
+	}
+	orphan := makeEvent(uuid.New(), 2)
+	if applied, err := projection.Execute(t.Context(), orphan); err != nil || applied {
+		t.Fatalf("orphan applied=%v err=%v", applied, err)
+	}
+	var recorded int
+	if err := f.db.QueryRow(t.Context(), "SELECT count(*) FROM processed_events WHERE event_id=$1", orphan.EventId).Scan(&recorded); err != nil || recorded != 1 {
+		t.Fatalf("orphan recorded=%d err=%v", recorded, err)
+	}
+	if applied, err := projection.Execute(t.Context(), orphan); err != nil || applied {
+		t.Fatalf("orphan replay applied=%v err=%v", applied, err)
+	}
+	valid := makeEvent(app.ID, 1)
+	if applied, err := projection.Execute(t.Context(), valid); err != nil || !applied {
+		t.Fatalf("next event applied=%v err=%v", applied, err)
+	}
+	got, err := f.repo.Get(t.Context(), f.params.OrgID, app.ID)
+	if err != nil || got.Status != "UNDER_REVIEW" {
+		t.Fatalf("next application status=%q err=%v", got.Status, err)
+	}
+}
 func TestV2DraftSnapshotAndSubmitWithoutFiles(t *testing.T) {
 	f := newV2Fixture(t)
 	app := f.completeV2(t)
