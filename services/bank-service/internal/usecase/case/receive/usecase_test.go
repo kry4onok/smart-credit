@@ -105,6 +105,44 @@ func TestParseSubmittedPinsProfileReferenceDate(t *testing.T) {
 	}
 }
 
+func TestParseV2DocumentAndAnsweredIDs(t *testing.T) {
+	event := providedEvent()
+	version := int32(2)
+	event.GetInfoProvided().Company.ProfileSchemaVersion = &version
+	doc := event.GetInfoProvided().Documents[0]
+	doc.DocumentType = commonpb.DocumentType_DOCUMENT_TYPE_MANAGEMENT_REPORT
+	doc.RequirementId = "business_result:2025-10-01:2026-09-30:all"
+	doc.CoveragePeriod = &commonpb.DatePeriod{From: "2025-10-01", To: "2026-09-30"}
+	event.GetInfoProvided().AnsweredRequirementIds = []string{"company.profit_12m"}
+	input, err := parse(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(input.AnsweredRequirementIDs) != 1 || input.AnsweredRequirementIDs[0] != "company.profit_12m" {
+		t.Fatalf("answered IDs: %v", input.AnsweredRequirementIDs)
+	}
+	var documents []DocumentSnapshot
+	if err := json.Unmarshal(input.DocumentsJSON, &documents); err != nil {
+		t.Fatal(err)
+	}
+	if len(documents) != 1 || documents[0].DocumentType != "MANAGEMENT_REPORT" || documents[0].RequirementID != doc.RequirementId || documents[0].CoveragePeriod.GetFrom() != "2025-10-01" {
+		t.Fatalf("document snapshot: %+v", documents)
+	}
+}
+
+func TestParseInfoProvidedCarriesInvalidDocumentToManualReview(t *testing.T) {
+	event := providedEvent()
+	version := int32(2)
+	event.GetInfoProvided().Company.ProfileSchemaVersion = &version
+	doc := event.GetInfoProvided().Documents[0]
+	doc.RequirementId = "cash_flow:2025-10-01:2026-09-30:all"
+	doc.CoveragePeriod = &commonpb.DatePeriod{From: "2026-02-30", To: "2026-09-30"}
+	input, err := parse(event)
+	if err != nil || !input.InvalidDocumentMetadata {
+		t.Fatalf("invalid v2 document: input=%+v, err=%v", input, err)
+	}
+}
+
 func TestParseRejectsInvalidSubmittedEvent(t *testing.T) {
 	tests := []struct {
 		name   string
