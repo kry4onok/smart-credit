@@ -195,3 +195,20 @@ func TestContextCannotRenewAssessmentExpiry(t *testing.T) {
 		t.Fatal("expired assessment considered current")
 	}
 }
+
+func TestDecisionStatementNamesStatusInRussianWithPublicReason(t *testing.T) {
+	v := View{ApplicationID: "22222222-2222-4222-8222-222222222222", Revision: "client:3:4", Status: "REJECTED",
+		Reason: "Банк не может предложить кредит по действующим условиям продукта."}
+	c := Context(v, pb.Audience_AUDIENCE_CLIENT, time.Now().UTC())
+	for _, s := range c.Statements {
+		if s.TargetId != "decision" {
+			continue
+		}
+		text := s.Variants[0].Text
+		if strings.Contains(text, "REJECTED") || !strings.Contains(text, "«отказ»") || !strings.Contains(text, v.Reason) {
+			t.Fatalf("decision statement = %q", text)
+		}
+		return
+	}
+	t.Fatal("decision statement missing")
+}

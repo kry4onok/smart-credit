@@ -18,14 +18,33 @@ type View struct {
 	Revision      string
 	Status        string
 	NextStep      string
-	Pending       bool
-	Public        *assessment.PublicResult
-	Risk          *assessment.RiskResult
-	Checks        *assessment.CheckResult
-	Requirements  []Requirement
+	// Reason is the decision text already published to the client; never internal notes.
+	Reason       string
+	Pending      bool
+	Public       *assessment.PublicResult
+	Risk         *assessment.RiskResult
+	Checks       *assessment.CheckResult
+	Requirements []Requirement
 }
 
 type Requirement struct{ ID, Label, Reason string }
+
+var statusLabels = map[string]string{
+	"DRAFT": "черновик", "SUBMITTED": "отправлена", "UNDER_REVIEW": "на рассмотрении", "NEEDS_INFO": "нужны данные",
+	"OFFER_AVAILABLE": "есть предложение банка", "FORMALIZING": "оформление", "DISBURSED": "деньги выданы",
+	"REJECTED": "отказ", "CLOSED": "закрыта", "VALIDATION": "проверка полноты", "ENRICHMENT": "проверка источников",
+	"SCORING": "скоринг", "DECISION": "решение по правилам", "MANUAL_REVIEW": "ручной разбор", "OFFER": "оферта",
+	"COUNTER_OFFER": "контрпредложение", "OFFER_ACCEPTED": "оферта принята", "SIGNING": "подписание",
+	"CANCELLED": "отменена", "EXPIRED": "срок предложения истёк",
+}
+
+// statusLabel keeps raw status codes out of text shown to people.
+func statusLabel(status string) string {
+	if label, ok := statusLabels[status]; ok {
+		return "«" + label + "»"
+	}
+	return status
+}
 
 // Context contains only approved statements. Forecasts are described as
 // projections; the legacy Help evidence enum has no PROJECTED member.
@@ -45,7 +64,11 @@ func Context(v View, audience pb.Audience, now time.Time) *pb.HelpContext {
 		next = "Откройте карточку заявки, чтобы увидеть текущий этап."
 	}
 	add("application", "Следующий шаг", next, pb.TargetKind_TARGET_KIND_PROFILE, pb.StatementTopic_STATEMENT_TOPIC_NEXT_STEP, pb.EvidenceKind_EVIDENCE_KIND_PROFILE)
-	add("decision", "Статус заявки", fmt.Sprintf("Текущий статус заявки: %s. %s", v.Status, next), pb.TargetKind_TARGET_KIND_DECISION, pb.StatementTopic_STATEMENT_TOPIC_DECISION, pb.EvidenceKind_EVIDENCE_KIND_DECISION)
+	decision := fmt.Sprintf("Текущий статус заявки: %s.", statusLabel(v.Status))
+	if v.Reason != "" {
+		decision += " " + v.Reason
+	}
+	add("decision", "Статус заявки", decision+" "+next, pb.TargetKind_TARGET_KIND_DECISION, pb.StatementTopic_STATEMENT_TOPIC_DECISION, pb.EvidenceKind_EVIDENCE_KIND_DECISION)
 	for _, q := range v.Requirements[:min(30, len(v.Requirements))] {
 		add("requirement:"+q.ID, q.Label, q.Label+". "+q.Reason, pb.TargetKind_TARGET_KIND_REQUIREMENT, pb.StatementTopic_STATEMENT_TOPIC_REQUIREMENT, pb.EvidenceKind_EVIDENCE_KIND_REQUIREMENT)
 	}
