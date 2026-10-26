@@ -147,6 +147,9 @@ export function offerBasis(data: BankAssessment | null): OfferBasis {
   return { stale: !fresh, candidates: fresh ? (data.assessment?.candidates ?? []).filter((c) => Date.parse(c.valid_until) > now) : [] };
 }
 
+// The assessment is still being calculated only while the case is in the automatic pipeline.
+const inPipeline = new Set<string>(["SUBMITTED", "VALIDATION", "ENRICHMENT", "SCORING", "DECISION"]);
+
 // BankAssessmentPanel shows the cash-flow assessment v2 to the analyst: admission checks, scorecard
 // factors, the cash-flow forecast and the calculated options that can be confirmed as an offer.
 export function BankAssessmentPanel({ kase, onUse, onChanged, onBasis }: { kase: BankCase; onUse: (c: Candidate) => void; onChanged: () => void; onBasis: (b: OfferBasis) => void }) {
@@ -226,12 +229,15 @@ export function BankAssessmentPanel({ kase, onUse, onChanged, onBasis }: { kase:
         </span>
       </div>
 
-      {!result && (
-        <p className="pending">
-          <span className="spinner" aria-hidden />
-          Оценка выполняется…
-        </p>
-      )}
+      {!result &&
+        (inPipeline.has(kase.status) ? (
+          <p className="pending">
+            <span className="spinner" aria-hidden />
+            Оценка выполняется…
+          </p>
+        ) : (
+          <p className="muted">Расчёта денежного потока по этому делу нет: продукт заявки не использует оценку v2 или дело закрыто до расчёта. Решение принимается по проверкам и скорингу ниже.</p>
+        ))}
 
       {result && (
         <>

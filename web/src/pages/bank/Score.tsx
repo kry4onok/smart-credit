@@ -5,8 +5,8 @@ const bands = [
   { grade: "E", from: 0, to: 350, note: "отказ" },
   { grade: "D", from: 350, to: 500, note: "ручной разбор" },
   { grade: "C", from: 500, to: 650, note: "ручной разбор" },
-  { grade: "B", from: 650, to: 800, note: "автооферта" },
-  { grade: "A", from: 800, to: 1000, note: "автооферта" },
+  { grade: "B", from: 650, to: 800, note: "оферта после проверки" },
+  { grade: "A", from: 800, to: 1000, note: "оферта после проверки" },
 ];
 
 // ScorePanel shows the risk score on the full 0..1000 scale with grade bands and its decomposition.

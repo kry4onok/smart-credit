@@ -9,7 +9,7 @@ import { HelpPanel, analystModes } from "../../components/HelpPanel";
 import { BankAssessmentPanel, type OfferBasis } from "./AssessmentPanel";
 import { BankPipeline } from "../../components/Pipeline";
 import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useTitle } from "../../components/ui";
-import { date, dateTime, money, months, rate, rub, shortId } from "../../lib/format";
+import { date, dateTime, money, months, rate, rub, caseNumber, shortId } from "../../lib/format";
 import {
   actorLabel,
   auditActionLabel,
@@ -75,7 +75,7 @@ export function CasePage() {
         <div>
           <h1>{kase.company.name}</h1>
           <p className="muted">
-            ИНН {kase.company.inn}, дело № {shortId(kase.id)}, получено {dateTime(kase.created_at)}
+            ИНН {kase.company.inn}, дело № {caseNumber(kase.id)}, получено {dateTime(kase.created_at)}
           </p>
         </div>
         <span aria-live="polite">
