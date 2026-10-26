@@ -53,22 +53,6 @@ export function Layout() {
           </div>
         </div>
       </header>
-      {import.meta.env.VITE_API_MOCK === "true" && (
-        <div className="mockbar">
-          Демо-режим: данные хранятся в браузере, сервер не используется.
-          <button
-            type="button"
-            onClick={() =>
-              void import("../mock/server").then((m) => {
-                m.resetMock();
-                window.location.reload();
-              })
-            }
-          >
-            Сбросить демо-данные
-          </button>
-        </div>
-      )}
       <main className="page" id="main" tabIndex={-1}>
         <Suspense fallback={<Loading />}>
           <Outlet />

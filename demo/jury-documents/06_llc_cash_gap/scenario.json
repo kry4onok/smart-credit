@@ -1,0 +1,180 @@
+{
+  "synthetic": true,
+  "extension_requires_profile_change": false,
+  "company": {
+    "number": 6,
+    "inn": "9876543210",
+    "email": "cashgap@smart-credit.test",
+    "name": "ООО «Тонкий запас»",
+    "registered_at": "2023-10-22",
+    "okved": "47.91",
+    "tax_regime": "USN_INCOME",
+    "margin_bps": 1800,
+    "largest_customer_share_bps": 1500,
+    "monthly_receipts_kopecks": 100000000,
+    "initial_cash_kopecks": 50000000,
+    "debt_kopecks": 0,
+    "suggested_amount_kopecks": 100000000,
+    "suggested_term_months": 12,
+    "title": "Нет посильного варианта",
+    "description": "Без просрочек и с высоким баллом, но поток не выдерживает стресс. Оферты нет даже при категории A."
+  },
+  "tax_regimes": [
+    "USN_INCOME"
+  ],
+  "reference_date": "2026-10-26",
+  "financial_period": {
+    "from": "2025-10-01",
+    "to": "2026-09-30"
+  },
+  "management_revenue_kopecks": 1200000000,
+  "management_profit_kopecks": 240000000,
+  "cash_surplus_kopecks": 216000000,
+  "additional_owner_funding_kopecks": 0,
+  "future_debt_schedule": [
+    {
+      "month": "2026-11",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2026-12",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-01",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-02",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-03",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-04",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-05",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-06",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-07",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-08",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-09",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-10",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-11",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2027-12",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-01",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-02",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-03",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-04",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-05",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-06",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-07",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-08",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-09",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    },
+    {
+      "month": "2028-10",
+      "principal_kopecks": 0,
+      "interest_kopecks": 0,
+      "payment_kopecks": 0
+    }
+  ]
+}

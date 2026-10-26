@@ -75,6 +75,16 @@ go test -race ./services/bank-service/...
 | `scripts/profile_v2_docker_smoke.py` | Профиль v2 через auth, client, Kafka и bank на продукте `SME_PROFILE_V2`: каталог из `bank.events`, черновик с `can_submit`, отправка, `NEEDS_INFO` с требованиями у клиента и банка, загрузка документов по `requirement_id` и периоду, `InfoProvided`. | `E2E v2 catalog → submit → NEEDS_INFO → InfoProvided → <статус> passed`; итог — `MANUAL_REVIEW`, `OFFER`, `COUNTER_OFFER` или `REJECTED`, запрос не открывается повторно. |
 | `scripts/assessment_docker_smoke.py` (Ollama намеренно недоступен) | ООО: оценка `READY_FOR_CONFIRMATION` с альтернативами и `baseline_v1`, проекция оценки у клиента, Help с шаблоном, 409 на неизвестный каталог, 403 клиенту на банковскую оценку; recheck: новое поколение, идемпотентный повтор; 422 на ставку вне кандидата; `COUNTER` → принятие → повторная подпись → ровно одна демо-выдача; ИП ПСН: запрос только патента и `MANUAL_REVIEW` после ответа; ликвидируемая компания: `REJECTED` с `COMPANY_LIQUIDATION`; сиды `demo.sql`: маршрутизация обогащения и оценки (`scripts/bank_integration.py`). | `All assessment E2E scenarios passed`. |
 
+Скрипт также дожидается публикации обновлённого каталога со всеми четырьмя целями,
+включая `OTHER`, в клиентском сервисе: такой каталог не должен блокировать очередь событий.
+
+Дополнительная проверка восстановления: `python3 scripts/assessment_docker_smoke.py --check-recovery`.
+После обычных сценариев скрипт останавливает Kafka и банк только своего временного
+Compose-проекта, отправляет новую заявку через клиентский сервис, проверяет сохранение
+события в outbox, запускает сервисы и ждёт обработки. Затем перезапускает клиентский
+и банковский сервисы: состояние заявки должно сохраниться, повторной выдачи быть не должно.
+Этот тест проверяет восстановление после перезапуска, а не доступность при отказе всего сервера.
+
 ## 6. Коллекции Postman (`postman/`)
 
 Подготовка — `postman/README.md`: `make demo-up`, импорт пяти коллекций и окружения `Smart-Credit-Local.postman_environment.json`, пароли `client_password`/`analyst_password` из `AUTH_DEV_*` локального `.env`, working directory — папка `postman`. Файл загрузки — `postman/fixtures/bank-statement.txt`: синтетическая выписка в формате `SMART_CREDIT_DEMO_STATEMENT_TXT_V1`, которую принимает парсер `services/bank-service/internal/document/statement` (суммы операций сходятся с оборотами и остатками). client-service сохраняет файл как демовложение и не извлекает из него данные. Запуск — Collection Runner, 1 итерация, задержка 1000 мс, коллекции по одной (общие переменные окружения).

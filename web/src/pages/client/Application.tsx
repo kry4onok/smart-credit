@@ -16,6 +16,7 @@ import { forgetDraft, loadProducts, recallDraft, recallOffer, rememberDraft, rem
 import { HintsPanel, PreferencesSection, RequirementsSection } from "./DraftExtras";
 import { AssessmentView } from "./AssessmentView";
 import { loanHints, monthsBetween } from "../../lib/hints";
+import { productName, systemMessage } from "../../lib/presentation";
 
 const settled = new Set(["DRAFT", "DISBURSED", "REJECTED", "CLOSED"]);
 
@@ -84,7 +85,7 @@ export function ApplicationPage() {
       </Link>
       <section className="app-head">
         <div>
-          <p className="app-head-product">{issued?.product_name ?? product?.name ?? "Кредит для бизнеса"}</p>
+          <p className="app-head-product">{productName(issued?.product_name ?? product?.name ?? "Кредит для бизнеса")}</p>
           <h1 className="amount">{issued ? money(issued.amount) : amount?.amount_kopecks ? money(amount) : "Новая заявка"}</h1>
           <p className="app-head-meta">
             {issued
@@ -101,8 +102,8 @@ export function ApplicationPage() {
       <section className="next panel">
         {/* Polling changes the status without a click; the live region announces it. */}
         <div aria-live="polite">
-          <h2>{app.stage_label}</h2>
-          {app.next_action && <p className="next-action">{app.next_action}</p>}
+          <h2>{systemMessage(app.stage_label)}</h2>
+          {app.next_action && <p className="next-action">{systemMessage(app.next_action)}</p>}
         </div>
         <ErrorNote error={error} />
         {app.status === "DRAFT" && <ErrorNote error={productError} onRetry={loadProduct} />}
@@ -135,7 +136,7 @@ function NextStep({ app, product, onChange, reload, fetchApp }: StepProps) {
       {(app.allowed_actions.includes("ACCEPT_OFFER") || app.allowed_actions.includes("SIGN")) && <OfferStep app={app} reload={reload} />}
       {app.status === "DISBURSED" && (
         <div className="outcome outcome-success">
-          <strong>Кредит выдан.</strong> Это симуляция: деньги не переводились, но все этапы конвейера пройдены.
+          <strong>Оформление завершено.</strong> Условия кредита и история рассмотрения сохранены в заявке.
         </div>
       )}
       {(app.status === "REJECTED" || app.status === "CLOSED") && app.public_reason && (
@@ -582,7 +583,7 @@ function DraftEditor({ app, product, onChange, fetchApp }: Omit<StepProps, "relo
             ))}
           </>
         )}
-        <p className="field-hint">Файл сохраняется как демо-документ. Для проверки достаточно любого текстового файла .txt. Суммы и реквизиты из файлов не извлекаются автоматически — их нужно указать в форме. Банк проверяет наличие документа.</p>
+        <p className="field-hint">Приложите документ и укажите суммы и реквизиты в форме — они не заполняются из файла автоматически.</p>
       </fieldset>
 
       <fieldset className="draft-step">
@@ -926,7 +927,7 @@ function OfferView({ app, offer, reload }: { app: ClientApplication; offer: Offe
       )}
       <div className="offer-grid">
         <div className="offer-main">
-          <span>{offer.product_name}</span>
+          <span>{productName(offer.product_name)}</span>
           <strong className="amount">{money(offer.amount)}</strong>
           <span>
             на {months(offer.term_months)} под {rate(offer.rate_bps)} годовых
@@ -971,12 +972,11 @@ function OfferView({ app, offer, reload }: { app: ClientApplication; offer: Offe
         <div className="sign">
           <h3>Подписание договора</h3>
           <p>
-            В прототипе подпись симулируется: настоящая электронная подпись не создаётся, деньги не переводятся. После подписи банк
-            проведёт демонстрационную выдачу.
+            Проверьте сумму, срок и ставку предложения перед подтверждением. После подписания заявка перейдёт к выдаче.
           </p>
           <label className="check">
             <input type="checkbox" checked={simulated} onChange={(e) => setSimulated(e.target.checked)} />
-            Понимаю, что это демонстрационная подпись
+            Подтверждаю выбранные условия кредита
           </label>
           <button type="button" className="btn btn-primary" disabled={!simulated || act.busy} onClick={() => void post("sign")}>
             Подписать договор
@@ -1076,7 +1076,7 @@ function Timeline({ id, version }: { id: string; version: number }) {
             <li key={e.id}>
               <time dateTime={e.occurred_at}>{dateTime(e.occurred_at)}</time>
               <div>
-                <strong>{e.message || clientStatusLabel[e.status]}</strong>
+                <strong>{e.message ? systemMessage(e.message) : clientStatusLabel[e.status]}</strong>
                 {e.message && <p>{clientStatusLabel[e.status]}</p>}
               </div>
             </li>

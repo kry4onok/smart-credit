@@ -9,6 +9,7 @@ import { date, moneyShort } from "../../lib/format";
 import { clientStatusLabel, clientStatusTone } from "../../lib/labels";
 import { appendPage, mergeFirstPage, usePolling } from "../../lib/util";
 import { useProductNames } from "./products";
+import { productName, systemMessage } from "../../lib/presentation";
 
 const settled = new Set(["DRAFT", "DISBURSED", "REJECTED", "CLOSED"]);
 // Statuses where the bank waits for the client: shown first.
@@ -84,8 +85,8 @@ export function ApplicationsPage() {
                       <Link to={`/cabinet/applications/${item.id}`} className={`app-row${group.urgent ? " app-row-urgent" : ""}`}>
                         <span className="app-row-amount">{moneyShort(item.amount)}</span>
                         <span className="app-row-main">
-                          <strong>{products[item.product_id]?.name ?? "Кредит"}</strong>
-                          <span>{item.next_action}</span>
+                          <strong>{productName(products[item.product_id]?.name ?? "Кредит")}</strong>
+                          <span>{systemMessage(item.next_action)}</span>
                         </span>
                         <span className="app-row-status">
                           <Badge tone={clientStatusTone[item.status]}>{clientStatusLabel[item.status]}</Badge>

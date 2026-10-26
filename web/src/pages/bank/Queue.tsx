@@ -142,7 +142,7 @@ export function QueuePage() {
                   <td>
                     <Badge tone={bankStatusTone[c.status]}>{bankStatusLabel[c.status]}</Badge>
                   </td>
-                  <td>{!c.assignee_id ? <span className="muted">свободно</span> : c.assignee_id === user?.id ? "вы" : `аналитик ${shortId(c.assignee_id)}`}</td>
+                  <td>{!c.assignee_id ? <span className="muted">свободно</span> : c.assignee_id === user?.id ? "вы" : "другой аналитик"}</td>
                   <td className="num">{age(c.created_at)}</td>
                 </tr>
               ))}

@@ -264,7 +264,8 @@ func insertProduct(ctx context.Context, tx Tx, product *commonpb.Product) error 
 	tags := make([]string, 0, len(product.GetPurposeTags()))
 	for _, tag := range product.GetPurposeTags() {
 		switch tag {
-		case commonpb.PurposeTag_PURPOSE_TAG_WORKING_CAPITAL, commonpb.PurposeTag_PURPOSE_TAG_EQUIPMENT, commonpb.PurposeTag_PURPOSE_TAG_EXPANSION:
+		case commonpb.PurposeTag_PURPOSE_TAG_WORKING_CAPITAL, commonpb.PurposeTag_PURPOSE_TAG_EQUIPMENT,
+			commonpb.PurposeTag_PURPOSE_TAG_EXPANSION, commonpb.PurposeTag_PURPOSE_TAG_OTHER:
 			tags = append(tags, strings.TrimPrefix(tag.String(), "PURPOSE_TAG_"))
 		default:
 			return errors.New("invalid catalog purpose tag")

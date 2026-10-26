@@ -4,6 +4,8 @@ import { clientCommunication } from "../../lib/clientCommunication";
 import { date, dateTime, money, months, rate } from "../../lib/format";
 import { clientStatusLabel, documentLabel, infoFieldLabel } from "../../lib/labels";
 
+import { productName } from "../../lib/presentation";
+
 export function ClientCommunication({ kase }: { kase: BankCase }) {
   const content = clientCommunication(kase);
   const status = <p className="field-hint">Статус у клиента: <strong>{clientStatusLabel[content.status]}</strong></p>;
@@ -39,7 +41,7 @@ export function ClientCommunication({ kase }: { kase: BankCase }) {
       {content.kind === "offer" && (
         <div className="sub">
           <h3>{content.offer.kind === "COUNTER_OFFER" ? "Другие условия кредита" : "Предложение банка"}</h3>
-          <p>{content.offer.product_name}: {money(content.offer.amount)} на {months(content.offer.term_months)} под {rate(content.offer.rate_bps)}.</p>
+          <p>{productName(content.offer.product_name)}: {money(content.offer.amount)} на {months(content.offer.term_months)} под {rate(content.offer.rate_bps)}.</p>
           <p className="field-hint">Предложение действует до {dateTime(content.offer.expires_at)}</p>
           {(content.offer.kind === "COUNTER_OFFER" || kase.application.amount.amount_kopecks !== content.offer.amount.amount_kopecks || kase.application.term_months !== content.offer.term_months) && (
             <CompareBars rows={offerRows(kase.application, content.offer)} />

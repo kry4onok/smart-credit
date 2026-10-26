@@ -69,6 +69,8 @@ dist/
 !docs/**/*.md
 !postman/fixtures/
 !postman/fixtures/**
+!demo/jury-documents/**/*.txt
+!demo/jury-documents/**/*.pdf
 
 # Web
 node_modules/

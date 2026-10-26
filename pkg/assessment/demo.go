@@ -1,6 +1,10 @@
 package assessment
 
-import "time"
+import (
+	"time"
+
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/demodata"
+)
 
 func ptr[T any](v T) *T { return &v }
 
@@ -24,9 +28,18 @@ func DemoSources(inn, registered, status string, credit CreditHistory, asOf time
 		}
 	}
 	f := &FinancialInput{Currency: "RUB", InitialCashKopecks: ptr(int64(50_000_000)), LargestCustomerShareBPS: ptr(1500), DebtScheduleKnown: ptr(true), DebtScheduleThrough: asOf.AddDate(0, 120, 0).Format("2006-01"), Months: []Month{}, DebtPayments: []DebtPayment{}, Provenance: p}
+	receipts, variable := int64(100_000_000), int64(40_000_000)
+	if company, ok := demodata.Lookup(inn); ok {
+		receipts = company.MonthlyReceiptsKopecks
+		// The other cash outflows below total 250,000 RUB per month. Construct
+		// actual cash components; Score still derives margin from all 12 months.
+		variable = receipts - scale(receipts, company.MarginBPS) - 25_000_000
+		f.InitialCashKopecks = ptr(company.InitialCashKopecks)
+		f.LargestCustomerShareBPS = ptr(company.LargestCustomerShareBPS)
+	}
 	start := periodStart(asOf)
 	for i := range 12 {
-		f.Months = append(f.Months, Month{Period: start.AddDate(0, i, 0).Format("2006-01"), Receipts: ptr(int64(100_000_000)), VariableCosts: ptr(int64(40_000_000)), FixedCosts: ptr(int64(15_000_000)), Taxes: ptr(int64(6_000_000)), Maintenance: ptr(int64(2_000_000)), OwnerDrawings: ptr(int64(2_000_000)), Provenance: p})
+		f.Months = append(f.Months, Month{Period: start.AddDate(0, i, 0).Format("2006-01"), Receipts: ptr(receipts), VariableCosts: ptr(variable), FixedCosts: ptr(int64(15_000_000)), Taxes: ptr(int64(6_000_000)), Maintenance: ptr(int64(2_000_000)), OwnerDrawings: ptr(int64(2_000_000)), Provenance: p})
 	}
 	if credit.TotalDebtKopecks != nil && *credit.TotalDebtKopecks > 0 {
 		balance := *credit.TotalDebtKopecks

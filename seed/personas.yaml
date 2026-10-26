@@ -129,3 +129,25 @@ personas:
       total_debt: {amount_kopecks: 100000000, currency: RUB}
       overdue_count_12m: 0
       max_overdue_days: 0
+
+  - inn: "9900000024"
+    profile:
+      legal_form: LLC
+      status: ACTIVE
+      registered_at: "2020-01-01"
+      okved: "47.11"
+    credit_history:
+      total_debt: {amount_kopecks: 0, currency: RUB}
+      overdue_count_12m: 2
+      max_overdue_days: 60
+
+  - inn: "9900000031"
+    profile:
+      legal_form: LLC
+      status: ACTIVE
+      registered_at: "2020-01-01"
+      okved: "46.90"
+    credit_history:
+      total_debt: {amount_kopecks: 0, currency: RUB}
+      overdue_count_12m: 1
+      max_overdue_days: 12

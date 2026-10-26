@@ -154,8 +154,12 @@ export const actorLabel: Record<string, string> = {
   CLIENT: "Клиент",
 };
 
-// Decision-engine rule codes from bank-service; unknown codes are shown as is.
+// User-facing explanations of decision-engine rule codes.
 export const ruleLabel: Record<string, string> = {
+  GRADE_REQUIRES_REVIEW: "Категория риска требует ручного разбора",
+  STOP_FACTOR_COMPANY_STATUS: "Статус компании не позволяет выдать кредит",
+  COMPANY_TOO_YOUNG: "Недостаточный срок работы компании",
+  OVERDUE_OVER_30: "Просрочка превышает 30 дней",
   AUTO_OFFER: "Автоматическая оферта",
   AMOUNT_REVENUE_REVIEW: "Сумма велика относительно выручки",
   COMPANY_AGE_REVIEW: "Компания моложе порога продукта",
@@ -181,7 +185,7 @@ export const ruleLabel: Record<string, string> = {
   REVIEW_REQUIRED: "Нужен ручной разбор",
   READY_FOR_CONFIRMATION: "Вариант ждёт подтверждения менеджером",
   NO_AFFORDABLE_OPTION: "Нет доступного варианта по денежному потоку",
-  LARGE_REQUEST: "Крупный запрос",
+  LARGE_REQUEST: "Запрошенная сумма требует дополнительной проверки",
 };
 
 // Audit actions from bank-service; transitions are labelled by their statuses instead.
@@ -207,7 +211,7 @@ export const auditActionLabel: Record<string, string> = {
   OFFER_DECLINED: "Клиент отказался от оферты",
   OFFER_EXPIRED: "Срок оферты истёк",
   CONTRACT_SIGNED: "Договор подписан",
-  DEMO_DISBURSED: "Деньги выданы (демо)",
+  DEMO_DISBURSED: "Деньги выданы",
   APPLICATION_CANCELLED: "Клиент отозвал заявку",
   // bank-service records offer responses under the client event names.
   OfferAccepted: "Клиент принял оферту",

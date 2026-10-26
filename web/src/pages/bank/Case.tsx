@@ -9,7 +9,7 @@ import { HelpPanel, analystModes } from "../../components/HelpPanel";
 import { BankAssessmentPanel, type OfferBasis } from "./AssessmentPanel";
 import { BankPipeline } from "../../components/Pipeline";
 import { Badge, Choices, Dl, ErrorNote, Field, Loading, useAction, useTitle } from "../../components/ui";
-import { date, dateTime, money, months, rate, rub, caseNumber, shortId } from "../../lib/format";
+import { date, dateTime, money, months, rate, rub, caseNumber } from "../../lib/format";
 import {
   actorLabel,
   auditActionLabel,
@@ -24,6 +24,7 @@ import {
 } from "../../lib/labels";
 import { appendPage, etag, useIntent, usePolling } from "../../lib/util";
 import { ScorePanel } from "./Score";
+import { productName, systemMessage } from "../../lib/presentation";
 
 const automatic = new Set(["SUBMITTED", "VALIDATION", "ENRICHMENT", "SCORING", "DECISION", "OFFER_ACCEPTED", "SIGNING"]);
 
@@ -52,6 +53,8 @@ export function CasePage() {
 
   useEffect(() => {
     setCase(null);
+    setPrefill(null);
+    setBasis(null);
     void load();
   }, [load]);
   usePolling(load, 4000, !!kase && automatic.has(kase.status));
@@ -102,7 +105,7 @@ export function CasePage() {
             )}
             <Dl
               items={[
-                ["Продукт", `${kase.product_name}, версия ${kase.product_version}`],
+                ["Продукт", productName(kase.product_name)],
                 ["Документы", kase.application.document_types.length ? kase.application.document_types.map((d) => documentLabel[d]).join(", ") : "не приложены"],
                 ["Сумма к выручке", amountToRevenue === null ? "выручка не указана" : `${amountToRevenue.toFixed(1)}%`],
               ]}
@@ -130,7 +133,7 @@ export function CasePage() {
                     Сработали правила:{" "}
                     {kase.triggered_rules.map((r) => (
                       <span key={r} className="rule">
-                        {ruleLabel[r] ?? r} <code>{r}</code>
+                        {ruleLabel[r] ?? "Требуется дополнительная проверка"}
                       </span>
                     ))}
                   </p>
@@ -189,7 +192,7 @@ export function CasePage() {
 
 function StatusValue({ value }: { value: string }) {
   const bad = value === "LIQUIDATING" || value === "LIQUIDATED";
-  return <span className={bad ? "text-danger" : undefined}>{companyStatusLabel[value] ?? value}</span>;
+  return <span className={bad ? "text-danger" : undefined}>{companyStatusLabel[value] ?? "Требует проверки"}</span>;
 }
 
 function AssistantSummary({ id }: { id: string }) {
@@ -207,12 +210,12 @@ function AssistantSummary({ id }: { id: string }) {
           {act.busy ? "Готовим…" : summary ? "Обновить" : "Сформировать"}
         </button>
       </div>
-      {!summary && !act.busy && <p className="muted">Короткий пересказ дела от локальной модели. Не влияет на решение и score.</p>}
+      {!summary && !act.busy && <p className="muted">Краткий обзор заявки, результатов проверок и условий кредита.</p>}
       <ErrorNote error={act.error} />
       {summary && (
         <>
-          <p className="assistant-text">{summary.text}</p>
-          <p className="assistant-source">{summary.source === "assistant" ? "Подготовлено моделью с открытыми весами" : "Шаблонный текст: модель недоступна или не ответила вовремя"}</p>
+          <p className="assistant-text">{systemMessage(summary.text)}</p>
+          <p className="assistant-source">По данным заявки</p>
         </>
       )}
     </section>
@@ -281,12 +284,11 @@ function Audit({ id, refreshKey }: { id: string; refreshKey: number }) {
                 <strong>
                   {e.from_status && e.to_status
                     ? `${bankStatusLabel[e.from_status]} → ${bankStatusLabel[e.to_status]}`
-                    : (auditActionLabel[e.action] ?? (e.to_status ? bankStatusLabel[e.to_status] : e.action))}
+                    : (auditActionLabel[e.action] ?? (e.to_status ? bankStatusLabel[e.to_status] : "Заявка обновлена"))}
                 </strong>
-                <p>{e.reason}</p>
+                <p>{e.actor_type === "ANALYST" ? e.reason : systemMessage(e.reason)}</p>
                 <small>
                   {actorLabel[e.actor_type]}
-                  {e.actor_id ? ` ${shortId(e.actor_id)}` : ""}, {e.action}
                 </small>
               </div>
             </li>
@@ -340,7 +342,7 @@ function Actions({ kase, onUpdated, reload, prefill, basis }: FormProps) {
           </button>
         </>
       ) : kase.status === "MANUAL_REVIEW" ? (
-        <p className="muted">{kase.assignee_id ? `Дело в работе у аналитика ${shortId(kase.assignee_id)}.` : "Для этого дела вам доступен только просмотр."}</p>
+        <p className="muted">{kase.assignee_id ? "Дело в работе у другого аналитика." : "Для этого дела вам доступен только просмотр."}</p>
       ) : automatic.has(kase.status) ? (
         <p className="pending">
           <span className="spinner" aria-hidden />
@@ -412,7 +414,10 @@ function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
 
   // «Предложить этот вариант» in the assessment panel fills the form with the calculated terms.
   useEffect(() => {
-    if (prefill) applyCandidate(prefill.candidate);
+    if (prefill && basis?.candidates.some((c) => c.candidate_id === prefill.candidate.candidate_id)) {
+      applyCandidate(prefill.candidate);
+      document.getElementById("bank-decision")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, [prefill?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A recheck replaces the options: a picked option that is gone can no longer be offered.
@@ -484,6 +489,7 @@ function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
 
   return (
     <form
+      id="bank-decision"
       className="panel side-panel decision"
       onSubmit={(e) => {
         e.preventDefault();
@@ -515,7 +521,7 @@ function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
                 options={candidates.map((c) => ({
                   value: c.candidate_id,
                   label: money(rub(c.schedule.amount_kopecks)),
-                  hint: `${months(c.schedule.term_months)}, ${rate(c.schedule.rate_bps)}, платёж ${money(rub(c.schedule.payment_kopecks))}. ${c.product_name}`,
+                  hint: `${months(c.schedule.term_months)}, ${rate(c.schedule.rate_bps)}, платёж ${money(rub(c.schedule.payment_kopecks))}. ${productName(c.product_name)}`,
                 }))}
                 value={picked?.candidate_id ?? null}
                 optionClassName={(_, on) => `candidate-pick${on ? " on" : ""}`}
@@ -530,7 +536,11 @@ function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
             <p className="note note-attention">
               {basis.stale
                 ? "Оценка устарела: пересчитайте её, чтобы получить актуальные варианты."
-                : "Расчёт не нашёл условий с посильным платежом. Запросите у клиента данные или откажите; после новых данных пересчитайте оценку."}
+                : basis.status === "MANUAL_REVIEW"
+                  ? "Проверки или категория риска требуют ручного разбора. Уточните причины в оценке; оферта станет доступна только после допустимого расчёта."
+                  : basis.status === "NEEDS_INFO"
+                    ? "Для расчёта не хватает данных. Запросите указанные в оценке сведения."
+                    : "Расчёт не нашёл условий с посильным платежом. Проверьте долги, денежный поток и ограничения клиента."}
             </p>
           )}
         </fieldset>
@@ -544,14 +554,14 @@ function DecisionForm({ kase, onUpdated, reload, prefill, basis }: FormProps) {
               {products ? (
                 products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {productName(p.name)}
                     {p.id === kase.product_id ? " (из заявки)" : ""}
                   </option>
                 ))
               ) : (
                 <>
-                  <option value={kase.product_id}>{kase.product_name} (из заявки)</option>
-                  {kase.offer && kase.offer.product_id !== kase.product_id && <option value={kase.offer.product_id}>{kase.offer.product_name}</option>}
+                  <option value={kase.product_id}>{productName(kase.product_name)} (из заявки)</option>
+                  {kase.offer && kase.offer.product_id !== kase.product_id && <option value={kase.offer.product_id}>{productName(kase.offer.product_name)}</option>}
                   <option value="other">Другой продукт…</option>
                 </>
               )}

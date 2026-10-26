@@ -17,7 +17,7 @@ export function ScorePanel({ score }: { score: ScoreResult | undefined }) {
   if (score.assessment_status !== "ASSESSED" || score.score === undefined) {
     return (
       <div className="note note-attention">
-        Модель не оценила заявку: {score.assessment_status === "INSUFFICIENT_DATA" ? "недостаточно данных" : "входные данные вне области модели"}.
+        Не удалось оценить заявку: {score.assessment_status === "INSUFFICIENT_DATA" ? "недостаточно данных" : "проверьте исходные данные"}.
         {score.data_issues.length > 0 && (
           <ul>
             {score.data_issues.map((d) => (
@@ -57,7 +57,7 @@ export function ScorePanel({ score }: { score: ScoreResult | undefined }) {
             <li key={r.code} className={r.direction === "INCREASES_RISK" ? "risk-up" : "risk-down"}>
               <span aria-hidden>{r.direction === "INCREASES_RISK" ? "▲" : "▼"}</span>
               <span>
-                <strong>{reasonLabel[r.code] ?? r.code}</strong>
+                <strong>{reasonLabel[r.code] ?? "Фактор кредитного риска"}</strong>
                 {r.description && r.description !== reasonLabel[r.code] && <small>{r.description}</small>}
               </span>
               <span className="reason-points">
@@ -76,7 +76,7 @@ export function ScorePanel({ score }: { score: ScoreResult | undefined }) {
           </p>
           {score.factor_contributions.map((f) => (
             <div key={f.factor_name} className="factor">
-              <span>{factorLabel[f.factor_name] ?? f.factor_name}</span>
+              <span>{factorLabel[f.factor_name] ?? "Фактор оценки"}</span>
               <span className="factor-bar">
                 <span
                   className={f.points >= 0 ? "pos" : "neg"}
@@ -91,10 +91,7 @@ export function ScorePanel({ score }: { score: ScoreResult | undefined }) {
           ))}
         </div>
       )}
-      <p className="score-meta">
-        Модель {score.model_version}, признаки {score.feature_schema_version}
-        {score.as_of_date ? `, данные на ${score.as_of_date}` : ""}
-      </p>
+      {score.as_of_date && <p className="score-meta">Данные на {score.as_of_date}</p>}
     </div>
   );
 }

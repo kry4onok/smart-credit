@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/demodata"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/auth/internal/infra/password"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -41,14 +42,27 @@ type organization struct {
 // personaClients are extra CLIENT accounts, one per demo outcome. They share the
 // client password; the INN of a company profile cannot be changed after the first
 // save, so every outcome needs its own organization.
-var personaClients = []struct {
+type personaClient struct {
 	userID, email, name string
 	org                 organization
-}{
-	{"30000000-0000-4000-8000-000000000002", "ip@smart-credit.test", "Демо ИП на патенте",
-		organization{uuid.MustParse("20000000-0000-4000-8000-000000000002"), "990000000115", "ИП Демо Предприниматель"}},
-	{"30000000-0000-4000-8000-000000000003", "closing@smart-credit.test", "Демо ликвидируемая компания",
-		organization{uuid.MustParse("20000000-0000-4000-8000-000000000003"), "1111111117", "ООО «Закрывающаяся мастерская»"}},
+}
+
+var personaClients = demoClients()
+
+func demoClients() []personaClient {
+	clients := []personaClient{}
+	for _, c := range demodata.Companies() {
+		// The original client keeps its stable identity.
+		if c.Number == 1 {
+			continue
+		}
+		clients = append(clients, personaClient{
+			userID: fmt.Sprintf("30000000-0000-4000-8000-%012d", c.Number),
+			email:  c.Email, name: c.Name,
+			org: organization{uuid.MustParse(fmt.Sprintf("20000000-0000-4000-8000-%012d", c.Number)), c.INN, c.Name},
+		})
+	}
+	return clients
 }
 
 type Credentials struct {

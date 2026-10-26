@@ -1,0 +1,181 @@
+{
+  "synthetic": true,
+  "extension_requires_profile_change": true,
+  "company": {
+    "number": 2,
+    "inn": "990000000115",
+    "email": "ip@smart-credit.test",
+    "name": "ИП Демо Предприниматель",
+    "registered_at": "2020-01-01",
+    "okved": "47.11",
+    "tax_regime": "PSN",
+    "margin_bps": 3500,
+    "largest_customer_share_bps": 3000,
+    "monthly_receipts_kopecks": 100000000,
+    "initial_cash_kopecks": 50000000,
+    "debt_kopecks": 100000000,
+    "suggested_amount_kopecks": 100000000,
+    "suggested_term_months": 12,
+    "title": "Запрос документов",
+    "description": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение."
+  },
+  "tax_regimes": [
+    "USN_INCOME_EXPENSE",
+    "PSN"
+  ],
+  "reference_date": "2026-10-26",
+  "financial_period": {
+    "from": "2025-10-01",
+    "to": "2026-09-30"
+  },
+  "management_revenue_kopecks": 1200000000,
+  "management_profit_kopecks": 444000000,
+  "cash_surplus_kopecks": 420000000,
+  "additional_owner_funding_kopecks": 0,
+  "future_debt_schedule": [
+    {
+      "month": "2026-11",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1500000,
+      "payment_kopecks": 5666666
+    },
+    {
+      "month": "2026-12",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1437500,
+      "payment_kopecks": 5604166
+    },
+    {
+      "month": "2027-01",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1375000,
+      "payment_kopecks": 5541666
+    },
+    {
+      "month": "2027-02",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1312500,
+      "payment_kopecks": 5479166
+    },
+    {
+      "month": "2027-03",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1250000,
+      "payment_kopecks": 5416666
+    },
+    {
+      "month": "2027-04",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1187500,
+      "payment_kopecks": 5354166
+    },
+    {
+      "month": "2027-05",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1125000,
+      "payment_kopecks": 5291666
+    },
+    {
+      "month": "2027-06",
+      "principal_kopecks": 4166666,
+      "interest_kopecks": 1062500,
+      "payment_kopecks": 5229166
+    },
+    {
+      "month": "2027-07",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 1000000,
+      "payment_kopecks": 5166667
+    },
+    {
+      "month": "2027-08",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 937500,
+      "payment_kopecks": 5104167
+    },
+    {
+      "month": "2027-09",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 875000,
+      "payment_kopecks": 5041667
+    },
+    {
+      "month": "2027-10",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 812500,
+      "payment_kopecks": 4979167
+    },
+    {
+      "month": "2027-11",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 750000,
+      "payment_kopecks": 4916667
+    },
+    {
+      "month": "2027-12",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 687500,
+      "payment_kopecks": 4854167
+    },
+    {
+      "month": "2028-01",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 625000,
+      "payment_kopecks": 4791667
+    },
+    {
+      "month": "2028-02",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 562500,
+      "payment_kopecks": 4729167
+    },
+    {
+      "month": "2028-03",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 500000,
+      "payment_kopecks": 4666667
+    },
+    {
+      "month": "2028-04",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 437500,
+      "payment_kopecks": 4604167
+    },
+    {
+      "month": "2028-05",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 375000,
+      "payment_kopecks": 4541667
+    },
+    {
+      "month": "2028-06",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 312500,
+      "payment_kopecks": 4479167
+    },
+    {
+      "month": "2028-07",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 250000,
+      "payment_kopecks": 4416667
+    },
+    {
+      "month": "2028-08",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 187500,
+      "payment_kopecks": 4354167
+    },
+    {
+      "month": "2028-09",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 125000,
+      "payment_kopecks": 4291667
+    },
+    {
+      "month": "2028-10",
+      "principal_kopecks": 4166667,
+      "interest_kopecks": 62500,
+      "payment_kopecks": 4229167
+    }
+  ]
+}

@@ -5,6 +5,8 @@ import { ApiError, errorMessage } from "../api/problem";
 import { homeFor, useSession } from "../auth/session";
 import { Field, useTitle } from "../components/ui";
 
+import { demoCompanies } from "../lib/demoCompanies";
+
 const heroStations = ["Заявка", "Проверка", "Решение", "Деньги"];
 
 const heroPoints = [
@@ -14,21 +16,19 @@ const heroPoints = [
 ];
 
 const demoClients = [
-  { email: "bakery@demo.local", who: "Северная пекарня", outcome: "автоматическое предложение, профиль не заполнен" },
-  { email: "warehouse@demo.local", who: "Балтийский склад", outcome: "заявка на ручном разборе у аналитика" },
-  { email: "service@demo.local", who: "Сибирский сервис", outcome: "банк запросит данные" },
-  { email: "workshop@demo.local", who: "Уральская мастерская", outcome: "черновик сверх лимита, будет контрпредложение" },
-  { email: "closing@demo.local", who: "Закрытие", outcome: "отказ: компания ликвидируется" },
+  { email: "bakery@demo.local", who: "Северная пекарня", outcome: "Кабинет компании" },
+  { email: "warehouse@demo.local", who: "Балтийский склад", outcome: "Кабинет компании" },
+  { email: "service@demo.local", who: "Сибирский сервис", outcome: "Кабинет компании" },
+  { email: "workshop@demo.local", who: "Уральская мастерская", outcome: "Кабинет компании" },
+  { email: "closing@demo.local", who: "Закрытие", outcome: "Кабинет компании" },
 ];
 
 // Accounts created by `make auth-dev-seed`; their passwords live in the .env (AUTH_DEV_*).
 // Each client persona has its own company because a profile INN cannot be changed.
 const seedAccounts = [
-  { email: "client@smart-credit.test", who: "Клиент: ООО «Северная пекарня» — варианты и выдача" },
-  { email: "ip@smart-credit.test", who: "Клиент: ИП на патенте — банк запросит патент" },
-  { email: "closing@smart-credit.test", who: "Клиент: ликвидируемое ООО — отказ" },
-  { email: "analyst@smart-credit.test", who: "Кредитный аналитик" },
-  { email: "admin@smart-credit.test", who: "Администратор" },
+  { email: "analyst@smart-credit.test", who: "Кредитный аналитик", outcome: "Очередь компаний, решения и история" },
+  { email: "admin@smart-credit.test", who: "Администратор", outcome: "Управление заявками" },
+  ...demoCompanies.map((c) => ({ email: c.email, who: c.name, outcome: "Кабинет компании" })),
 ];
 
 const demoStaff = [{ email: "analyst@demo.local", who: "Анна Аналитик", outcome: "очередь дел и ручные решения" }];
@@ -157,7 +157,7 @@ export function LoginPage() {
         {!isMock && (
           <div className="demo-accounts">
             <p>
-              Демо-учётки стенда. Пароли указаны в README проекта; при локальном запуске — в <code>.env</code> (<code>AUTH_DEV_*</code>).
+              Выберите учётную запись и введите пароль.
             </p>
             <div className="demo-group">
               <ul>
@@ -175,7 +175,7 @@ export function LoginPage() {
                       </span>
                       <span>
                         <strong>{a.who}</strong>
-                        <span>{a.email}</span>
+                        <span>{a.outcome} · {a.email}</span>
                       </span>
                     </button>
                   </li>
@@ -187,7 +187,7 @@ export function LoginPage() {
         {isMock && (
           <div className="demo-accounts">
             <p>
-              Демо-режим: войдите одним нажатием. Пароль у всех учёток — <code>demo</code>.
+              Выберите учётную запись для входа.
             </p>
             {demo(demoClients, "Компании")}
             {demo(demoStaff, "Банк")}

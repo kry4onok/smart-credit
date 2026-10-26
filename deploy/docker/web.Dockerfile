@@ -4,6 +4,7 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
+COPY pkg/demodata/companies.json /src/pkg/demodata/companies.json
 RUN npm run build
 
 FROM nginx:1.30.6-alpine

@@ -6,8 +6,9 @@ type Group = { key: string; label: string; color: string; statuses: BankStatus[]
 const groups: Group[] = [
   { key: "auto", label: "Автоматическая обработка", color: "#2c58b5", statuses: ["SUBMITTED", "VALIDATION", "ENRICHMENT", "SCORING", "DECISION"] },
   { key: "manual", label: "Ручной разбор", color: "#a35700", statuses: ["MANUAL_REVIEW"] },
-  { key: "client", label: "Ждут клиента", color: "#7a4fb5", statuses: ["NEEDS_INFO", "OFFER", "COUNTER_OFFER", "OFFER_ACCEPTED"] },
-  { key: "done", label: "Выдано", color: "#0f7451", statuses: ["SIGNING", "DISBURSED"] },
+  { key: "client", label: "Ждут клиента", color: "#7a4fb5", statuses: ["NEEDS_INFO", "OFFER", "COUNTER_OFFER"] },
+  { key: "signing", label: "Оформление", color: "#4c697b", statuses: ["OFFER_ACCEPTED", "SIGNING"] },
+  { key: "done", label: "Выдано", color: "#0f7451", statuses: ["DISBURSED"] },
   { key: "closed", label: "Отказ и закрыто", color: "#c2487a", statuses: ["REJECTED", "CANCELLED", "EXPIRED"] },
 ];
 
@@ -47,7 +48,7 @@ export function QueueSummary({ items, partial, me, onFilter }: Props) {
         <button type="button" className={`tile${stale ? " tile-alert" : ""}`} onClick={() => onFilter({ status: "MANUAL_REVIEW", stale: true })}>
           <span className="tile-label">Ждут больше суток</span>
           <span className="tile-value">{stale}</span>
-          <span className="tile-note">{stale ? "начните с самых старых" : "просроченных нет"}</span>
+          <span className="tile-note">{stale ? "начните с самых старых" : "таких дел нет"}</span>
         </button>
         <button type="button" className="tile" onClick={() => onFilter({ status: "MANUAL_REVIEW", assignee: "unassigned" })}>
           <span className="tile-label">Свободные</span>

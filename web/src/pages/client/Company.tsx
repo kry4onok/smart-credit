@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { clientApi } from "../../api/http";
+import { clientApi, isMock } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
 import type { CompanyProfile, LegalForm, TaxRegime } from "../../api/types";
 import { useSession } from "../../auth/session";
 import { MoneyInput } from "../../components/inputs";
 import { Choices, ErrorNote, Field, Loading, useAction, useTitle } from "../../components/ui";
+import { demoCompany, demoProfile } from "../../lib/demoCompanies";
 import { rub } from "../../lib/format";
 import { registryLinks } from "../../lib/external";
 import { financialBasisLabel, legalFormLabel, taxRegimeLabel, taxRegimesFor, vatStatusLabel } from "../../lib/labels";
@@ -185,6 +186,7 @@ export function CompanyPage() {
   };
 
   // The INN of a saved profile cannot change, and it decides which legal form is possible.
+  const scenario = isMock ? undefined : demoCompany(user?.organization?.inn);
   const innLocked = version !== null;
   const innForm = formForInn(draft.inn);
   const form = draft.legal_form;
@@ -230,6 +232,20 @@ export function CompanyPage() {
       <p className="lead">
         Заполните один раз — данные подставятся в каждую новую заявку. От формы бизнеса зависит, какие документы попросит банк.
       </p>
+
+      {scenario && version === null && (
+        <section className="panel">
+          <h2>Данные компании</h2>
+          <p>Можно подставить сведения о {scenario.name}. Проверьте их перед сохранением.</p>
+          {version === null && (
+            <button type="button" className="btn btn-secondary" onClick={() => {
+              setDraft(fromProfile(demoProfile(scenario)));
+              setErrors({});
+              setSaved(false);
+            }}>Подставить данные компании</button>
+          )}
+        </section>
+      )}
 
       <fieldset className="panel">
         <legend>Форма бизнеса</legend>

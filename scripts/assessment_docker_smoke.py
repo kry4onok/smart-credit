@@ -19,13 +19,23 @@ from bank_integration import verify_bank_integration
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_ID = "10000000-0000-4000-8000-000000000022"
 # Persona organizations created by auth-dev-seed; their INN is unique in auth_db.
-SEEDED_PERSONAS = {"990000000115": "ip@smart-credit.test", "1111111117": "closing@smart-credit.test"}
+DEMO_COMPANIES = json.loads((ROOT / "pkg/demodata/companies.json").read_text())
+SEEDED_PERSONAS = {c["inn"]: c["email"] for c in DEMO_COMPANIES}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--images-from", help="Reuse images from a previous smart-credit-assessment-smoke-* project")
+    parser.add_argument("--go-binaries", type=Path, help="Use current Linux Go service binaries with reusable runtime images")
+    parser.add_argument("--check-recovery", action="store_true", help="Verify queued submission and recovery after stopping Kafka and bank")
     args = parser.parse_args()
+    if args.go_binaries:
+        if not args.images_from:
+            parser.error("--go-binaries requires --images-from")
+        args.go_binaries = args.go_binaries.resolve()
+        for name in ("auth", "client-service", "bank-service", "bureau-mocks"):
+            if not (args.go_binaries / name).is_file():
+                parser.error(f"missing Go binary: {name}")
     if args.images_from and not args.images_from.startswith("smart-credit-assessment-smoke-"):
         parser.error("--images-from must identify an assessment smoke project")
     settings = dict(line.split("=", 1) for line in (ROOT / ".env.example").read_text().splitlines()
@@ -61,7 +71,8 @@ def main():
                             "  gateway:\n    ports: !override [\"127.0.0.1::8080\"]\n"
                             f"    volumes: !override [\"{nginx}:/etc/nginx/nginx.conf:ro\","
                             f" \"{ROOT / 'api'}:/usr/share/nginx/html/api:ro\"]\n"
-                            + "".join(f"  {name}:\n    ports: !reset []\n" + (f"    image: {args.images_from}-{name}:latest\n" if args.images_from and name not in ("kafka", "swagger-ui") else "") for name in
+                            + "".join(f"  {name}:\n    ports: !reset []\n" + (f"    image: {args.images_from}-{name}:latest\n" if args.images_from and name not in ("kafka", "swagger-ui") else "") +
+                                      (f"    volumes: [\"{args.go_binaries / name}:/usr/local/bin/service:ro\"]\n" if args.go_binaries and name in ("auth", "client-service", "bank-service", "bureau-mocks") else "") for name in
                                       ("kafka", "auth", "client-service", "bank-service", "swagger-ui",
                                        "scoring", "bureau-mocks", "assistant")))
         compose = ["docker", "compose", "--env-file", str(env_file), "--project-name", project,
@@ -152,11 +163,20 @@ def main():
                     time.sleep(1)
                 raise AssertionError(f"client did not reach {status}: {current['status']}")
 
-            def new_application(profile_file, inn=None, amount=100000000):
+            def new_application(profile_file, inn=None, amount=100000000, reuse_profile=False):
                 nonlocal client
                 profile = json.loads((ROOT / "seed/profile-requirements" / profile_file).read_text())
                 if inn:
                     profile["inn"] = inn
+                scenario = next((c for c in DEMO_COMPANIES if c["inn"] == profile["inn"]), None)
+                if scenario:
+                    profile.update(name=scenario["name"], registered_at=scenario["registered_at"], okved=scenario["okved"],
+                                   revenue_12m={"amount_kopecks": scenario["monthly_receipts_kopecks"] * 12, "currency": "RUB"},
+                                   obligations={"amount_kopecks": scenario["debt_kopecks"], "currency": "RUB"})
+                    profile["tax_periods"] = [{"from": scenario["registered_at"], "regimes": [scenario["tax_regime"]], "vat_status": "EXEMPT"}]
+                    if scenario["email"] == "warehouse@smart-credit.test":
+                        # The UI demo preset leaves accounting profit unknown; it is not cash flow.
+                        profile.pop("profit_12m", None)
                 if profile["inn"] in SEEDED_PERSONAS:
                     client = login(SEEDED_PERSONAS[profile["inn"]])
                 elif profile["inn"] != "7707083893":
@@ -168,7 +188,8 @@ def main():
                         FROM users WHERE email='client@smart-credit.test';"""
                     run(compose + ["exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "auth_db"], sql)
                     client = login(email)
-                api("PUT", "/api/client/company", client, profile)
+                if not reuse_profile:
+                    api("PUT", "/api/client/company", client, profile)
                 deadline = time.monotonic() + 90
                 while not any(p["id"] == PRODUCT_ID for p in api("GET", "/api/client/products", client)["items"]):
                     if time.monotonic() > deadline:
@@ -287,11 +308,80 @@ def main():
             wait_app(rejected_id, "REJECTED")
             rejected = api("GET", f"/api/backoffice/applications/{rejected_id}/assessment", analyst)["assessment"]
             assert rejected["status"] == "REJECT" and "COMPANY_LIQUIDATION" in rejected["checks"]["codes"]
+            print("Distinct companies: grade B, counteroffer, cash gap, score rejection, manual review, source outage", flush=True)
+            expected = {
+                "warehouse@smart-credit.test": (750, "B", "READY_FOR_CONFIRMATION", "MANUAL_REVIEW"),
+                "workshop@smart-credit.test": (950, "A", "READY_FOR_CONFIRMATION", "MANUAL_REVIEW"),
+                "cashgap@smart-credit.test": (930, "A", "NO_AFFORDABLE_OPTION", "MANUAL_REVIEW"),
+                "loss@smart-credit.test": (0, "E", "REJECT", "REJECTED"),
+                "review@smart-credit.test": (605, "C", "MANUAL_REVIEW", "MANUAL_REVIEW"),
+                "service@smart-credit.test": (None, None, None, "MANUAL_REVIEW"),
+            }
+            for company in DEMO_COMPANIES:
+                if company["email"] not in expected:
+                    continue
+                score, grade, result_status, case_status = expected[company["email"]]
+                app_id = new_application("company-llc-usn.json", company["inn"], company["suggested_amount_kopecks"])
+                case = wait_case(app_id, {case_status, "NEEDS_INFO", "REJECTED"})
+                assert case["status"] == case_status, (company["email"], case)
+                if result_status is None:
+                    assert case["checks"].get("bureau_error"), case
+                    print(f"{company['email']}: source unavailable -> MANUAL_REVIEW", flush=True)
+                    continue
+                envelope = api("GET", f"/api/backoffice/applications/{app_id}/assessment", analyst)
+                assessed = envelope["assessment"]
+                assert (assessed["risk"].get("score"), assessed["risk"].get("grade"), assessed["status"]) == (score, grade, result_status), (company["email"], assessed)
+                if result_status == "READY_FOR_CONFIRMATION":
+                    assert assessed["candidates"]
+                    expected_rate = 1800 if grade == "B" else 1600
+                    assert all(c["schedule"]["rate_bps"] == expected_rate for c in assessed["candidates"])
+                    if company["email"].startswith("workshop@"):
+                        assert assessed["original_failure_codes"]
+                        assert all(c["schedule"]["amount_kopecks"] < company["suggested_amount_kopecks"] or c["schedule"]["term_months"] != 12 for c in assessed["candidates"])
+                else:
+                    assert assessed["candidates"] == []
+                if case_status == "MANUAL_REVIEW" and result_status != "READY_FOR_CONFIRMATION":
+                    case = api("POST", f"/api/backoffice/applications/{app_id}/take", analyst, {},
+                               {"If-Match": f'"{case["version"]}"', "Idempotency-Key": str(uuid.uuid4())})
+                    impossible = {"outcome": "APPROVE", "comment": "Verify no policy bypass", "offer": {
+                        "product_id": PRODUCT_ID, "amount": {"amount_kopecks": 100000000, "currency": "RUB"}, "term_months": 12, "rate_bps": 1600}}
+                    api("POST", f"/api/backoffice/applications/{app_id}/decision", analyst, impossible,
+                        {"If-Match": f'"{case["version"]}"', "Idempotency-Key": str(uuid.uuid4())}, 422)
+                print(f"{company['email']}: {score}/{grade}, {result_status}", flush=True)
+
             print("Bank CI: seeded enrichment and assessment routing", flush=True)
             run(compose + ["exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1",
                            "-U", "postgres", "-d", "bank_db"],
                 (ROOT / "services/bank-service/seeds/demo.sql").read_text())
             verify_bank_integration(base + "/api", analyst)
+            deadline = time.monotonic() + 60
+            while not any("OTHER" in p["purpose_tags"] for p in api("GET", "/api/client/products", client)["items"]):
+                if time.monotonic() > deadline:
+                    raise AssertionError("catalog with all four financing purposes did not reach client")
+                time.sleep(1)
+            print("Updated catalog with OTHER reached client without blocking bank events", flush=True)
+            if args.check_recovery:
+                print("Recovery: accept a submission while Kafka and bank are stopped", flush=True)
+                run(compose + ["stop", "bank-service", "kafka"])
+                recovery_id = new_application("company-llc-usn.json", "7707083893", reuse_profile=True)
+
+                def count_rows(database, query):
+                    return int(run(compose + ["exec", "-T", "postgres", "psql", "-XAt", "-v", "ON_ERROR_STOP=1",
+                                              "-U", "postgres", "-d", database], query))
+
+                assert count_rows("client_db", f"SELECT count(*) FROM outbox WHERE aggregate_id='{recovery_id}' AND published_at IS NULL") == 1
+                run(compose + ["up", "-d", "--wait", "kafka", "bank-service"])
+                recovered = wait_case(recovery_id, {"MANUAL_REVIEW"})
+                wait_app(recovery_id, "UNDER_REVIEW")
+                assert count_rows("client_db", f"SELECT count(*) FROM outbox WHERE aggregate_id='{recovery_id}' AND published_at IS NULL") == 0
+                assert count_rows("bank_db", f"SELECT count(*) FROM cases WHERE id='{recovery_id}'") == 1
+                run(compose + ["restart", "client-service", "bank-service"])
+                run(compose + ["up", "-d", "--wait", "client-service", "bank-service"])
+                after_restart = wait_case(recovery_id, {"MANUAL_REVIEW"})
+                assert after_restart["version"] == recovered["version"]
+                wait_app(recovery_id, "UNDER_REVIEW")
+                assert count_rows("bank_db", f"SELECT count(*) FROM audit_log WHERE case_id='{application_id}' AND action='DEMO_DISBURSED'") == 1
+                print("Recovery passed: queued submission delivered once, state and single disbursement preserved after restart", flush=True)
             print("All assessment E2E scenarios passed", flush=True)
         except Exception:
             diagnostics = subprocess.run(compose + ["logs", "--no-color", "--tail=20",

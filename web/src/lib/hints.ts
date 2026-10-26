@@ -30,7 +30,7 @@ export type HintInput = {
   today?: Date;
 };
 
-// Base coverage the bank requires: monthly cash flow / loan payment ≥ 1.3.
+// Preliminary profit comparison only; the bank separately evaluates cash flow, existing debt and stress.
 export const COVERAGE_MIN = 1.3;
 const ROUND_TO = 100_000_00; // round suggestions down to 100 000 ₽
 
@@ -87,7 +87,7 @@ export function loanHints(i: HintInput): Hint[] {
       id: "loss",
       level: "bad",
       title: "Бизнес не показывает прибыль",
-      text: "Платёж по кредиту нечем покрывать из операционного потока — банк, вероятно, не найдёт доступных условий.",
+      text: "Заявленная прибыль не положительная. Для решения банк отдельно проверит денежный поток и действующие долги.",
     });
   }
 
@@ -102,8 +102,8 @@ export function loanHints(i: HintInput): Hint[] {
       hints.push({
         id: "coverage",
         level,
-        title: "Платёж по силам бизнесу",
-        text: `Ежемесячная прибыль ≈ ${rubles(monthlyFlow)} покрывает платёж ≈ ${rubles(payment)} с запасом ×${coverage.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}.`,
+        title: "Платёж ниже заявленной прибыли",
+        text: `Ежемесячная прибыль ≈ ${rubles(monthlyFlow)} покрывает платёж ≈ ${rubles(payment)} с запасом ×${coverage.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}. Это предварительное сравнение: банк проверит денежный поток, действующие долги и стрессовый сценарий.`,
         meter,
       });
     } else {
@@ -124,8 +124,8 @@ export function loanHints(i: HintInput): Hint[] {
         level,
         title: level === "bad" ? "Платёж больше прибыли" : "Платёж почти без запаса",
         text:
-          `Платёж ≈ ${rubles(payment)} в месяц, а прибыль ≈ ${rubles(monthlyFlow)}. Банк требует запас не меньше ×1,3. Меньшую сумму банк предложит, только если указать минимальную сумму в разделе «Если всю сумму дать не получится»; иначе уменьшите сумму или увеличьте срок сами.` +
-          (options.length ? ` Комфортно: ${options.join(" или ")}.` : ""),
+          `Платёж ≈ ${rubles(payment)} в месяц, а прибыль ≈ ${rubles(monthlyFlow)}. Для ориентира используем запас ×1,3 по прибыли; банковский расчёт выполняется по денежному потоку с учётом других долгов и стресса. Меньшую сумму банк предложит, только если указать минимальную сумму в разделе «Если всю сумму дать не получится»; иначе уменьшите сумму или увеличьте срок сами.` +
+          (options.length ? ` Для предварительного сравнения: ${options.join(" или ")}.` : ""),
         meter,
         fix:
           comfortable > 0 && comfortable >= (i.minAmountKopecks ?? 0)

@@ -1,0 +1,180 @@
+{
+  "synthetic": true,
+  "extension_requires_profile_change": false,
+  "company": {
+    "number": 4,
+    "inn": "7810755500",
+    "email": "warehouse@smart-credit.test",
+    "name": "ООО «Балтийский склад»",
+    "registered_at": "2016-09-20",
+    "okved": "52.10",
+    "tax_regime": "USN_INCOME",
+    "margin_bps": 3500,
+    "largest_customer_share_bps": 3000,
+    "monthly_receipts_kopecks": 200000000,
+    "initial_cash_kopecks": 50000000,
+    "debt_kopecks": 350000000,
+    "suggested_amount_kopecks": 100000000,
+    "suggested_term_months": 12,
+    "title": "Категория B",
+    "description": "Историческая просрочка 12 дней и концентрация 30%. Сравните ставку и доступные условия с пекарней."
+  },
+  "tax_regimes": [
+    "USN_INCOME"
+  ],
+  "reference_date": "2026-10-26",
+  "financial_period": {
+    "from": "2025-10-01",
+    "to": "2026-09-30"
+  },
+  "management_revenue_kopecks": 2400000000,
+  "management_profit_kopecks": 864000000,
+  "cash_surplus_kopecks": 840000000,
+  "additional_owner_funding_kopecks": 0,
+  "future_debt_schedule": [
+    {
+      "month": "2026-11",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 5250000,
+      "payment_kopecks": 19833333
+    },
+    {
+      "month": "2026-12",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 5031250,
+      "payment_kopecks": 19614583
+    },
+    {
+      "month": "2027-01",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 4812500,
+      "payment_kopecks": 19395833
+    },
+    {
+      "month": "2027-02",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 4593750,
+      "payment_kopecks": 19177083
+    },
+    {
+      "month": "2027-03",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 4375000,
+      "payment_kopecks": 18958333
+    },
+    {
+      "month": "2027-04",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 4156250,
+      "payment_kopecks": 18739583
+    },
+    {
+      "month": "2027-05",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 3937500,
+      "payment_kopecks": 18520833
+    },
+    {
+      "month": "2027-06",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 3718750,
+      "payment_kopecks": 18302083
+    },
+    {
+      "month": "2027-07",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 3500000,
+      "payment_kopecks": 18083333
+    },
+    {
+      "month": "2027-08",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 3281250,
+      "payment_kopecks": 17864583
+    },
+    {
+      "month": "2027-09",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 3062500,
+      "payment_kopecks": 17645833
+    },
+    {
+      "month": "2027-10",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 2843750,
+      "payment_kopecks": 17427083
+    },
+    {
+      "month": "2027-11",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 2625000,
+      "payment_kopecks": 17208333
+    },
+    {
+      "month": "2027-12",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 2406250,
+      "payment_kopecks": 16989583
+    },
+    {
+      "month": "2028-01",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 2187500,
+      "payment_kopecks": 16770833
+    },
+    {
+      "month": "2028-02",
+      "principal_kopecks": 14583333,
+      "interest_kopecks": 1968750,
+      "payment_kopecks": 16552083
+    },
+    {
+      "month": "2028-03",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 1750000,
+      "payment_kopecks": 16333334
+    },
+    {
+      "month": "2028-04",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 1531250,
+      "payment_kopecks": 16114584
+    },
+    {
+      "month": "2028-05",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 1312500,
+      "payment_kopecks": 15895834
+    },
+    {
+      "month": "2028-06",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 1093750,
+      "payment_kopecks": 15677084
+    },
+    {
+      "month": "2028-07",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 875000,
+      "payment_kopecks": 15458334
+    },
+    {
+      "month": "2028-08",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 656250,
+      "payment_kopecks": 15239584
+    },
+    {
+      "month": "2028-09",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 437500,
+      "payment_kopecks": 15020834
+    },
+    {
+      "month": "2028-10",
+      "principal_kopecks": 14583334,
+      "interest_kopecks": 218750,
+      "payment_kopecks": 14802084
+    }
+  ]
+}

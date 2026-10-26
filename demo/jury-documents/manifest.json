@@ -1,0 +1,1698 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "reference_date": "2026-10-26",
+  "source": "pkg/demodata/companies.json + pkg/assessment/demo.go",
+  "scenarios": [
+    {
+      "folder": "01_llc_approval",
+      "name": "ООО «Северная пекарня»",
+      "email": "client@smart-credit.test",
+      "inn": "7707083893",
+      "title": "Подтверждение условий",
+      "expected_behavior": "Устойчивый поток, нет просрочек. Банк рассчитывает варианты; аналитик подтверждает оферту.",
+      "extension": false
+    },
+    {
+      "folder": "02_ip_patent",
+      "name": "ИП Демо Предприниматель",
+      "email": "ip@smart-credit.test",
+      "inn": "990000000115",
+      "title": "Запрос документов",
+      "expected_behavior": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение.",
+      "extension": false
+    },
+    {
+      "folder": "03_llc_liquidation",
+      "name": "ООО «Закрывающаяся мастерская»",
+      "email": "closing@smart-credit.test",
+      "inn": "1111111117",
+      "title": "Отказ по допуску",
+      "expected_behavior": "Компания ликвидируется: банк откажет до расчёта балла.",
+      "extension": false
+    },
+    {
+      "folder": "04_llc_grade_b",
+      "name": "ООО «Балтийский склад»",
+      "email": "warehouse@smart-credit.test",
+      "inn": "7810755500",
+      "title": "Категория B",
+      "expected_behavior": "Историческая просрочка 12 дней и концентрация 30%. Сравните ставку и доступные условия с пекарней.",
+      "extension": false
+    },
+    {
+      "folder": "05_llc_counteroffer",
+      "name": "ООО «Уральская мастерская»",
+      "email": "workshop@smart-credit.test",
+      "inn": "6671160003",
+      "title": "Контрпредложение",
+      "expected_behavior": "Запрос 5 млн ₽ на 12 месяцев. Банк предложит меньшую сумму или больший срок, если платежи проходят проверку.",
+      "extension": false
+    },
+    {
+      "folder": "06_llc_cash_gap",
+      "name": "ООО «Тонкий запас»",
+      "email": "cashgap@smart-credit.test",
+      "inn": "9876543210",
+      "title": "Нет посильного варианта",
+      "expected_behavior": "Без просрочек и с высоким баллом, но поток не выдерживает стресс. Оферты нет даже при категории A.",
+      "extension": false
+    },
+    {
+      "folder": "07_llc_loss",
+      "name": "ООО «Убыточный проект»",
+      "email": "loss@smart-credit.test",
+      "inn": "9900000024",
+      "title": "Отказ по скоркарте",
+      "expected_behavior": "Убыточный поток, концентрация 85%, историческая просрочка 60 дней. Банк рассчитает низкий балл и откажет.",
+      "extension": false
+    },
+    {
+      "folder": "08_llc_manual_review",
+      "name": "ООО «Зависимый поставщик»",
+      "email": "review@smart-credit.test",
+      "inn": "9900000031",
+      "title": "Ручной разбор",
+      "expected_behavior": "Просрочка 12 дней, запас 18%, концентрация 40%. Аналитик увидит причины; оферта без допустимого расчёта заблокирована.",
+      "extension": false
+    },
+    {
+      "folder": "09_llc_source_unavailable",
+      "name": "ООО «Сибирский сервис»",
+      "email": "service@smart-credit.test",
+      "inn": "5401010012",
+      "title": "Источник не ответил",
+      "expected_behavior": "Бюро задерживает ответ. Дело уйдёт на ручную проверку, отсутствие ответа не считается нулевой просрочкой.",
+      "extension": false
+    },
+    {
+      "folder": "extended/ip_usn_income",
+      "name": "ИП Демо Предприниматель",
+      "email": "ip@smart-credit.test",
+      "inn": "990000000115",
+      "title": "Запрос документов",
+      "expected_behavior": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение.",
+      "extension": true
+    },
+    {
+      "folder": "extended/ip_usn_expense",
+      "name": "ИП Демо Предприниматель",
+      "email": "ip@smart-credit.test",
+      "inn": "990000000115",
+      "title": "Запрос документов",
+      "expected_behavior": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение.",
+      "extension": true
+    },
+    {
+      "folder": "extended/ip_osno",
+      "name": "ИП Демо Предприниматель",
+      "email": "ip@smart-credit.test",
+      "inn": "990000000115",
+      "title": "Запрос документов",
+      "expected_behavior": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение.",
+      "extension": true
+    },
+    {
+      "folder": "extended/ip_usn_psn",
+      "name": "ИП Демо Предприниматель",
+      "email": "ip@smart-credit.test",
+      "inn": "990000000115",
+      "title": "Запрос документов",
+      "expected_behavior": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение.",
+      "extension": true
+    },
+    {
+      "folder": "extended/ip_regime_changed",
+      "name": "ИП Демо Предприниматель",
+      "email": "ip@smart-credit.test",
+      "inn": "990000000115",
+      "title": "Запрос документов",
+      "expected_behavior": "Банк запросит патент. После загрузки документа заявка вернётся на рассмотрение.",
+      "extension": true
+    }
+  ],
+  "documents": [
+    {
+      "scenario": "01_llc_approval",
+      "inn": "7707083893",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "01_llc_approval/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "01_llc_approval/bank_statement.txt": "97b0fd1552f9b3f980c23382d0538f0937bd038fc61e092be4e6ca7d4465fc19"
+      }
+    },
+    {
+      "scenario": "01_llc_approval",
+      "inn": "7707083893",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "01_llc_approval/management_report.txt",
+        "01_llc_approval/management_report.pdf"
+      ],
+      "sha256": {
+        "01_llc_approval/management_report.txt": "2c5ec03273da9fccd6e1387c73c1b8c4dde8558265b0a1a6e95cb67aab039ace",
+        "01_llc_approval/management_report.pdf": "63c437f47ebdb01b009a297f2697df0fa6c8c1cbdcb7b9bea6a52cc958131985"
+      }
+    },
+    {
+      "scenario": "01_llc_approval",
+      "inn": "7707083893",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "01_llc_approval/accounting_report.txt",
+        "01_llc_approval/accounting_report.pdf"
+      ],
+      "sha256": {
+        "01_llc_approval/accounting_report.txt": "c3d2f42a1120c6aca5d246a3bfc6c5a882150232c51c64a42d3bf63162549dc9",
+        "01_llc_approval/accounting_report.pdf": "a19580b38dc4caa1d42b8a4877d193da57a5edf26d99d3d616f178fee85946cb"
+      }
+    },
+    {
+      "scenario": "01_llc_approval",
+      "inn": "7707083893",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "01_llc_approval/receivables_payables.txt",
+        "01_llc_approval/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "01_llc_approval/receivables_payables.txt": "b728f96ece4a9da2a002db7fa031a40d7a709826d30ef8a74347ca9a0cf8f2ea",
+        "01_llc_approval/receivables_payables.pdf": "9fbc7ecb03eb51084124c56cf5e1e0d96d95accc583224c58d8f50e203cc3e88"
+      }
+    },
+    {
+      "scenario": "01_llc_approval",
+      "inn": "7707083893",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "01_llc_approval/tax_declaration_usn_usn_income.txt",
+        "01_llc_approval/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "01_llc_approval/tax_declaration_usn_usn_income.txt": "812d177e6921273387e1168acdbe7e21b9177ccaf14277862eec3ca00cfa2c7e",
+        "01_llc_approval/tax_declaration_usn_usn_income.pdf": "3a4316a5c11331ddcdb8487fd169b787e9fa5e8d1592b807aaf2dcb439f9ca5d"
+      }
+    },
+    {
+      "scenario": "01_llc_approval",
+      "inn": "7707083893",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "01_llc_approval/business_plan.txt",
+        "01_llc_approval/business_plan.pdf"
+      ],
+      "sha256": {
+        "01_llc_approval/business_plan.txt": "b1196673691f0c16eb3418a63f8970acffc15fcdba31773cc6cffc6d7a35723f",
+        "01_llc_approval/business_plan.pdf": "9216db36eb55223dac94689af2ac3dd9d23bb7881415ea4ac0371e0105c25cba"
+      }
+    },
+    {
+      "scenario": "02_ip_patent",
+      "inn": "990000000115",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "02_ip_patent/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "02_ip_patent/bank_statement.txt": "f5ddc069be6c11861ad598f0879daf2660b9283b8dd33f55ef8b4b676c313e3b"
+      }
+    },
+    {
+      "scenario": "02_ip_patent",
+      "inn": "990000000115",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "02_ip_patent/management_report.txt",
+        "02_ip_patent/management_report.pdf"
+      ],
+      "sha256": {
+        "02_ip_patent/management_report.txt": "2b0e9be6267e5cdb430162fe0ada792658e1d7cb7cc02d0f6e6ed49df445f57b",
+        "02_ip_patent/management_report.pdf": "c769185721cc5f0cd887de6fd8ca2f62c4cbf3cc024e4b1d4c9416bd74e4faec"
+      }
+    },
+    {
+      "scenario": "02_ip_patent",
+      "inn": "990000000115",
+      "document_type": "PATENT",
+      "coverage_from": "2026-01-01",
+      "coverage_to": "2026-12-31",
+      "requirement_code": "PATENT_RIGHT",
+      "requirement_id_example": "patent_right:2026-10-26:2026-10-26:psn",
+      "tax_regime": "PSN",
+      "files": [
+        "02_ip_patent/patent.txt",
+        "02_ip_patent/patent.pdf"
+      ],
+      "sha256": {
+        "02_ip_patent/patent.txt": "99a5d0b1028a34388352fcc00269e4ffa2ef5198c5b98ab8dcb6f78457e72bd7",
+        "02_ip_patent/patent.pdf": "a918ba8946d12f56f7c09e16d2d4751e909cf17a823150ec4b7c0ccb2e351fb2"
+      }
+    },
+    {
+      "scenario": "02_ip_patent",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2026-09-30:psn",
+      "tax_regime": "PSN",
+      "files": [
+        "02_ip_patent/income_ledger_psn.txt",
+        "02_ip_patent/income_ledger_psn.pdf"
+      ],
+      "sha256": {
+        "02_ip_patent/income_ledger_psn.txt": "10f4510ad2429d05ba026971633c3cccb828495aa53f2443bab6b36bde824a66",
+        "02_ip_patent/income_ledger_psn.pdf": "bc82550a6b7df01a9bfd813fb4a752f5d54b0cc7c3332b7d22c0a22ff2bcb729"
+      }
+    },
+    {
+      "scenario": "02_ip_patent",
+      "inn": "990000000115",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "02_ip_patent/business_plan.txt",
+        "02_ip_patent/business_plan.pdf"
+      ],
+      "sha256": {
+        "02_ip_patent/business_plan.txt": "19fe4bb4cf3d3dd663191b3b82ba1107719f28bffc23eb34110ae2c75d62935b",
+        "02_ip_patent/business_plan.pdf": "87262f819c86147ba7ce7f08eb326d8abe3eac655601e459579203d0c35606a3"
+      }
+    },
+    {
+      "scenario": "03_llc_liquidation",
+      "inn": "1111111117",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "03_llc_liquidation/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 960000000,
+        "closing_balance_kopecks": 290000000,
+        "operations": 180
+      },
+      "sha256": {
+        "03_llc_liquidation/bank_statement.txt": "fc7446df03cd7be9565145a99602056ae0133f6c18d62ddb7217816fc8ef50d0"
+      }
+    },
+    {
+      "scenario": "03_llc_liquidation",
+      "inn": "1111111117",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "03_llc_liquidation/management_report.txt",
+        "03_llc_liquidation/management_report.pdf"
+      ],
+      "sha256": {
+        "03_llc_liquidation/management_report.txt": "89cefd0ec83e079124397874bb2ad55c9faff432dd2b88850d81fac3c75821bf",
+        "03_llc_liquidation/management_report.pdf": "a7613d2c5fa10be403b4724d8079c5e72e1d278f82eeb504cfe575c3b1410131"
+      }
+    },
+    {
+      "scenario": "03_llc_liquidation",
+      "inn": "1111111117",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "03_llc_liquidation/accounting_report.txt",
+        "03_llc_liquidation/accounting_report.pdf"
+      ],
+      "sha256": {
+        "03_llc_liquidation/accounting_report.txt": "6740a9c7a8fe73d45593e559b8c2bb68f77784e86d8c1ed882a7a20d757a082f",
+        "03_llc_liquidation/accounting_report.pdf": "c54267cf0d1801de979001eb8b1ec7c84ff03012fd136d06e5636bb103e21b99"
+      }
+    },
+    {
+      "scenario": "03_llc_liquidation",
+      "inn": "1111111117",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "03_llc_liquidation/receivables_payables.txt",
+        "03_llc_liquidation/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "03_llc_liquidation/receivables_payables.txt": "cdbc6ef1223d0ad5916db8ee39450ade17dbf8c168902948d15989c2322dd983",
+        "03_llc_liquidation/receivables_payables.pdf": "ba52af20455020a0313e5eca5fcf5f950193b13e9149f420175c91e071c66483"
+      }
+    },
+    {
+      "scenario": "03_llc_liquidation",
+      "inn": "1111111117",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "03_llc_liquidation/tax_declaration_usn_usn_income.txt",
+        "03_llc_liquidation/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "03_llc_liquidation/tax_declaration_usn_usn_income.txt": "718d2b643076a9cf6610a7f5d9e572e4457cde900a7985a89cb38a83535f7a8b",
+        "03_llc_liquidation/tax_declaration_usn_usn_income.pdf": "c5bdc32bc5cb0cf708ca4a4deccaaddf0e0e915dd5143669f7e077b9fa21aaac"
+      }
+    },
+    {
+      "scenario": "03_llc_liquidation",
+      "inn": "1111111117",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "03_llc_liquidation/business_plan.txt",
+        "03_llc_liquidation/business_plan.pdf"
+      ],
+      "sha256": {
+        "03_llc_liquidation/business_plan.txt": "90cffa44214f8fe8b817957ae69d66098628b1470779e13801af390ee0af2f41",
+        "03_llc_liquidation/business_plan.pdf": "59e1fbed54a64a015e5f4afe76d06323fe0f24f7fec0d43dcf79c6cfab9f76eb"
+      }
+    },
+    {
+      "scenario": "04_llc_grade_b",
+      "inn": "7810755500",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "04_llc_grade_b/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 2400000000,
+        "total_debits_kopecks": 1560000000,
+        "closing_balance_kopecks": 890000000,
+        "operations": 180
+      },
+      "sha256": {
+        "04_llc_grade_b/bank_statement.txt": "539568480f8817644f285fd30f0d25007b6f0d82aab84953291d466a93c654d0"
+      }
+    },
+    {
+      "scenario": "04_llc_grade_b",
+      "inn": "7810755500",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "04_llc_grade_b/management_report.txt",
+        "04_llc_grade_b/management_report.pdf"
+      ],
+      "sha256": {
+        "04_llc_grade_b/management_report.txt": "d2ce88d89c8334334abb1445b45711bbb0610f93711cd2c32378b45bf04fe585",
+        "04_llc_grade_b/management_report.pdf": "742b8c4670fff594c1a3ce9acfc1e77b1418e7f61349cfa27b352aae2500d072"
+      }
+    },
+    {
+      "scenario": "04_llc_grade_b",
+      "inn": "7810755500",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "04_llc_grade_b/accounting_report.txt",
+        "04_llc_grade_b/accounting_report.pdf"
+      ],
+      "sha256": {
+        "04_llc_grade_b/accounting_report.txt": "a518a566a8d036b403bb195d30c1d3160dad893c29d9b30fb61bf749fa91be1a",
+        "04_llc_grade_b/accounting_report.pdf": "dae20ee5fc0183efacbb52b5d924ff5d3f0914202c1814e2cbb5f0cd9ef98d83"
+      }
+    },
+    {
+      "scenario": "04_llc_grade_b",
+      "inn": "7810755500",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "04_llc_grade_b/receivables_payables.txt",
+        "04_llc_grade_b/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "04_llc_grade_b/receivables_payables.txt": "2ab7a561cc1666e3751be6d3ce70ff046927e99ef7f6e8574e5543b5e9c2248e",
+        "04_llc_grade_b/receivables_payables.pdf": "32fa0792ab4f151b53c76b3c70e3d7acbe4374482c76bd84c1fb20b599b0d904"
+      }
+    },
+    {
+      "scenario": "04_llc_grade_b",
+      "inn": "7810755500",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "04_llc_grade_b/tax_declaration_usn_usn_income.txt",
+        "04_llc_grade_b/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "04_llc_grade_b/tax_declaration_usn_usn_income.txt": "925b6520947b988c4df2f432c9a3cb2f60f5596432bd36213a59afe44bc55d2d",
+        "04_llc_grade_b/tax_declaration_usn_usn_income.pdf": "5637be958b83251548c9b1a4942453309b12b3ee82ddb37c7da3274e500356f0"
+      }
+    },
+    {
+      "scenario": "04_llc_grade_b",
+      "inn": "7810755500",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "04_llc_grade_b/business_plan.txt",
+        "04_llc_grade_b/business_plan.pdf"
+      ],
+      "sha256": {
+        "04_llc_grade_b/business_plan.txt": "57048dd3fc627e3d8164d11b7eea00a7c6bdfd0d8f3b80f6a7f61e739a161c50",
+        "04_llc_grade_b/business_plan.pdf": "af292a1531614361b75d28b45668127db3b3df4b205a67c16179098108374c2a"
+      }
+    },
+    {
+      "scenario": "05_llc_counteroffer",
+      "inn": "6671160003",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "05_llc_counteroffer/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "05_llc_counteroffer/bank_statement.txt": "4dfa3b45306cfd016ab39f152ffb6ba0f4cbd63ba8126964cf58db9daa496f5c"
+      }
+    },
+    {
+      "scenario": "05_llc_counteroffer",
+      "inn": "6671160003",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "05_llc_counteroffer/management_report.txt",
+        "05_llc_counteroffer/management_report.pdf"
+      ],
+      "sha256": {
+        "05_llc_counteroffer/management_report.txt": "8da632b538e902abfd7846ba1fbc795ee8c18c58c0f0d6ae85d6faf8f2f5ddc3",
+        "05_llc_counteroffer/management_report.pdf": "986df5b2cd959f2fa4f0f0bd76aadc867609b857f0604afeac70b1321cc06bc2"
+      }
+    },
+    {
+      "scenario": "05_llc_counteroffer",
+      "inn": "6671160003",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "05_llc_counteroffer/accounting_report.txt",
+        "05_llc_counteroffer/accounting_report.pdf"
+      ],
+      "sha256": {
+        "05_llc_counteroffer/accounting_report.txt": "e0c8939083022e519fe049e3e78b2707f547e4f313f68ee8cad67619cbcc9704",
+        "05_llc_counteroffer/accounting_report.pdf": "3f39dadc248b25dfd5e829d668a4c267fa9ab460fa61ee43bdc91d88527d732c"
+      }
+    },
+    {
+      "scenario": "05_llc_counteroffer",
+      "inn": "6671160003",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "05_llc_counteroffer/receivables_payables.txt",
+        "05_llc_counteroffer/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "05_llc_counteroffer/receivables_payables.txt": "cbd26497646466f00101b57e7659fe43b06e82f79bb62950dd8bc2ccbbd144c3",
+        "05_llc_counteroffer/receivables_payables.pdf": "dc21104179e3ab2ffef175966bc2c8318d426503944331dc1400b4c31cb986e2"
+      }
+    },
+    {
+      "scenario": "05_llc_counteroffer",
+      "inn": "6671160003",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "05_llc_counteroffer/tax_declaration_usn_usn_income.txt",
+        "05_llc_counteroffer/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "05_llc_counteroffer/tax_declaration_usn_usn_income.txt": "c61db51299df69296c315ad0cafdaaca1a14c88ba40094b39ce6be4ffd309e66",
+        "05_llc_counteroffer/tax_declaration_usn_usn_income.pdf": "80dc8b9da06d3e83ea0ff00af4c4ca7ffed68370700cf913832a5a08bcb0f757"
+      }
+    },
+    {
+      "scenario": "05_llc_counteroffer",
+      "inn": "6671160003",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "05_llc_counteroffer/business_plan.txt",
+        "05_llc_counteroffer/business_plan.pdf"
+      ],
+      "sha256": {
+        "05_llc_counteroffer/business_plan.txt": "f0f8e32d97c705f68bc3fb7f6db8405b950c4657ec213d852b9f2856fa28ffab",
+        "05_llc_counteroffer/business_plan.pdf": "956d5dc32122aab949165f15a44dfd3e23d49ea8f9d2649bad198ff9b5f8f8ae"
+      }
+    },
+    {
+      "scenario": "06_llc_cash_gap",
+      "inn": "9876543210",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "06_llc_cash_gap/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 984000000,
+        "closing_balance_kopecks": 266000000,
+        "operations": 180
+      },
+      "sha256": {
+        "06_llc_cash_gap/bank_statement.txt": "69db1d64727b4083570600a3d301700ba50458e715472dd7ddb23fc0699942f8"
+      }
+    },
+    {
+      "scenario": "06_llc_cash_gap",
+      "inn": "9876543210",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "06_llc_cash_gap/management_report.txt",
+        "06_llc_cash_gap/management_report.pdf"
+      ],
+      "sha256": {
+        "06_llc_cash_gap/management_report.txt": "d4832e8aba106fda2ca2db09d326cbe8003f96b7339ba6e4eb9856bd6c320960",
+        "06_llc_cash_gap/management_report.pdf": "46b817a812ba87a69a7f7cad3374d0c0fe9c9c7e7de77772319b258cdc483126"
+      }
+    },
+    {
+      "scenario": "06_llc_cash_gap",
+      "inn": "9876543210",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "06_llc_cash_gap/accounting_report.txt",
+        "06_llc_cash_gap/accounting_report.pdf"
+      ],
+      "sha256": {
+        "06_llc_cash_gap/accounting_report.txt": "c5a17d65348dda4bf0a535a76b5a30949f2967f8c0204a9134dbc6c51e9d99b0",
+        "06_llc_cash_gap/accounting_report.pdf": "73aad89c47fc191560e15dd228e65c8c57daac24da4fc79f0c73332a47d830e8"
+      }
+    },
+    {
+      "scenario": "06_llc_cash_gap",
+      "inn": "9876543210",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "06_llc_cash_gap/receivables_payables.txt",
+        "06_llc_cash_gap/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "06_llc_cash_gap/receivables_payables.txt": "1eb8d195e7a25838cbc7156ec76b1d53eb597148f0524300a50cbf213481f141",
+        "06_llc_cash_gap/receivables_payables.pdf": "8573aa40737aa510f1749373b1efe165fe2aab699fa6c50cbae1965213f0a2e0"
+      }
+    },
+    {
+      "scenario": "06_llc_cash_gap",
+      "inn": "9876543210",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "06_llc_cash_gap/tax_declaration_usn_usn_income.txt",
+        "06_llc_cash_gap/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "06_llc_cash_gap/tax_declaration_usn_usn_income.txt": "31177cc9b1a7e18612db3f15992e2b4137e7bd6e869935fb203390d0846fc559",
+        "06_llc_cash_gap/tax_declaration_usn_usn_income.pdf": "a6b74c63451e0a95466b8499614ebfc19511df9d5829c0709fd90a77ce263be1"
+      }
+    },
+    {
+      "scenario": "06_llc_cash_gap",
+      "inn": "9876543210",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "06_llc_cash_gap/business_plan.txt",
+        "06_llc_cash_gap/business_plan.pdf"
+      ],
+      "sha256": {
+        "06_llc_cash_gap/business_plan.txt": "0ac8efc9f5e95d6410c10fedd0a576ad0043285ecb501699da4a9daa0535505c",
+        "06_llc_cash_gap/business_plan.pdf": "e8ad5dca24aa69b6b71bc3373815efd1794a936707f0566c78ea051ac66953d3"
+      }
+    },
+    {
+      "scenario": "07_llc_loss",
+      "inn": "9900000024",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "07_llc_loss/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1210000000,
+        "total_debits_kopecks": 1260000000,
+        "closing_balance_kopecks": 0,
+        "operations": 181
+      },
+      "sha256": {
+        "07_llc_loss/bank_statement.txt": "b41184b06f2c4ceb7d2f59f2d5e5ce0031e014c83c4c823fa08da16fc57afbe3"
+      }
+    },
+    {
+      "scenario": "07_llc_loss",
+      "inn": "9900000024",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "07_llc_loss/management_report.txt",
+        "07_llc_loss/management_report.pdf"
+      ],
+      "sha256": {
+        "07_llc_loss/management_report.txt": "33f546bd8104beb9b6b8b9f36370e5c9f18ca5f75b23c9a5878f830493e3337a",
+        "07_llc_loss/management_report.pdf": "3bdfd81980fc93e4c4b20691c0c75305624f58ed8e93f99004a429abd9fc793a"
+      }
+    },
+    {
+      "scenario": "07_llc_loss",
+      "inn": "9900000024",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "07_llc_loss/accounting_report.txt",
+        "07_llc_loss/accounting_report.pdf"
+      ],
+      "sha256": {
+        "07_llc_loss/accounting_report.txt": "45e7d8baad99c8d575704a327735e3e7fe75acd8b920e028eb1d9b92c26c98b3",
+        "07_llc_loss/accounting_report.pdf": "bcaaf1e6491eb3b4d5819b16c2664b68799dfa86eda509038c4e5b18dae7b9d9"
+      }
+    },
+    {
+      "scenario": "07_llc_loss",
+      "inn": "9900000024",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "07_llc_loss/receivables_payables.txt",
+        "07_llc_loss/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "07_llc_loss/receivables_payables.txt": "8c5a85d8dac78e54f5eb062f3b7f4814d566b5cebd53d97bb8bf13510325ff3c",
+        "07_llc_loss/receivables_payables.pdf": "a6a38618eb4842b1a84b6221d09774a2165f67f50be594ef40067f668cada608"
+      }
+    },
+    {
+      "scenario": "07_llc_loss",
+      "inn": "9900000024",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "07_llc_loss/tax_declaration_usn_usn_income.txt",
+        "07_llc_loss/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "07_llc_loss/tax_declaration_usn_usn_income.txt": "5d3f8bf378d9a52c2fdd0b63665b0714ebe5d4b723ca333a123c243887863825",
+        "07_llc_loss/tax_declaration_usn_usn_income.pdf": "5bfd0335d6cde2c81a9c3252bd631ca06fcafd6498942b3badfb380cd8e26fa1"
+      }
+    },
+    {
+      "scenario": "07_llc_loss",
+      "inn": "9900000024",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "07_llc_loss/business_plan.txt",
+        "07_llc_loss/business_plan.pdf"
+      ],
+      "sha256": {
+        "07_llc_loss/business_plan.txt": "7d0a3d931b5444eafff8e18078053c5c723bfc06da6bc37a3c70123f33110b20",
+        "07_llc_loss/business_plan.pdf": "6c55bf2210b75d7dc512bcde4c2d654f790ad0c3cae3274e3e027f29d5b02e3a"
+      }
+    },
+    {
+      "scenario": "08_llc_manual_review",
+      "inn": "9900000031",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "08_llc_manual_review/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 984000000,
+        "closing_balance_kopecks": 266000000,
+        "operations": 180
+      },
+      "sha256": {
+        "08_llc_manual_review/bank_statement.txt": "e6de74d7fc5babb9b6612c8ee54a9f91110953133a160a209f5ccfd31f20fdaf"
+      }
+    },
+    {
+      "scenario": "08_llc_manual_review",
+      "inn": "9900000031",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "08_llc_manual_review/management_report.txt",
+        "08_llc_manual_review/management_report.pdf"
+      ],
+      "sha256": {
+        "08_llc_manual_review/management_report.txt": "b34260df3a60351db2eef587923f0c694ffb4c490bb2fe756b8e2e78410d99e3",
+        "08_llc_manual_review/management_report.pdf": "cf66b8fc238e9a73e5c9d82880a62e7b1e82fd78fd33107e38b1e9c2cc903fee"
+      }
+    },
+    {
+      "scenario": "08_llc_manual_review",
+      "inn": "9900000031",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "08_llc_manual_review/accounting_report.txt",
+        "08_llc_manual_review/accounting_report.pdf"
+      ],
+      "sha256": {
+        "08_llc_manual_review/accounting_report.txt": "28be848ef761dde5c4b61d614c45b31dec086f5fd509990f5e48513fcec2aec7",
+        "08_llc_manual_review/accounting_report.pdf": "60142cabe4a5df9f8b32e2182ef31a49412e12894d61d8ad0e75bc3cfe4c7ead"
+      }
+    },
+    {
+      "scenario": "08_llc_manual_review",
+      "inn": "9900000031",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "08_llc_manual_review/receivables_payables.txt",
+        "08_llc_manual_review/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "08_llc_manual_review/receivables_payables.txt": "132b6cdfdac581594796154304d773cfd13921875b03d1d9b0c6a9a8a9e7bfd9",
+        "08_llc_manual_review/receivables_payables.pdf": "69adf92b1ccb59ce74401a28db9f220388b77a51e74209b403a22d2ff887fac5"
+      }
+    },
+    {
+      "scenario": "08_llc_manual_review",
+      "inn": "9900000031",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "08_llc_manual_review/tax_declaration_usn_usn_income.txt",
+        "08_llc_manual_review/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "08_llc_manual_review/tax_declaration_usn_usn_income.txt": "768d6167e9f45aaa450ebd463bf5b0555621af600ba28ee1a4116cd8b8c6663b",
+        "08_llc_manual_review/tax_declaration_usn_usn_income.pdf": "4506e4d70ad62afabd0fa4ea32c04ed0d7f6e9e75ebee974c01c4bebccd61726"
+      }
+    },
+    {
+      "scenario": "08_llc_manual_review",
+      "inn": "9900000031",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "08_llc_manual_review/business_plan.txt",
+        "08_llc_manual_review/business_plan.pdf"
+      ],
+      "sha256": {
+        "08_llc_manual_review/business_plan.txt": "ed66d7c0ab3fb2c9d2187889cbe08456759099cbfcb2718486128affd4d3ba7a",
+        "08_llc_manual_review/business_plan.pdf": "41552286a19c689823f6380278d62fdf6278bdf31d588984876a019d39fb19ae"
+      }
+    },
+    {
+      "scenario": "09_llc_source_unavailable",
+      "inn": "5401010012",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "09_llc_source_unavailable/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 936000000,
+        "closing_balance_kopecks": 314000000,
+        "operations": 180
+      },
+      "sha256": {
+        "09_llc_source_unavailable/bank_statement.txt": "3f0f6728117c6a4cf48f9d508feee9118b21a1cab705c00a333c6b16bd38370f"
+      }
+    },
+    {
+      "scenario": "09_llc_source_unavailable",
+      "inn": "5401010012",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "MANAGEMENT_REPORT",
+      "requirement_id_example": "management_report:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "09_llc_source_unavailable/management_report.txt",
+        "09_llc_source_unavailable/management_report.pdf"
+      ],
+      "sha256": {
+        "09_llc_source_unavailable/management_report.txt": "ef35a3585aa7ca7a46059ec9ac204a7c4bbb44772e7d47b674576efd37f4b122",
+        "09_llc_source_unavailable/management_report.pdf": "d9895ca3619a64afe02fc85d9355c1a4a9d83a3b9d416ad3d3fff8ca974581c7"
+      }
+    },
+    {
+      "scenario": "09_llc_source_unavailable",
+      "inn": "5401010012",
+      "document_type": "ACCOUNTING_REPORT",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-01-01:2025-12-31:all",
+      "tax_regime": "all",
+      "files": [
+        "09_llc_source_unavailable/accounting_report.txt",
+        "09_llc_source_unavailable/accounting_report.pdf"
+      ],
+      "sha256": {
+        "09_llc_source_unavailable/accounting_report.txt": "e8995899e4d282ffc5ca69b1118dcccf4c898d7c1354b2553e575156a57bcd4d",
+        "09_llc_source_unavailable/accounting_report.pdf": "06d5a9e9b0a7efa1ca615461c82fca3a22120efa07718f85fa1fe0724dc7db27"
+      }
+    },
+    {
+      "scenario": "09_llc_source_unavailable",
+      "inn": "5401010012",
+      "document_type": "RECEIVABLES_PAYABLES",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": "RECEIVABLES_PAYABLES",
+      "requirement_id_example": "receivables_payables:2026-10-26:2026-10-26:all",
+      "tax_regime": "all",
+      "files": [
+        "09_llc_source_unavailable/receivables_payables.txt",
+        "09_llc_source_unavailable/receivables_payables.pdf"
+      ],
+      "sha256": {
+        "09_llc_source_unavailable/receivables_payables.txt": "67bb6818353206130ba8549699aaef2256b67c928e688183147d6a5a89157ec2",
+        "09_llc_source_unavailable/receivables_payables.pdf": "5434111bba82dbc351f7c95d748ebbfc7e84543a7dc492f3b2ae4e722b2329d0"
+      }
+    },
+    {
+      "scenario": "09_llc_source_unavailable",
+      "inn": "5401010012",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "09_llc_source_unavailable/tax_declaration_usn_usn_income.txt",
+        "09_llc_source_unavailable/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "09_llc_source_unavailable/tax_declaration_usn_usn_income.txt": "dc6edff319aff8c3e18d715315fb06ae683a96b29da94ef7b35eb5f9ab269630",
+        "09_llc_source_unavailable/tax_declaration_usn_usn_income.pdf": "402798fe6c01d6f32e6bb6ad719e5e33daa96a71a4ad6155fff65a579341f031"
+      }
+    },
+    {
+      "scenario": "09_llc_source_unavailable",
+      "inn": "5401010012",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "09_llc_source_unavailable/business_plan.txt",
+        "09_llc_source_unavailable/business_plan.pdf"
+      ],
+      "sha256": {
+        "09_llc_source_unavailable/business_plan.txt": "53800a48d4ce2e1bccdbd96ed7025782a60ba836e1a092a046a8a4f234c0dcf2",
+        "09_llc_source_unavailable/business_plan.pdf": "44d6c6c6c70d0b89d9004dafdf753fa503937b015ea74140eab39fa791e6e183"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_income",
+      "inn": "990000000115",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "extended/ip_usn_income/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "extended/ip_usn_income/bank_statement.txt": "f5ddc069be6c11861ad598f0879daf2660b9283b8dd33f55ef8b4b676c313e3b"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_income",
+      "inn": "990000000115",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_usn_income/management_report.txt",
+        "extended/ip_usn_income/management_report.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_income/management_report.txt": "51485b506da90d84d8712dda544d60134e6257df0cea28bc73b3df6d59f98839",
+        "extended/ip_usn_income/management_report.pdf": "826afa69115fe64f4223e2bbd4dfd7d6ee9846c3c4a612906b8959de0aa53a66"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_income",
+      "inn": "990000000115",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "extended/ip_usn_income/tax_declaration_usn_usn_income.txt",
+        "extended/ip_usn_income/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_income/tax_declaration_usn_usn_income.txt": "ff8038508efa5c464e9089788ce068466a8754fd3347bee3490402145ca08c6f",
+        "extended/ip_usn_income/tax_declaration_usn_usn_income.pdf": "c529b23215e8885d8fcb23967348eca35291ad3a0263f807968646fd10c77cc5"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_income",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2026-09-30:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "extended/ip_usn_income/income_ledger_usn_income.txt",
+        "extended/ip_usn_income/income_ledger_usn_income.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_income/income_ledger_usn_income.txt": "a3eddee14dda5949f00182cc79405f2744c32ba01df5ab6778aeb589e065d68b",
+        "extended/ip_usn_income/income_ledger_usn_income.pdf": "936b55a105d8d6576a1b1655b6a6949945f212c193e8545aca480801ac2177a1"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_income",
+      "inn": "990000000115",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_usn_income/business_plan.txt",
+        "extended/ip_usn_income/business_plan.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_income/business_plan.txt": "19fe4bb4cf3d3dd663191b3b82ba1107719f28bffc23eb34110ae2c75d62935b",
+        "extended/ip_usn_income/business_plan.pdf": "87262f819c86147ba7ce7f08eb326d8abe3eac655601e459579203d0c35606a3"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_expense",
+      "inn": "990000000115",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "extended/ip_usn_expense/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "extended/ip_usn_expense/bank_statement.txt": "f5ddc069be6c11861ad598f0879daf2660b9283b8dd33f55ef8b4b676c313e3b"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_expense",
+      "inn": "990000000115",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_usn_expense/management_report.txt",
+        "extended/ip_usn_expense/management_report.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_expense/management_report.txt": "99eea08d5e18bea84d029a1f8d8a9583bb1b9a9a0061a29664ba59d50803070d",
+        "extended/ip_usn_expense/management_report.pdf": "7122ee74ace8e68ca9db5080ba03d6507f50f78bb0af21fc0aeb7566960f5369"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_expense",
+      "inn": "990000000115",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income_expense",
+      "tax_regime": "USN_INCOME_EXPENSE",
+      "files": [
+        "extended/ip_usn_expense/tax_declaration_usn_usn_income_expense.txt",
+        "extended/ip_usn_expense/tax_declaration_usn_usn_income_expense.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_expense/tax_declaration_usn_usn_income_expense.txt": "540405bc9864b62e982ea361f1593a5672792fdd9c349138af7ed3da3d89d4d8",
+        "extended/ip_usn_expense/tax_declaration_usn_usn_income_expense.pdf": "d348d76af940032d4dc186564da8efa6b8fe877b30ad842146f477fc1fa18bf4"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_expense",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2026-09-30:usn_income_expense",
+      "tax_regime": "USN_INCOME_EXPENSE",
+      "files": [
+        "extended/ip_usn_expense/income_ledger_usn_income_expense.txt",
+        "extended/ip_usn_expense/income_ledger_usn_income_expense.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_expense/income_ledger_usn_income_expense.txt": "9481a44413792cefff282a614cd3e05f2c87c6f7ed32d9c6d69897a0de4f88b6",
+        "extended/ip_usn_expense/income_ledger_usn_income_expense.pdf": "487d309816b23f18e78e2f24759714ad74b6644e302df64e6ba31f98399905ca"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_expense",
+      "inn": "990000000115",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_usn_expense/business_plan.txt",
+        "extended/ip_usn_expense/business_plan.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_expense/business_plan.txt": "19fe4bb4cf3d3dd663191b3b82ba1107719f28bffc23eb34110ae2c75d62935b",
+        "extended/ip_usn_expense/business_plan.pdf": "87262f819c86147ba7ce7f08eb326d8abe3eac655601e459579203d0c35606a3"
+      }
+    },
+    {
+      "scenario": "extended/ip_osno",
+      "inn": "990000000115",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "extended/ip_osno/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "extended/ip_osno/bank_statement.txt": "f5ddc069be6c11861ad598f0879daf2660b9283b8dd33f55ef8b4b676c313e3b"
+      }
+    },
+    {
+      "scenario": "extended/ip_osno",
+      "inn": "990000000115",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_osno/management_report.txt",
+        "extended/ip_osno/management_report.pdf"
+      ],
+      "sha256": {
+        "extended/ip_osno/management_report.txt": "94630582efc11c051e6488bcd26784f42db0840f8ca1eb9ae05abfc13d1e2e8e",
+        "extended/ip_osno/management_report.pdf": "81bc3b516b05b228c8e944ec923fe21e6ecd138bea7aaf104f455cb089e7a29c"
+      }
+    },
+    {
+      "scenario": "extended/ip_osno",
+      "inn": "990000000115",
+      "document_type": "TAX_DECLARATION_3NDFL",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:osno",
+      "tax_regime": "OSNO",
+      "files": [
+        "extended/ip_osno/tax_declaration_3ndfl_osno.txt",
+        "extended/ip_osno/tax_declaration_3ndfl_osno.pdf"
+      ],
+      "sha256": {
+        "extended/ip_osno/tax_declaration_3ndfl_osno.txt": "ec5ff221c8a5208769dff5689e2638dfcd441faa483dff432ace3e0abda32214",
+        "extended/ip_osno/tax_declaration_3ndfl_osno.pdf": "42dfb29e03e51f81ad0a4101071ad90baca489b243075bdf05a368b8a155ff09"
+      }
+    },
+    {
+      "scenario": "extended/ip_osno",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2026-09-30:osno",
+      "tax_regime": "OSNO",
+      "files": [
+        "extended/ip_osno/income_ledger_osno.txt",
+        "extended/ip_osno/income_ledger_osno.pdf"
+      ],
+      "sha256": {
+        "extended/ip_osno/income_ledger_osno.txt": "5b60ec75185491c67dd07c28800520cbc16e60e6b660ba68f2b8fa318d0771b7",
+        "extended/ip_osno/income_ledger_osno.pdf": "9c0b9d0b830b2f404b3439c2c776454b55de367f99780d62d8bc7f5a605f46d9"
+      }
+    },
+    {
+      "scenario": "extended/ip_osno",
+      "inn": "990000000115",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_osno/business_plan.txt",
+        "extended/ip_osno/business_plan.pdf"
+      ],
+      "sha256": {
+        "extended/ip_osno/business_plan.txt": "19fe4bb4cf3d3dd663191b3b82ba1107719f28bffc23eb34110ae2c75d62935b",
+        "extended/ip_osno/business_plan.pdf": "87262f819c86147ba7ce7f08eb326d8abe3eac655601e459579203d0c35606a3"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "extended/ip_usn_psn/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "extended/ip_usn_psn/bank_statement.txt": "f5ddc069be6c11861ad598f0879daf2660b9283b8dd33f55ef8b4b676c313e3b"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_usn_psn/management_report.txt",
+        "extended/ip_usn_psn/management_report.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_psn/management_report.txt": "efaada3a7dcb05c0f2daa85f6f7f1a62cff252630dcb64f83ce7c66c724ca419",
+        "extended/ip_usn_psn/management_report.pdf": "2600046011e033c88639099d146c5f5143244f112feef460f92388f997c10658"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "PATENT",
+      "coverage_from": "2026-01-01",
+      "coverage_to": "2026-12-31",
+      "requirement_code": "PATENT_RIGHT",
+      "requirement_id_example": "patent_right:2026-10-26:2026-10-26:psn",
+      "tax_regime": "PSN",
+      "files": [
+        "extended/ip_usn_psn/patent.txt",
+        "extended/ip_usn_psn/patent.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_psn/patent.txt": "99a5d0b1028a34388352fcc00269e4ffa2ef5198c5b98ab8dcb6f78457e72bd7",
+        "extended/ip_usn_psn/patent.pdf": "a918ba8946d12f56f7c09e16d2d4751e909cf17a823150ec4b7c0ccb2e351fb2"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income_expense",
+      "tax_regime": "USN_INCOME_EXPENSE",
+      "files": [
+        "extended/ip_usn_psn/tax_declaration_usn_usn_income_expense.txt",
+        "extended/ip_usn_psn/tax_declaration_usn_usn_income_expense.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_psn/tax_declaration_usn_usn_income_expense.txt": "0d0717b323099b0fd91972fc35be4edf8d62662da9a4a0616317e0652c5a75a5",
+        "extended/ip_usn_psn/tax_declaration_usn_usn_income_expense.pdf": "adc53c372ea82970c1b1b03490fe31c9389f45b85a7cffe4bc83e0cf7c2e1d74"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2026-09-30:usn_income_expense",
+      "tax_regime": "USN_INCOME_EXPENSE",
+      "files": [
+        "extended/ip_usn_psn/income_ledger_usn_income_expense.txt",
+        "extended/ip_usn_psn/income_ledger_usn_income_expense.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_psn/income_ledger_usn_income_expense.txt": "90cf33474227a0fbb15e7ef376d71c61dbc4f525121be8cfa46c746f32dc5f4f",
+        "extended/ip_usn_psn/income_ledger_usn_income_expense.pdf": "71233d3588e66a487e22e3c5404309e6098cf8327cf016e0c1a0f9cda262544e"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2026-09-30:psn",
+      "tax_regime": "PSN",
+      "files": [
+        "extended/ip_usn_psn/income_ledger_psn.txt",
+        "extended/ip_usn_psn/income_ledger_psn.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_psn/income_ledger_psn.txt": "562634e2d8e2a9d26d75642a34b7abc9c2508584253de083335df4664c7cf239",
+        "extended/ip_usn_psn/income_ledger_psn.pdf": "cbb9aa45ac361769f945ac7c6e8e7c100a7cb15409155a555470bb13cef06ef0"
+      }
+    },
+    {
+      "scenario": "extended/ip_usn_psn",
+      "inn": "990000000115",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_usn_psn/business_plan.txt",
+        "extended/ip_usn_psn/business_plan.pdf"
+      ],
+      "sha256": {
+        "extended/ip_usn_psn/business_plan.txt": "19fe4bb4cf3d3dd663191b3b82ba1107719f28bffc23eb34110ae2c75d62935b",
+        "extended/ip_usn_psn/business_plan.pdf": "87262f819c86147ba7ce7f08eb326d8abe3eac655601e459579203d0c35606a3"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "BANK_STATEMENT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "CASH_FLOW",
+      "requirement_id_example": "cash_flow:2025-10-01:2026-09-30:all",
+      "files": [
+        "extended/ip_regime_changed/bank_statement.txt"
+      ],
+      "expected_parser": {
+        "opening_balance_kopecks": 50000000,
+        "total_credits_kopecks": 1200000000,
+        "total_debits_kopecks": 780000000,
+        "closing_balance_kopecks": 470000000,
+        "operations": 180
+      },
+      "sha256": {
+        "extended/ip_regime_changed/bank_statement.txt": "f5ddc069be6c11861ad598f0879daf2660b9283b8dd33f55ef8b4b676c313e3b"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "MANAGEMENT_REPORT",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "BUSINESS_RESULT",
+      "requirement_id_example": "business_result:2025-10-01:2026-09-30:all",
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_regime_changed/management_report.txt",
+        "extended/ip_regime_changed/management_report.pdf"
+      ],
+      "sha256": {
+        "extended/ip_regime_changed/management_report.txt": "4c7ee963bf2ef6ac938484aea1e81e6e0b6d5217ef7cc62559bbb7caa3399b62",
+        "extended/ip_regime_changed/management_report.pdf": "c60a0797ba88c565f4a39f8e6497afc01cf7e31991b46e0386c6e535c81222f1"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "PATENT",
+      "coverage_from": "2026-01-01",
+      "coverage_to": "2026-12-31",
+      "requirement_code": "PATENT_RIGHT",
+      "requirement_id_example": "patent_right:2026-10-26:2026-10-26:psn",
+      "tax_regime": "PSN",
+      "files": [
+        "extended/ip_regime_changed/patent.txt",
+        "extended/ip_regime_changed/patent.pdf"
+      ],
+      "sha256": {
+        "extended/ip_regime_changed/patent.txt": "99a5d0b1028a34388352fcc00269e4ffa2ef5198c5b98ab8dcb6f78457e72bd7",
+        "extended/ip_regime_changed/patent.pdf": "a918ba8946d12f56f7c09e16d2d4751e909cf17a823150ec4b7c0ccb2e351fb2"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "TAX_DECLARATION_USN",
+      "coverage_from": "2025-01-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "TAX_DECLARATION",
+      "requirement_id_example": "tax_declaration:2025-01-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "extended/ip_regime_changed/tax_declaration_usn_usn_income.txt",
+        "extended/ip_regime_changed/tax_declaration_usn_usn_income.pdf"
+      ],
+      "sha256": {
+        "extended/ip_regime_changed/tax_declaration_usn_usn_income.txt": "ff8038508efa5c464e9089788ce068466a8754fd3347bee3490402145ca08c6f",
+        "extended/ip_regime_changed/tax_declaration_usn_usn_income.pdf": "c529b23215e8885d8fcb23967348eca35291ad3a0263f807968646fd10c77cc5"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2025-10-01",
+      "coverage_to": "2025-12-31",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2025-10-01:2025-12-31:usn_income",
+      "tax_regime": "USN_INCOME",
+      "files": [
+        "extended/ip_regime_changed/income_ledger_usn_income.txt",
+        "extended/ip_regime_changed/income_ledger_usn_income.pdf"
+      ],
+      "sha256": {
+        "extended/ip_regime_changed/income_ledger_usn_income.txt": "2a99584dbd67adccaac0845af0b850823681753bf304a8321007f3fd88025319",
+        "extended/ip_regime_changed/income_ledger_usn_income.pdf": "6091970340921c9c219ae3a59e8a29e4679206b11cdaaed86758032ce93fbc39"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "INCOME_LEDGER",
+      "coverage_from": "2026-01-01",
+      "coverage_to": "2026-09-30",
+      "requirement_code": "INCOME_LEDGER",
+      "requirement_id_example": "income_ledger:2026-01-01:2026-09-30:psn",
+      "tax_regime": "PSN",
+      "files": [
+        "extended/ip_regime_changed/income_ledger_psn.txt",
+        "extended/ip_regime_changed/income_ledger_psn.pdf"
+      ],
+      "sha256": {
+        "extended/ip_regime_changed/income_ledger_psn.txt": "b9467b29546c984165a46a5db7916870b86bdbeeb290f608be13a9761cc3c8a4",
+        "extended/ip_regime_changed/income_ledger_psn.pdf": "42b0a96b16563debe46409d381bc45d989e739ef4b820a744f71daa0f6bed4c1"
+      }
+    },
+    {
+      "scenario": "extended/ip_regime_changed",
+      "inn": "990000000115",
+      "document_type": "BUSINESS_PLAN",
+      "coverage_from": "2026-10-26",
+      "coverage_to": "2026-10-26",
+      "requirement_code": null,
+      "requirement_id_example": null,
+      "tax_regime": "all",
+      "files": [
+        "extended/ip_regime_changed/business_plan.txt",
+        "extended/ip_regime_changed/business_plan.pdf"
+      ],
+      "sha256": {
+        "extended/ip_regime_changed/business_plan.txt": "19fe4bb4cf3d3dd663191b3b82ba1107719f28bffc23eb34110ae2c75d62935b",
+        "extended/ip_regime_changed/business_plan.pdf": "87262f819c86147ba7ce7f08eb326d8abe3eac655601e459579203d0c35606a3"
+      }
+    }
+  ],
+  "negative_cases": [
+    {
+      "file": "negative/statement_bad_totals.txt",
+      "layer": "parser",
+      "expected": "INCONSISTENT_TOTALS",
+      "upload_accepts": true
+    },
+    {
+      "file": "negative/statement_wrong_period.txt",
+      "layer": "coverage",
+      "expected": "period does not cover requirement",
+      "parser_accepts": true
+    },
+    {
+      "file": "negative/patent_expired.txt",
+      "layer": "coverage",
+      "expected": "period does not cover reference date"
+    },
+    {
+      "file": "negative/invalid_signature.pdf",
+      "layer": "upload",
+      "expected": "INVALID_DOCUMENT"
+    },
+    {
+      "file": "negative/empty.txt",
+      "layer": "upload",
+      "expected": "INVALID_DOCUMENT"
+    }
+  ],
+  "notice": "Expected behavior is code-derived, not evidence of a live E2E run. Get requirement_id from the current application."
+}

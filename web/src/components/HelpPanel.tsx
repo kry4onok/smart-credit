@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { assessmentApi } from "../api/http";
 import { ApiError, call } from "../api/problem";
+import { systemMessage } from "../lib/presentation";
 import type { HelpContext, HelpResponse, HelpSelectionRequest } from "../api/types";
 import { tidyBlocks } from "../lib/helpBlocks";
 import { ErrorNote, useAction } from "./ui";
@@ -103,17 +104,6 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
   const response = answer?.response;
   // Several targets of one kind produce identical buttons that lead to the same place: keep one.
   const actions = (response?.actions ?? []).filter((a, i, all) => all.findIndex((b) => b.kind === a.kind && b.label === a.label) === i);
-  const fromModel = response?.source === "RESPONSE_SOURCE_MODEL";
-  const fallbackLabel: Record<string, string> = {
-    FALLBACK_REASON_MODEL_TIMEOUT: "Ответ из проверенных данных: модель не успела ответить",
-    FALLBACK_REASON_MODEL_UNAVAILABLE: "Ответ из проверенных данных: модель недоступна",
-    FALLBACK_REASON_QUEUE_FULL: "Ответ из проверенных данных: модель занята",
-    FALLBACK_REASON_INVALID_MODEL_OUTPUT: "Ответ из проверенных данных: ответ модели не прошёл проверку",
-    FALLBACK_REASON_NO_SUPPORTED_CONTEXT: "Ответ из проверенных данных: пока не хватает сведений",
-  };
-  const sourceLabel = fromModel
-    ? "Модель выбрала подходящие проверенные сведения банка"
-    : fallbackLabel[response?.fallback_reason ?? ""] ?? "Ответ из проверенных данных банка";
   return (
     <section className="panel helper" aria-labelledby={`helper-${audience}`}>
       <div className="helper-head">
@@ -155,7 +145,7 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
             <div key={i} className="helper-block">
               {title && <h3>{title}</h3>}
               {(block.items ?? []).map((item, j) => (
-                <p key={item.statement_id ?? j}>{item.text}</p>
+                <p key={item.statement_id ?? j}>{item.text ? systemMessage(item.text) : ""}</p>
               ))}
             </div>
           ))}
@@ -170,7 +160,7 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
             </div>
           )}
           <p className="helper-source">
-            {sourceLabel}
+            По данным вашей заявки
           </p>
         </div>
       )}

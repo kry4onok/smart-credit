@@ -1,0 +1,31 @@
+{
+  "profile_schema_version": 2,
+  "inn": "7810755500",
+  "name": "ООО «Балтийский склад»",
+  "legal_form": "LLC",
+  "registered_at": "2016-09-20",
+  "okved": "52.10",
+  "tax_periods": [
+    {
+      "from": "2016-09-20",
+      "regimes": [
+        "USN_INCOME"
+      ],
+      "vat_status": "UNKNOWN"
+    }
+  ],
+  "financial_period": {
+    "from": "2025-10-01",
+    "to": "2026-09-30"
+  },
+  "financial_basis": "MANAGEMENT",
+  "obligations_as_of": "2026-10-26",
+  "revenue_12m": {
+    "amount_kopecks": 2400000000,
+    "currency": "RUB"
+  },
+  "obligations": {
+    "amount_kopecks": 350000000,
+    "currency": "RUB"
+  }
+}

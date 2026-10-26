@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { clientApi } from "../../api/http";
+import { useSession } from "../../auth/session";
+import { demoCompany } from "../../lib/demoCompanies";
+import { productDescription, productName } from "../../lib/presentation";
+import { clientApi, isMock } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
 import type { Product } from "../../api/types";
 import { MoneyInput } from "../../components/inputs";
@@ -14,6 +17,8 @@ import { createDraft, misfit, prefillFromParams, prefillToParams, type Prefill }
 export function CatalogPage() {
   const [params, setParams] = useSearchParams();
   const initial = prefillFromParams(params);
+  const { user } = useSession();
+  const scenario = isMock ? undefined : demoCompany(user?.organization?.inn);
   const purpose = initial.purpose ?? null;
   const [amount, setAmount] = useState<number | null | undefined>(initial.amount);
   const [termText, setTermText] = useState(initial.term ? String(initial.term) : "");
@@ -69,6 +74,18 @@ export function CatalogPage() {
 
   return (
     <>
+      {scenario && (
+        <section className="panel">
+          <h2>Параметры запроса</h2>
+          <p>Начните с суммы {money(rub(scenario.suggested_amount_kopecks))} на {months(scenario.suggested_term_months)} или укажите свои условия ниже.</p>
+          {scenario.email === "workshop@smart-credit.test" && <p className="field-hint">Если готовы рассмотреть меньшую сумму, укажите её минимум в черновике, в разделе «Если всю сумму дать не получится».</p>}
+          <button type="button" className="btn btn-secondary" onClick={() => {
+            setAmount(scenario.suggested_amount_kopecks);
+            setTermText(String(scenario.suggested_term_months));
+            setParams(prefillToParams({ amount: scenario.suggested_amount_kopecks, term: scenario.suggested_term_months, purpose: "WORKING_CAPITAL" }));
+          }}>Подставить параметры</button>
+        </section>
+      )}
       <section className="purpose-pick">
         <h1>На что нужны деньги?</h1>
         <div className="purpose-options" role="group" aria-label="Цель кредита">
@@ -122,8 +139,8 @@ export function CatalogPage() {
           return (
             <article key={p.id} className={`product panel${why ? " product-off" : ""}`}>
               <header>
-                <h2>{p.name}</h2>
-                <p>{p.description}</p>
+                <h2>{productName(p.name)}</h2>
+                <p>{productDescription(p.code, p.description)}</p>
               </header>
               {why && <p className="product-why">Не подходит: {why.toLowerCase()}</p>}
               {estimate && (

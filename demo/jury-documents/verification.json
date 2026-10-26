@@ -1,0 +1,24 @@
+{
+  "reference_date": "2026-10-26",
+  "positive_documents": 82,
+  "positive_attachment_files": 150,
+  "valid_pdfs_including_guide": 69,
+  "statement_files": 14,
+  "scenario_sets": 14,
+  "negative_files": 5,
+  "checks": {
+    "sha256_and_size": "passed",
+    "pdf_render_and_visual_review": "passed: all 69 pages",
+    "actual_statement_parser": "passed: 14 statements and two negative/parser cases",
+    "actual_upload_usecase": "passed: 150 attachments and two invalid files",
+    "actual_requirement_matching": "passed: all document requirements for 14 profiles, expired patent and short statement rejected",
+    "monthly_cash_components_vs_DemoSources": "passed for all 14 statements"
+  },
+  "go_test_packages": [
+    "services/bank-service/internal/document/statement",
+    "services/client-service/internal/usecase/application/document",
+    "pkg/requirements"
+  ],
+  "verification_method": "Existing package tests plus temporary Go overlay tests using the generated files; no application code modified.",
+  "live_e2e_run": false
+}

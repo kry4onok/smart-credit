@@ -159,12 +159,11 @@ export function DocumentSlot({ applicationId, type, requirement, legalForm, docu
           </span>
         )}
         {enabled && !done && (
-          <span className="doc-demo">Для демо подойдёт любой текстовый файл .txt: банк проверяет наличие документа, а не его содержимое.</span>
+          <span className="doc-demo">Приложите документ в соответствующий раздел. Суммы и реквизиты укажите в форме — они не заполняются из файла автоматически.</span>
         )}
         {attached.map((d) => (
           <span key={d.id} className="doc-file">
             {d.file_name}, загружен {dateTime(d.uploaded_at)}
-            {d.is_mock && <em className="tag">демо-документ</em>}
           </span>
         ))}
         {attached.length > 0 && <span role="status">Файл сохранён. Данные из него не извлекаются — заполните поля формы вручную.</span>}

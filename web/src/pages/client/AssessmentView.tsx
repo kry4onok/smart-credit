@@ -90,7 +90,7 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
 
   const f = result.financial;
   // An outdated calculation keeps the charts for context, but its options are no longer valid.
-  const stale = data.freshness === "STALE" || Date.parse(result.valid_until) <= now;
+  const stale = data.freshness !== "CURRENT" || Date.parse(result.valid_until) <= now;
   const help = (
     <HelpPanel
       applicationId={app.id}
@@ -133,7 +133,7 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
               {data.freshness === "PENDING" && !stale && " — данные обновляются"}
             </p>
           </div>
-          <Badge tone={tone}>{stale ? "Расчёт устарел" : (assessmentStatusLabel[result.status] ?? result.status)}</Badge>
+          <Badge tone={tone}>{stale ? "Расчёт устарел" : (assessmentStatusLabel[result.status] ?? "Оценка заявки")}</Badge>
         </div>
 
         {stale && <p className="field-hint">Расчёт устарел: банк пересчитает его, когда получит новые данные. Варианты кредита появятся после пересчёта.</p>}
