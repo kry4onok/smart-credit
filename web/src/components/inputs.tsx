@@ -158,6 +158,9 @@ export function DocumentSlot({ applicationId, type, requirement, legalForm, docu
             )}
           </span>
         )}
+        {enabled && !done && (
+          <span className="doc-demo">Для демо подойдёт любой текстовый файл .txt: банк проверяет наличие документа, а не его содержимое.</span>
+        )}
         {attached.map((d) => (
           <span key={d.id} className="doc-file">
             {d.file_name}, загружен {dateTime(d.uploaded_at)}

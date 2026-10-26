@@ -1106,6 +1106,11 @@ legend {
   padding: 14px 16px;
 }
 
+.doc-slot-text > .doc-demo {
+  color: var(--info);
+  font-size: 0.85rem;
+}
+
 .doc-slot-done {
   border-style: solid;
   border-color: color-mix(in srgb, var(--ok) 45%, transparent);
