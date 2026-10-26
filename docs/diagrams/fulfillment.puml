@@ -1,0 +1,49 @@
+@startuml fulfillment
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 17
+skinparam defaultFontColor #17233B
+skinparam sequenceArrowColor #416791
+skinparam sequenceLifeLineBorderColor #CAD7E8
+skinparam sequenceParticipantBorderColor #AFC5E2
+skinparam sequenceParticipantBackgroundColor #EAF2FF
+skinparam sequenceGroupBorderColor #B5C6DE
+skinparam sequenceGroupBackgroundColor #F5F8FC
+skinparam sequenceDividerBackgroundColor #E8F0FF
+skinparam sequenceDividerBorderColor #B8CBE6
+hide footbox
+title Путь клиента  ·  2/2  Принятие → демо-выдача
+
+actor "Клиент" as User
+boundary "web" as Web #EAF2FF
+participant "client-service" as Client #EAF2FF
+queue "Kafka" as Kafka #FFF2D9
+participant "bank-service" as Bank #EAF2FF
+
+== Принятие оферты ==
+User -> Web: Принять условия
+Web -> Client: POST /offer/accept
+Client -> Kafka: client.events\nOfferAccepted
+Kafka -> Bank: Проверить offer_id
+Bank -> Bank: OFFER_ACCEPTED
+Bank -> Kafka: bank.events\nFORMALIZING
+Kafka -> Client: Обновить проекцию
+
+== Демо-подпись ==
+Web -> Client: GET заявки (polling)
+Client --> Web: FORMALIZING, offer_id
+User -> Web: Подписать
+Web -> Client: POST /sign
+Client -> Kafka: client.events\nContractSigned
+Kafka -> Bank: Подтвердить подпись
+
+== Демо-выдача ==
+Bank -> Bank: SIGNING → DISBURSED (worker)
+Bank -> Kafka: bank.events\nDISBURSED
+Kafka -> Client: Обновить проекцию
+Web -> Client: GET заявки (polling)
+Client --> Web: DISBURSED
+Web --> User: Выдача симулирована
+@enduml

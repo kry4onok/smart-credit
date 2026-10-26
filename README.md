@@ -32,7 +32,7 @@ make demo-up
 
 ## Архитектура
 
-![Контейнеры и связи Smart Credit](docs/diagrams/architecture.svg)
+![Карта сервисов Smart Credit](docs/diagrams/architecture.svg)
 
 [Исходник PlantUML](docs/diagrams/architecture.puml) · [как перерисовать схемы](docs/diagrams/README.md) · [Compose-конфигурация](deploy/docker-compose.yml)
 
@@ -51,13 +51,26 @@ make demo-up
 
 ## Путь клиента
 
-![Основной путь: заявка, оферта, подпись и демо-выдача](docs/diagrams/client-journey.svg)
+### 1. Заявка → оферта
+
+![Подача заявки, проверка и оферта](docs/diagrams/client-journey.svg)
 
 [Исходник PlantUML](docs/diagrams/client-journey.puml). После submit ответ клиента может показывать отправку, пока банк не опубликует следующую версию публичного состояния: интерфейс обновляет его через GET.
 
-![Альтернативные ветки](docs/diagrams/branches.svg)
+### 2. Принятие → демо-выдача
 
-[Исходник PlantUML](docs/diagrams/branches.puml). Decline и cancel подтверждает банк через событие; истечение активной оферты выполняет банковский worker; `MANUAL_REVIEW` завершается действием назначенного аналитика (`APPROVE`, `COUNTER`, `REQUEST_INFO` или `REJECT`).
+![Принятие оферты, подпись и демо-выдача](docs/diagrams/fulfillment.svg)
+
+[Исходник PlantUML](docs/diagrams/fulfillment.puml).
+
+### Другие исходы
+
+| Ветка | Действие | Итог после события банка |
+|---|---|---|
+| **Decline** | Клиент отказывается от активной оферты (`OfferDeclined`). | Банк `CANCELLED`, клиент `CLOSED`. |
+| **Cancel** | Клиент отзывает заявку до подписи (`ApplicationCancelled`). | Банк `CANCELLED`, клиент `CLOSED`. |
+| **Expiry** | Срок активной оферты проходит; банковский worker проверяет `expires_at`. | Банк `EXPIRED`, клиент `CLOSED`. |
+| **Ручное решение** | Назначенный аналитик берёт `MANUAL_REVIEW` и выбирает `APPROVE`, `COUNTER`, `REQUEST_INFO` или `REJECT`. | Оферта, запрос данных либо отказ. |
 
 ## Состояния и события
 

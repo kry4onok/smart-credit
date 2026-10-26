@@ -1,48 +1,41 @@
 @startuml architecture
-!include <C4/C4_Container>
-
-LAYOUT_TOP_DOWN()
-skinparam backgroundColor #F8FAFC
+!theme plain
+left to right direction
+skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName Arial
-skinparam defaultFontColor #172033
-skinparam ArrowColor #475569
-skinparam linetype ortho
-title Smart Credit — контейнеры MVP
+skinparam defaultFontSize 18
+skinparam defaultFontColor #17233B
+skinparam ArrowColor #416791
+skinparam ArrowThickness 2
+skinparam roundCorner 16
+skinparam componentStyle rectangle
+skinparam componentBorderColor #B8CBE6
+skinparam componentBackgroundColor #EDF4FF
+skinparam queueBorderColor #C48A23
+skinparam queueBackgroundColor #FFF2D9
+hide stereotype
+title Smart Credit — карта сервисов MVP
 
-Person(client, "Клиент", "Подаёт заявку и принимает оферту")
-Person(analyst, "Аналитик", "Решает ручные дела")
+actor "Клиент" as customer
+actor "Аналитик" as analyst
 
-System_Boundary(sc, "Smart Credit / локальный Compose") {
-  Container(web, "web", "React + nginx", "Кабинет и backoffice")
-  Container(auth, "auth", "Go / HTTP", "Учётки, JWT, JWKS")
-  Container(clientSvc, "client-service", "Go / HTTP + Kafka", "Заявки и публичная проекция")
-  Container(bank, "bank-service", "Go / HTTP + Kafka", "Дела, правила, аудит, выдача")
-  ContainerDb(authDb, "auth_db", "PostgreSQL", "Пользователи и сессии")
-  ContainerDb(clientDb, "client_db", "PostgreSQL", "Клиентские данные, outbox")
-  ContainerDb(bankDb, "bank_db", "PostgreSQL", "Дела, outbox, аудит")
-  ContainerQueue(kafka, "Kafka", "KRaft", "client.events / bank.events")
-  Container(bureau, "bureau-mocks", "Go / gRPC", "Синтетические проверки")
-  Container(score, "scoring", "Python / gRPC", "Оценка риска")
-  Container(assistant, "assistant", "Python / gRPC", "Тексты и шаблон")
-}
+component "<b>Вход и доступ</b>\nweb · gateway / Swagger\nauth · auth_db" as entry #E8F0FF
+component "<b>Клиентский контур</b>\nclient-service\nclient_db" as client #E8F0FF
+queue "<b>Kafka</b>\nclient.events\nbank.events" as kafka #FFF2D9
+component "<b>Банковский контур</b>\nbank-service\nbank_db" as bank #E8F0FF
+component "<b>Локальные проверки</b>\nbureau-mocks\nscoring · assistant" as deps #E3F7F2
 
-Rel(client, web, "Кабинет")
-Rel(analyst, web, "Backoffice")
-Rel(web, auth, "Логин", "HTTP")
-Rel(web, clientSvc, "Кабинет", "HTTP")
-Rel(web, bank, "Backoffice", "HTTP")
-Rel(auth, authDb, "SQL")
-Rel(clientSvc, clientDb, "SQL")
-Rel(bank, bankDb, "SQL")
-Rel(clientSvc, kafka, "client.events → / ← bank.events")
-Rel(bank, kafka, "← client.events / bank.events →")
-Rel(bank, bureau, "Профиль, БКИ", "gRPC")
-Rel(bank, score, "Оценка", "gRPC")
-Rel(bank, assistant, "Текст", "gRPC")
+customer --> entry
+analyst --> entry
+entry --> client : HTTP API
+client <--> kafka : события
+kafka <--> bank : события
+bank --> deps : gRPC
 
-note right of bank
-  Оригинал вложения банк читает
-  через защищённый HTTP GET клиента.
-end note
+legend bottom
+  <b>HTTP:</b> web и gateway маршрутизируют запросы к auth, client-service и bank-service.
+  <b>БД:</b> auth_db, client_db и bank_db — отдельные базы в одном PostgreSQL.
+  <b>Граница:</b> состояние client ↔ bank передаётся через Kafka; оригинал вложения банк читает по защищённому HTTP GET.
+endlegend
 @enduml
