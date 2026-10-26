@@ -2933,7 +2933,135 @@ fieldset.group > legend {
   padding: 4px 8px;
 }
 
-/* Assessment view: impacts, cash flow, options */
+/* Assessment view: cash flow and calculated options */
+.assessment-cashflow {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.cashflow-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cashflow-facts dt {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+.cashflow-facts dd {
+  margin: 4px 0;
+  font: 500 1.5rem var(--display);
+}
+
+.cashflow-facts p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  max-width: 40em;
+}
+
+.cashflow-heading,
+.cashflow-coverage {
+  display: grid;
+  gap: 10px;
+}
+
+.cashflow-coverage .coverage {
+  grid-template-columns: 160px 1fr auto;
+}
+
+.monthly-cashflow {
+  min-width: 0;
+}
+
+.monthly-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 14px;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+}
+
+.monthly-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthly-base { --series-color: var(--info); }
+.monthly-stress { --series-color: var(--warn); }
+.monthly-payment { --series-color: var(--ink-2); }
+
+.monthly-key {
+  width: 20px;
+  border-top: 3px solid var(--series-color);
+}
+
+.monthly-key.monthly-stress { border-top-style: dashed; }
+.monthly-key.monthly-payment { border-top-width: 2px; }
+
+.monthly-plot {
+  display: block;
+  width: 100%;
+  height: 260px;
+}
+
+.monthly-grid { stroke: var(--line); stroke-width: 1; }
+.monthly-zero { stroke: var(--line-strong); }
+.monthly-guide { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 4; }
+.monthly-tick { fill: var(--muted); font: 400 12px var(--text); }
+.monthly-series polyline { fill: none; stroke: var(--series-color); stroke-width: 2.5; stroke-linejoin: round; }
+.monthly-series circle { fill: var(--series-color); }
+.monthly-series.monthly-stress polyline { stroke-dasharray: 6 5; }
+.monthly-series.monthly-payment polyline { stroke-width: 2; }
+
+.monthly-inspect {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  padding: 16px 0;
+}
+
+.monthly-inspect label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.monthly-inspect select { width: auto; min-width: 150px; }
+.monthly-inspect dl { display: flex; flex: 1; flex-wrap: wrap; gap: 12px 28px; margin: 0; }
+.monthly-inspect dt { font-size: 0.75rem; color: var(--muted); }
+.monthly-inspect dd { margin: 4px 0 0; font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.cashflow-details {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  min-width: 0;
+}
+
+.cashflow-details summary { cursor: pointer; padding: 4px 0; font-weight: 500; font-size: 0.85rem; }
+.cashflow-details[open] > summary { margin-bottom: 12px; }
+.cashflow-details > p { margin: 8px 0; font-size: 0.85rem; color: var(--ink-2); }
+.monthly-table caption { text-align: left; padding: 8px 0; color: var(--muted); }
+.monthly-table td { font-variant-numeric: tabular-nums; }
+.cashflow-reserve { display: grid; gap: 6px; background: var(--warn-tint); border-radius: var(--r-md); padding: 16px 18px; font-size: 0.85rem; }
+.cashflow-reserve p { color: var(--ink-2); }
+.cashflow-reserve-low { background: var(--danger-tint); }
+
+@media (max-width: 720px) {
+  .assess-head { flex-wrap: wrap; }
+  .cashflow-facts { gap: 16px; }
+  .cashflow-coverage .coverage { grid-template-columns: 1fr auto; }
+  .monthly-inspect { align-items: flex-start; }
+}
+
+@media (max-width: 400px) {
+  .cashflow-facts { grid-template-columns: 1fr; }
+  .monthly-inspect dl { flex-basis: 100%; }
+}
+
 .assess {
   display: grid;
   gap: 18px;
@@ -2945,86 +3073,6 @@ fieldset.group > legend {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-}
-
-.impact-axis {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin: 0 0 6px calc(220px + 16px);
-  max-width: 360px;
-}
-
-.impact ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 14px;
-}
-
-.impact-row {
-  display: grid;
-  grid-template-columns: 220px minmax(160px, 360px) 1fr;
-  gap: 16px;
-  align-items: center;
-}
-
-.impact-label {
-  display: grid;
-}
-
-.impact-value {
-  font: 500 1.2rem/1.2 var(--display);
-}
-
-.impact-bar {
-  position: relative;
-  height: 14px;
-  background: var(--bg);
-  border-radius: 7px;
-}
-
-.impact-mid {
-  position: absolute;
-  left: 50%;
-  top: -4px;
-  bottom: -4px;
-  width: 2px;
-  background: var(--line-strong);
-}
-
-.impact-fill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 7px;
-}
-
-.impact-pos .impact-fill {
-  background: var(--ok);
-}
-
-.impact-neg .impact-fill {
-  background: var(--danger);
-}
-
-.impact-row p {
-  color: var(--ink-2);
-  font-size: 0.88rem;
-}
-
-.impact-word {
-  font-weight: 600;
-}
-
-.impact-pos .impact-word {
-  color: var(--ok);
-}
-
-.impact-neg .impact-word {
-  color: var(--danger);
 }
 
 .issues {
@@ -3338,15 +3386,6 @@ fieldset.group > legend {
 
   .hint-meter {
     max-width: calc(100% - 60px);
-  }
-
-  .impact-axis {
-    margin-left: 0;
-  }
-
-  .impact-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
   }
 
   .coverage {

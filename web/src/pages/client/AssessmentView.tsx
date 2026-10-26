@@ -2,103 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { assessmentApi } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
-import type { Candidate, ClientApplication, ClientAssessment, PublicResult } from "../../api/types";
-import { CashFlowChart, CoverageBar } from "../../components/CashFlowChart";
+import type { Candidate, ClientApplication, ClientAssessment } from "../../api/types";
+import { CoverageBar } from "../../components/CashFlowChart";
+import { AssessmentCashFlow } from "../../components/AssessmentCashFlow";
 import { CompareBars } from "../../components/Compare";
 import { HelpPanel, clientModes } from "../../components/HelpPanel";
 import { Badge, ErrorNote, useNow } from "../../components/ui";
 import { dateTime, money, months, rate, rub } from "../../lib/format";
 import { assessmentStatusLabel } from "../../lib/labels";
-
-// Impact of one parameter on the bank's view, from −2 (hurts a lot) to +2 (helps a lot).
-type Impact = { id: string; label: string; value: string; impact: -2 | -1 | 0 | 1 | 2; text: string };
-
-const impactWord: Record<number, string> = { 2: "сильно помогает", 1: "помогает", 0: "нейтрально", [-1]: "снижает шансы", [-2]: "сильно мешает" };
-
-const pct = (bps: number) => `${Math.round(bps / 100)}%`;
-
-// Bands follow the published expert scorecard steps (docs/ASSESSMENT_V2.md): the client sees which
-// of their own figures moved the result up or down, without the bank's internal points.
-export function impacts(result: PublicResult, requestedKopecks: number | undefined, option: Candidate | undefined): Impact[] {
-  const out: Impact[] = [];
-  const f = result.financial;
-  if (f) {
-    const m = f.operating_margin_bps;
-    out.push({
-      id: "margin",
-      label: "Запас денежного потока",
-      value: pct(m),
-      impact: m >= 2000 ? 2 : m >= 1500 ? 1 : m >= 1000 ? 0 : m >= 0 ? -1 : -2,
-      text: `После всех расходов, налогов и изъятий у бизнеса остаётся ${pct(m)} поступлений.${m < 1000 ? " Чем выше этот запас, тем больше кредит может выдержать бизнес." : ""}`,
-    });
-    const c = f.largest_customer_share_bps;
-    if (c !== null && c !== undefined) {
-      out.push({
-        id: "concentration",
-        label: "Зависимость от одного покупателя",
-        value: pct(c),
-        impact: c <= 2000 ? 2 : c <= 3500 ? 1 : c <= 5000 ? 0 : c <= 7500 ? -1 : -2,
-        text: `Крупнейший покупатель приносит ${pct(c)} выручки.${c > 5000 ? " Если он уйдёт, бизнесу будет сложно платить по кредиту." : " Выручка распределена по нескольким клиентам."}`,
-      });
-    }
-  }
-  if (option) {
-    const base = option.base_coverage_bps / 10000;
-    const stress = option.stress_coverage_bps / 10000;
-    out.push({
-      id: "coverage",
-      label: "Платёж к денежному потоку",
-      value: `×${base.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}`,
-      impact: base >= 2 ? 2 : base >= 1.3 ? 1 : -2,
-      text: `Поток бизнеса покрывает платёж в ${base.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} раза, а при падении выручки на 20% — в ${stress.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}. Банку нужно не меньше ×1,3 и ×1,1.`,
-    });
-    if (requestedKopecks && option.uncovered_need_kopecks > 0) {
-      const share = 1 - option.uncovered_need_kopecks / requestedKopecks;
-      out.push({
-        id: "amount",
-        label: "Запрошенная сумма",
-        value: pct(Math.round(share * 10000)),
-        impact: share >= 0.8 ? -1 : -2,
-        text: `Денежного потока хватает на ${money(rub(option.schedule.amount_kopecks))} из ${money(rub(requestedKopecks))}. Не хватает ${money(rub(option.uncovered_need_kopecks))}.`,
-      });
-    } else if (requestedKopecks) {
-      out.push({ id: "amount", label: "Запрошенная сумма", value: "100%", impact: 1, text: "Бизнес может обслуживать кредит на всю запрошенную сумму." });
-    }
-  }
-  return out;
-}
-
-function ImpactChart({ items }: { items: Impact[] }) {
-  if (!items.length) return null;
-  return (
-    <div className="impact" id="factors">
-      <div className="impact-axis" aria-hidden>
-        <span>мешает</span>
-        <span>помогает</span>
-      </div>
-      <ul>
-        {items.map((i) => (
-          <li key={i.id} className={`impact-row impact-${i.impact > 0 ? "pos" : i.impact < 0 ? "neg" : "zero"}`}>
-            <div className="impact-label">
-              <strong>{i.label}</strong>
-              <span className="impact-value">{i.value}</span>
-            </div>
-            <span className="impact-bar" aria-hidden>
-              <span className="impact-mid" />
-              <span
-                className="impact-fill"
-                style={i.impact >= 0 ? { left: "50%", width: `${(i.impact / 2) * 50}%` } : { right: "50%", width: `${(-i.impact / 2) * 50}%` }}
-              />
-            </span>
-            <p>
-              <span className="impact-word">{impactWord[i.impact]}.</span> {i.text}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 function OptionCard({ c, selected, onSelect, requested }: { c: Candidate; selected: boolean; onSelect: () => void; requested?: { amount: number; term: number } }) {
   const s = c.schedule;
@@ -120,8 +31,8 @@ function OptionCard({ c, selected, onSelect, requested }: { c: Candidate; select
           <dd>{money(rub(s.total_interest_kopecks))}</dd>
         </div>
       </dl>
-      <CoverageBar label="Запас по потоку" bps={c.base_coverage_bps} threshold={1.3} />
-      <CoverageBar label="Если выручка упадёт" bps={c.stress_coverage_bps} threshold={1.1} />
+      <CoverageBar label="Базовое покрытие" bps={c.base_coverage_bps} threshold={1.3} />
+      <CoverageBar label="Покрытие в стрессе" bps={c.stress_coverage_bps} threshold={1.1} />
       {requested && c.uncovered_need_kopecks > 0 && <p className="option-gap">Не хватит до запроса: {money(rub(c.uncovered_need_kopecks))}</p>}
       {requested && selected && (
         <CompareBars
@@ -198,7 +109,7 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
           <details className="panel summary">
             <summary>Расчёт денежного потока</summary>
             <p className="muted">Расчёт от {dateTime(result.as_of)}, показан для справки.</p>
-            <CashFlowChart caption="Денежный поток бизнеса" history={f.history} base={f.base} stress={f.stress} />
+            <AssessmentCashFlow financial={f} />
           </details>
         )}
         {help}
@@ -216,7 +127,7 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
       <section className="panel assess" id="assessment" aria-labelledby="assess-title">
         <div className="assess-head">
           <div>
-            <h2 id="assess-title">Как банк оценил заявку</h2>
+            <h2 id="assess-title">Денежный поток и кредитная нагрузка</h2>
             <p className="muted">
               Расчёт от {dateTime(result.as_of)}
               {data.freshness === "PENDING" && !stale && " — данные обновляются"}
@@ -227,8 +138,6 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
 
         {stale && <p className="field-hint">Расчёт устарел: банк пересчитает его, когда получит новые данные. Варианты кредита появятся после пересчёта.</p>}
 
-        <ImpactChart items={impacts(result, requested?.amount, option)} />
-
         {(result.issues ?? []).length > 0 && (
           <ul className="issues">
             {result.issues!.map((i) => (
@@ -237,18 +146,7 @@ export function AssessmentView({ app }: { app: ClientApplication }) {
           </ul>
         )}
 
-        {f && (
-          <CashFlowChart
-            caption={option ? `Денежный поток и платежи по варианту ${money(rub(option.schedule.amount_kopecks))}` : "Денежный поток бизнеса"}
-            history={f.history}
-            base={option?.base ?? f.base}
-            stress={option?.stress ?? f.stress}
-          />
-        )}
-        <p className="field-hint">
-          Факт — по выпискам за {f ? `${f.period_from} — ${f.period_to}` : "последние 12 месяцев"}. Прогноз повторяет прошлый год без роста; стресс — выручка ниже
-          на 20%. Сведения в демо синтетические.
-        </p>
+        {f && <AssessmentCashFlow financial={f} option={option} requestedAmount={requested?.amount} />}
       </section>
 
       {candidates.length > 0 && (
