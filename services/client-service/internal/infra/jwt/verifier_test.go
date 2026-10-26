@@ -68,6 +68,14 @@ func TestVerifyAndRotateJWKS(t *testing.T) {
 	if calls.Load() != 2 {
 		t.Fatal("unknown kid did not refresh JWKS")
 	}
+	for _, kid := range []string{"forged-1", "forged-2"} {
+		if _, err := verifier.Verify(t.Context(), signToken(t, key, kid, "RS256", payload)); err == nil {
+			t.Fatalf("token with unknown kid %q was accepted", kid)
+		}
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("unknown kids refreshed JWKS again within the interval: %d requests", calls.Load())
+	}
 	verifier.expires = time.Now().Add(-time.Second)
 	if _, err := verifier.Verify(context.Background(), signToken(t, key, "second", "RS256", payload)); err != nil {
 		t.Fatal(err)

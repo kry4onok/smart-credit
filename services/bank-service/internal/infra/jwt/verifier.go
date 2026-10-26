@@ -35,7 +35,12 @@ type Verifier struct {
 	mu       sync.Mutex
 	keys     map[string]*rsa.PublicKey
 	expires  time.Time
+	// lastUnknownRefresh rate-limits refreshes caused by an unknown kid, so forged
+	// tokens cannot make every request wait for a JWKS download.
+	lastUnknownRefresh time.Time
 }
+
+const unknownKidRefreshInterval = 10 * time.Second
 
 func New(cfg config.JWTConfig) *Verifier {
 	return &Verifier{url: cfg.JWKSURL, issuer: cfg.Issuer, audience: cfg.Audience,
@@ -132,8 +137,15 @@ func hasAudience(raw json.RawMessage, audience string) bool {
 func (v *Verifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if key := v.keys[kid]; key != nil && time.Now().Before(v.expires) {
+	now := time.Now()
+	if key := v.keys[kid]; key != nil && now.Before(v.expires) {
 		return key, nil
+	}
+	if v.keys != nil && now.Before(v.expires) {
+		if now.Sub(v.lastUnknownRefresh) < unknownKidRefreshInterval {
+			return nil, ErrInvalidToken
+		}
+		v.lastUnknownRefresh = now
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, v.url, nil)
