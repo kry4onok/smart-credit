@@ -20,6 +20,8 @@ import (
 
 var ErrEventConflict = errors.New("bank event ID or aggregate version conflicts with a different event")
 
+var errOrphanApplicationEvent = errors.New("bank event has no client application")
+
 type Tx interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
@@ -57,13 +59,14 @@ func (p *Projection) Execute(ctx context.Context, event *eventspb.Event) (bool, 
 	default:
 		err = fmt.Errorf("unsupported bank event payload")
 	}
-	if err != nil {
+	orphan := errors.Is(err, errOrphanApplicationEvent)
+	if err != nil && !orphan {
 		return false, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return false, fmt.Errorf("commit bank event projection: %w", err)
 	}
-	return true, nil
+	return !orphan, nil
 }
 
 func validateEnvelope(event *eventspb.Event) error {
@@ -175,7 +178,10 @@ func applyApplicationState(ctx context.Context, tx Tx, event *eventspb.Event) er
 			return fmt.Errorf("check projected application: %w", err)
 		}
 		if !exists {
-			return fmt.Errorf("application %s not found for bank event", applicationID)
+			// A bank event can only follow a committed client outbox event. An absent
+			// application is therefore a stale fixture or deleted record; retrying
+			// it would block every later event in the Kafka partition.
+			return fmt.Errorf("%w: %s", errOrphanApplicationEvent, applicationID)
 		}
 		return nil
 	}
