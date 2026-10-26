@@ -66,6 +66,10 @@ func Conflict(code string, cause error) *Error {
 	}
 }
 
+func Unprocessable(code string, cause error) *Error {
+	return &Error{Status: http.StatusUnprocessableEntity, Code: code, Title: "Нарушено бизнес-правило", Detail: cause.Error(), cause: cause}
+}
+
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	problem := common.Problem{
 		Type:   "about:blank",

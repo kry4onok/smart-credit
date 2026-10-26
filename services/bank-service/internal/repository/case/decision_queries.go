@@ -23,20 +23,25 @@ SET response_body=$4,response_headers=jsonb_build_object('ETag',$5::text),case_i
 WHERE actor_id=$1 AND route=$2 AND idempotency_key=$3`
 
 const previewDecisionCase = `
-SELECT status,assignee_id,version,company_snapshot,documents_snapshot,purpose_tag,product_name
-FROM cases
-WHERE id=$1`
+SELECT c.status,c.assignee_id,c.version,c.company_snapshot,c.documents_snapshot,c.purpose_tag,c.product_name,
+       c.requirements_reference_date,COALESCE(p.requirements_policy_version,''),p.purpose_tags,p.required_document_types,
+       p.min_amount_kopecks,p.max_amount_kopecks,p.min_term_months,p.max_term_months,c.requested_amount_kopecks,c.requested_term_months
+FROM cases c JOIN products p ON p.id=c.product_id AND p.version=c.product_version
+WHERE c.id=$1`
 
 const lockDecisionCase = `
-SELECT status,assignee_id,version,company_snapshot,documents_snapshot,purpose_tag 
-FROM cases 
-WHERE id=$1 
+SELECT c.status,c.assignee_id,c.version,c.company_snapshot,c.documents_snapshot,c.purpose_tag,
+       c.requirements_reference_date,COALESCE(p.requirements_policy_version,''),p.purpose_tags,p.required_document_types,
+       p.min_amount_kopecks,p.max_amount_kopecks,p.min_term_months,p.max_term_months,c.requested_amount_kopecks,c.requested_term_months
+FROM cases c JOIN products p ON p.id=c.product_id AND p.version=c.product_version
+WHERE c.id=$1
 FOR UPDATE`
 
 const loadDecisionProduct = `
 SELECT p.version,p.name,p.purpose_tags,p.required_document_types,p.min_amount_kopecks,p.max_amount_kopecks,
 	p.min_term_months,p.max_term_months,r.rate_grade_a_bps,r.rate_grade_b_bps,
-	r.min_company_age_months,r.max_amount_to_revenue_bps,r.max_overdue_days,r.offer_ttl_hours
+	r.min_company_age_months,r.max_amount_to_revenue_bps,r.max_overdue_days,r.offer_ttl_hours,
+    COALESCE(p.requirements_policy_version,'')
 FROM products p 
     JOIN product_rules r 
         ON r.product_id=p.id AND r.product_version=p.version
@@ -82,6 +87,10 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`
 const insertDecisionInfo = `
 INSERT INTO info_requests (id,case_id,decision_id,message,required_fields,required_document_types) 
 VALUES ($1,$2,$3,$4,$5,$6)`
+
+const insertDecisionV2Info = `
+INSERT INTO info_requests (id,case_id,decision_id,message,requirements)
+VALUES ($1,$2,$3,$4,$5::jsonb)`
 
 const insertDecisionAudit = `
 INSERT INTO audit_log (id,case_id,case_version,action,actor_type,actor_id,reason,details) 

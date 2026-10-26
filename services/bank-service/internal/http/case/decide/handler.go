@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alfabank-hackathon-2026/smart-credit/pkg/requirements"
+
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/generated"
 	gethandler "github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/case/get"
 	"github.com/alfabank-hackathon-2026/smart-credit/services/bank-service/internal/http/domainerror"
@@ -56,10 +58,10 @@ func (h *Handler) Handle(ctx context.Context, r generated.DecideCaseRequestObjec
 	}
 	if r.Body.InfoRequest != nil {
 		draft := r.Body.InfoRequest
+		info := &decide.InfoRequest{Message: draft.Message, V2: draft.RequirementIds != nil}
 		if draft.RequirementIds != nil {
-			return nil, &domainerror.Error{Status: 422, Code: "PROFILE_V2_NOT_ENABLED", Title: "Этап 1 ещё не подключён", Detail: "Запрос требований по ID будет доступен после подключения модуля требований."}
+			info.RequirementIDs = append([]string(nil), (*draft.RequirementIds)...)
 		}
-		info := &decide.InfoRequest{Message: draft.Message}
 		for _, f := range draft.RequiredFields {
 			info.RequiredFields = append(info.RequiredFields, string(f))
 		}
@@ -70,7 +72,10 @@ func (h *Handler) Handle(ctx context.Context, r generated.DecideCaseRequestObjec
 	}
 	result, err := h.useCase.Execute(ctx, input)
 	if err != nil {
+		var ruleError *requirements.RuleError
 		switch {
+		case errors.As(err, &ruleError):
+			return nil, domainerror.Unprocessable(ruleError.Code, err)
 		case errors.Is(err, decide.ErrNotFound):
 			return nil, domainerror.NotFound("CASE_NOT_FOUND", err)
 		case errors.Is(err, decide.ErrForbidden):

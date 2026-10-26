@@ -99,7 +99,7 @@ func loadProducts(ctx context.Context, q transaction.Queryer) ([]*commonpb.Produ
 		var indicativeRate int32
 		if err := rows.Scan(&id, &p.Version, &p.Code, &p.Name, &p.Description,
 			&purposeTags, &documentTypes, &minAmount, &maxAmount,
-			&p.MinTermMonths, &p.MaxTermMonths, &indicativeRate); err != nil {
+			&p.MinTermMonths, &p.MaxTermMonths, &indicativeRate, &p.RequirementsPolicyVersion); err != nil {
 			return nil, fmt.Errorf("scan active product: %w", err)
 		}
 		p.ProductId = id.String()

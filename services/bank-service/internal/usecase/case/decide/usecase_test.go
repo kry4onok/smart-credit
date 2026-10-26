@@ -31,6 +31,16 @@ func TestValidateDecisionShapes(t *testing.T) {
 			i.Offer = nil
 			i.InfoRequest = &InfoRequest{Message: "Дополните заявку", RequiredDocumentTypes: []string{"BANK_STATEMENT"}}
 		}, true},
+		{"v2 request", func(i *Input) {
+			i.Outcome = "REQUEST_INFO"
+			i.Offer = nil
+			i.InfoRequest = &InfoRequest{Message: "Дополните заявку", V2: true, RequirementIDs: []string{"id"}}
+		}, true},
+		{"v2 mixed request", func(i *Input) {
+			i.Outcome = "REQUEST_INFO"
+			i.Offer = nil
+			i.InfoRequest = &InfoRequest{Message: "Дополните заявку", V2: true, RequirementIDs: []string{"id"}, RequiredFields: []string{"COMPANY_REVENUE_12M"}}
+		}, false},
 		{"reject requires reason", func(i *Input) { i.Outcome = "REJECT"; i.Offer = nil }, false},
 		{"reject", func(i *Input) {
 			i.Outcome = "REJECT"

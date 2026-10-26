@@ -19,7 +19,7 @@ INSERT INTO products (
 ON CONFLICT (id, version) DO NOTHING;
 
 
--- Profile-v2 contract fixture. Not published until the requirements engine is enabled.
+-- Profile-v2 demo fixture. Published after migration 00006 enables the policy.
 INSERT INTO products (
  id, version, code, name, description, purpose_tags, required_document_types,
  min_amount_kopecks, max_amount_kopecks, min_term_months, max_term_months,
@@ -28,8 +28,9 @@ INSERT INTO products (
  '10000000-0000-4000-8000-000000000021', 1, 'SME_PROFILE_V2',
  'Демо: профиль ИП/ООО', 'Тестовый продукт для v2 матрицы',
  ARRAY['WORKING_CAPITAL'], ARRAY[]::text[], 10000000, 500000000, 6, 36, 1800,
- false, 'sme-profile-v1'
-) ON CONFLICT (id, version) DO NOTHING;
+ true, 'sme-profile-v1'
+) ON CONFLICT (id, version) DO UPDATE SET is_active = true
+  WHERE products.requirements_policy_version = 'sme-profile-v1';
 
 INSERT INTO product_rules (
     product_id, product_version, min_company_age_months,
@@ -37,7 +38,8 @@ INSERT INTO product_rules (
     rate_grade_b_bps, offer_ttl_hours
 ) VALUES
     ('11111111-1111-4111-8111-111111111111', 1, 12, 5000, 30, 1450, 1650, 168),
-    ('22222222-2222-4222-8222-222222222222', 1, 12, 4000, 30, 1650, 1850, 168)
+    ('22222222-2222-4222-8222-222222222222', 1, 12, 4000, 30, 1650, 1850, 168),
+    ('10000000-0000-4000-8000-000000000021', 1, 12, 5000, 30, 1600, 1800, 168)
 ON CONFLICT (product_id, product_version) DO NOTHING;
 
 WITH demo_cases (
