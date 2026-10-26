@@ -90,7 +90,7 @@ func (r *Repository) Apply(ctx context.Context, input receive.Input) (bool, erro
 		input.CompanyINN, input.CompanyName, string(input.CompanyJSON), string(input.FormJSON),
 		string(input.DocumentsJSON), input.AmountKopecks, input.TermMonths,
 		input.PurposeTag, status, recommendation, triggeredRules, scheduleValidation,
-		input.AggregateVersion)
+		input.AggregateVersion, input.RequirementsReferenceDate)
 	if err != nil {
 		return false, fmt.Errorf("create case: %w", err)
 	}

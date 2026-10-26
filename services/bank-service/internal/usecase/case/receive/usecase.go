@@ -20,28 +20,29 @@ var ErrInvalidEvent = errors.New("invalid client event")
 var innPattern = regexp.MustCompile(`^[0-9]{10}([0-9]{2})?$`)
 
 type Input struct {
-	InfoProvided     bool
-	Cancelled        bool
-	CancelReason     string
-	OfferAction      string
-	OfferID          uuid.UUID
-	SignedAt         time.Time
-	RequestID        uuid.UUID
-	EventID          uuid.UUID
-	ApplicationID    uuid.UUID
-	AggregateVersion int64
-	OrgID            uuid.UUID
-	ClientUserID     uuid.UUID
-	ProductID        uuid.UUID
-	ProductVersion   int64
-	CompanyINN       string
-	CompanyName      string
-	CompanyJSON      []byte
-	FormJSON         []byte
-	DocumentsJSON    []byte
-	AmountKopecks    int64
-	TermMonths       int32
-	PurposeTag       string
+	InfoProvided              bool
+	Cancelled                 bool
+	CancelReason              string
+	OfferAction               string
+	OfferID                   uuid.UUID
+	SignedAt                  time.Time
+	RequestID                 uuid.UUID
+	EventID                   uuid.UUID
+	ApplicationID             uuid.UUID
+	AggregateVersion          int64
+	OrgID                     uuid.UUID
+	ClientUserID              uuid.UUID
+	ProductID                 uuid.UUID
+	ProductVersion            int64
+	RequirementsReferenceDate *time.Time
+	CompanyINN                string
+	CompanyName               string
+	CompanyJSON               []byte
+	FormJSON                  []byte
+	DocumentsJSON             []byte
+	AmountKopecks             int64
+	TermMonths                int32
+	PurposeTag                string
 }
 
 type Repository interface {
@@ -161,6 +162,17 @@ func parse(event *eventspb.Event) (Input, error) {
 		}
 		input.ProductVersion = submitted.GetProductVersion()
 		company, form, documentsInput = submitted.GetCompany(), submitted.GetForm(), submitted.GetDocuments()
+		if value := submitted.GetRequirementsReferenceDate(); value != "" {
+			date, parseErr := time.Parse("2006-01-02", value)
+			if parseErr != nil || date.Format("2006-01-02") != value ||
+				date.After(event.GetOccurredAt().AsTime().UTC().Truncate(24*time.Hour)) {
+				return Input{}, fmt.Errorf("%w: requirements_reference_date", ErrInvalidEvent)
+			}
+			input.RequirementsReferenceDate = &date
+		}
+		if company != nil && company.GetProfileSchemaVersion() == 2 && input.RequirementsReferenceDate == nil {
+			return Input{}, fmt.Errorf("%w: missing requirements_reference_date", ErrInvalidEvent)
+		}
 	} else {
 		input.InfoProvided = true
 		input.RequestID, err = nonzeroUUID(provided.GetRequestId())
