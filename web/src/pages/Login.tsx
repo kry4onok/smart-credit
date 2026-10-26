@@ -21,9 +21,12 @@ const demoClients = [
   { email: "closing@demo.local", who: "Закрытие", outcome: "отказ: компания ликвидируется" },
 ];
 
-// Accounts created by `make auth-dev-seed`; their passwords live in the local .env (AUTH_DEV_*).
+// Accounts created by `make auth-dev-seed`; their passwords live in the .env (AUTH_DEV_*).
+// Each client persona has its own company because a profile INN cannot be changed.
 const seedAccounts = [
-  { email: "client@smart-credit.test", who: "Клиент: ООО «Северная пекарня»" },
+  { email: "client@smart-credit.test", who: "Клиент: ООО «Северная пекарня» — варианты и выдача" },
+  { email: "ip@smart-credit.test", who: "Клиент: ИП на патенте — банк запросит патент" },
+  { email: "closing@smart-credit.test", who: "Клиент: ликвидируемое ООО — отказ" },
   { email: "analyst@smart-credit.test", who: "Кредитный аналитик" },
   { email: "admin@smart-credit.test", who: "Администратор" },
 ];
@@ -153,7 +156,7 @@ export function LoginPage() {
         {!isMock && (
           <div className="demo-accounts">
             <p>
-              Учётки стенда из <code>make auth-dev-seed</code>. Пароли — в локальном <code>.env</code> (<code>AUTH_DEV_*</code>).
+              Демо-учётки стенда. Пароли указаны в README проекта; при локальном запуске — в <code>.env</code> (<code>AUTH_DEV_*</code>).
             </p>
             <div className="demo-group">
               <ul>
