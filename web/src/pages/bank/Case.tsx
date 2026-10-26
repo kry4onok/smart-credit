@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { bankApi, isMock } from "../../api/http";
 import { ApiError, call } from "../../api/problem";
 import type { AnalystDecisionRequest, AuditEntry, BankCase, Candidate, CaseSummary, DocumentType, InfoField, Product } from "../../api/types";
-import { CompareBars, offerRows } from "../../components/Compare";
+import { ClientCommunication } from "./ClientCommunication";
 import { MoneyInput } from "../../components/inputs";
 import { HelpPanel, analystModes } from "../../components/HelpPanel";
 import { BankAssessmentPanel, type OfferBasis } from "./AssessmentPanel";
@@ -174,37 +174,7 @@ export function CasePage() {
             </div>
           </section>
 
-          {(kase.info_request || kase.offer || kase.public_reason) && (
-            <section className="panel">
-              <h2>Что видит клиент</h2>
-              {kase.info_request && (
-                <div className="sub">
-                  <h3>Открытый запрос данных</h3>
-                  <p>{kase.info_request.message}</p>
-                  <p className="muted">
-                    {[...kase.info_request.required_fields.map((f) => infoFieldLabel[f]), ...kase.info_request.required_document_types.map((d) => documentLabel[d])].join(", ")}
-                  </p>
-                </div>
-              )}
-              {kase.offer && (
-                <div className="sub">
-                  <h3>{kase.offer.kind === "COUNTER_OFFER" ? "Контрпредложение" : "Оферта"}</h3>
-                  <p>
-                    {kase.offer.product_name}: {money(kase.offer.amount)} на {months(kase.offer.term_months)} под {rate(kase.offer.rate_bps)}, до{" "}
-                    {dateTime(kase.offer.expires_at)}
-                  </p>
-                  <CompareBars rows={offerRows(kase.application, kase.offer)} />
-                  {kase.offer.explanation && <p className="muted">{kase.offer.explanation}</p>}
-                </div>
-              )}
-              {kase.public_reason && kase.public_reason !== kase.offer?.explanation && (
-                <div className="sub">
-                  <h3>Опубликованное объяснение</h3>
-                  <p>{kase.public_reason}</p>
-                </div>
-              )}
-            </section>
-          )}
+          <ClientCommunication kase={kase} />
 
           <Audit id={kase.id} refreshKey={auditKey} />
         </div>
