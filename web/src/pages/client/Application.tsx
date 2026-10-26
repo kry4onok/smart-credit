@@ -75,6 +75,8 @@ export function ApplicationPage() {
   // Until all three fields are set the server has no form; the header shows what was typed.
   const local = app.status === "DRAFT" && !app.form ? recallDraft(app.id) : null;
   const amount = app.form?.amount ?? (local?.amount ? rub(local.amount) : undefined);
+  // After acceptance the header shows the terms being issued; the request stays as context.
+  const issued = app.status === "FORMALIZING" || app.status === "DISBURSED" ? (app.offer ?? recallOffer(app.id)) : null;
   return (
     <>
       <Link to="/cabinet" className="back">
@@ -82,10 +84,14 @@ export function ApplicationPage() {
       </Link>
       <section className="app-head">
         <div>
-          <p className="app-head-product">{product?.name ?? "Кредит для бизнеса"}</p>
-          <h1 className="amount">{amount?.amount_kopecks ? money(amount) : "Новая заявка"}</h1>
+          <p className="app-head-product">{issued?.product_name ?? product?.name ?? "Кредит для бизнеса"}</p>
+          <h1 className="amount">{issued ? money(issued.amount) : amount?.amount_kopecks ? money(amount) : "Новая заявка"}</h1>
           <p className="app-head-meta">
-            {app.form?.term_months && app.form.purpose ? `${months(app.form.term_months)}, ${purposeLabel[app.form.purpose].toLowerCase()}` : "Заполните условия кредита"}
+            {issued
+              ? `${months(issued.term_months)} под ${rate(issued.rate_bps)}${amount?.amount_kopecks ? `, запрошено ${money(amount)}` : ""}`
+              : app.form?.term_months && app.form.purpose
+                ? `${months(app.form.term_months)}, ${purposeLabel[app.form.purpose].toLowerCase()}`
+                : "Заполните условия кредита"}
           </p>
         </div>
         <Badge tone={clientStatusTone[app.status]}>{clientStatusLabel[app.status]}</Badge>

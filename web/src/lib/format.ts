@@ -98,3 +98,9 @@ export function monthlyPayment(amount: Money, termMonths: number, rateBps: numbe
 export function shortId(id: string): string {
   return id.slice(0, 8);
 }
+
+// caseNumber is the human case number: the UUID tail, which also tells apart the seeded demo
+// cases 10000000-…-000000000001, …0002 that share one prefix.
+export function caseNumber(id: string): string {
+  return id.replace(/-/g, "").slice(-8);
+}

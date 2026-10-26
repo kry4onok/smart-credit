@@ -198,7 +198,7 @@ func (r *Repository) ProvideInfo(ctx context.Context, params model.ProvideInfoPa
 		    pending_since = $7,
 		    version = $8,
 		    client_event_version = $9,
-		    updated_at = $7
+		    updated_at = greatest($7, created_at)
 		WHERE id = $1 AND org_id = $2 AND status = 'NEEDS_INFO' AND pending_action IS NULL`,
 		params.ApplicationID, params.OrgID, companyJSON, form.AmountKopecks,
 		form.TermMonths, form.Purpose, now, snapshot.version+1, clientEventVersion)

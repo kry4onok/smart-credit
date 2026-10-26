@@ -150,7 +150,7 @@ func (r *Repository) offerAction(ctx context.Context, params offerActionParams) 
 	result, err := tx.Exec(ctx, `
 		UPDATE applications
 		SET pending_action = $3, pending_since = $4,
-		    version = $5, client_event_version = $6, updated_at = $4
+		    version = $5, client_event_version = $6, updated_at = greatest($4, created_at)
 		WHERE id = $1 AND org_id = $2 AND status = 'OFFER_AVAILABLE' AND pending_action IS NULL`,
 		params.ApplicationID, params.OrgID, params.PendingAction, now, version+1, clientEventVersion)
 	if err != nil {

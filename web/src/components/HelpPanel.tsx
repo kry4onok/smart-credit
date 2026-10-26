@@ -2,6 +2,7 @@ import { useState } from "react";
 import { assessmentApi } from "../api/http";
 import { ApiError, call } from "../api/problem";
 import type { HelpContext, HelpResponse, HelpSelectionRequest } from "../api/types";
+import { tidyBlocks } from "../lib/helpBlocks";
 import { ErrorNote, useAction } from "./ui";
 
 type Mode = HelpSelectionRequest["mode"];
@@ -21,13 +22,6 @@ export const analystModes: { mode: Mode; label: string }[] = [
   { mode: "NEXT_STEP", label: "Следующий шаг" },
 ];
 
-const blockTitle: Record<string, string> = {
-  BLOCK_KIND_DETAILS: "Подробнее",
-  BLOCK_KIND_LIMITATIONS: "Ограничения",
-  BLOCK_KIND_NEXT_STEPS: "Что сделать",
-  BLOCK_KIND_CHANGES: "Что изменилось",
-  BLOCK_KIND_COMPARISON: "Сравнение",
-};
 
 // Navigation targets for assistant actions. Actions only move the view, never run a bank command.
 const actionAnchor: Record<string, string> = {
@@ -147,9 +141,9 @@ export function HelpPanel({ applicationId, audience, modes, onOpenProfile }: Pro
       )}
       {response && !act.busy && (
         <div className="helper-answer" aria-live="polite">
-          {(response.blocks ?? []).map((block, i) => (
+          {tidyBlocks(response.blocks ?? []).map(({ block, title }, i) => (
             <div key={i} className="helper-block">
-              {block.kind && blockTitle[block.kind] && <h3>{blockTitle[block.kind]}</h3>}
+              {title && <h3>{title}</h3>}
               {(block.items ?? []).map((item, j) => (
                 <p key={item.statement_id ?? j}>{item.text}</p>
               ))}

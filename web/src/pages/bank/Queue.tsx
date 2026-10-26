@@ -5,7 +5,7 @@ import { call } from "../../api/problem";
 import type { BankStatus, CaseListItem } from "../../api/types";
 import { useSession } from "../../auth/session";
 import { Badge, ErrorNote, Loading, useAction, useTitle } from "../../components/ui";
-import { age, money, shortId } from "../../lib/format";
+import { age, money, caseNumber, shortId } from "../../lib/format";
 import { bankStatusLabel, bankStatusTone } from "../../lib/labels";
 import { appendPage, mergeFirstPage, usePolling } from "../../lib/util";
 import { QueueSummary } from "./QueueSummary";
@@ -122,7 +122,7 @@ export function QueuePage() {
                 <tr key={c.id} className={c.status === "MANUAL_REVIEW" ? "row-manual" : ""}>
                   <td>
                     <Link to={`/bank/cases/${c.id}`}>{c.company_name ?? `Дело ${shortId(c.id)}`}</Link>
-                    <small>№ {shortId(c.id)}</small>
+                    <small>№ {caseNumber(c.id)}</small>
                   </td>
                   <td className="num">{money(c.requested_amount)}</td>
                   <td>

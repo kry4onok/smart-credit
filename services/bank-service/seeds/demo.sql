@@ -37,9 +37,9 @@ INSERT INTO product_rules (
     max_amount_to_revenue_bps, max_overdue_days, rate_grade_a_bps,
     rate_grade_b_bps, offer_ttl_hours
 ) VALUES
-    ('11111111-1111-4111-8111-111111111111', 1, 12, 5000, 30, 1450, 1650, 168),
-    ('22222222-2222-4222-8222-222222222222', 1, 12, 4000, 30, 1650, 1850, 168),
-    ('10000000-0000-4000-8000-000000000021', 1, 12, 5000, 30, 1600, 1800, 168)
+    ('11111111-1111-4111-8111-111111111111', 1, 12, 5000, 30, 1450, 1650, 72),
+    ('22222222-2222-4222-8222-222222222222', 1, 12, 4000, 30, 1650, 1850, 72),
+    ('10000000-0000-4000-8000-000000000021', 1, 12, 5000, 30, 1600, 1800, 72)
 ON CONFLICT (product_id, product_version) DO NOTHING;
 
 WITH demo_cases (
@@ -259,4 +259,4 @@ COMMIT;
 INSERT INTO products(id,version,code,name,description,purpose_tags,required_document_types,min_amount_kopecks,max_amount_kopecks,min_term_months,max_term_months,indicative_rate_bps,is_active,requirements_policy_version)
 VALUES ('10000000-0000-4000-8000-000000000022',1,'SME_CASHFLOW_V2','Демо: денежный поток','Синтетическая оценка; подтверждение менеджером',ARRAY['WORKING_CAPITAL','EQUIPMENT','EXPANSION'],ARRAY[]::text[],10000000,500000000,6,36,1600,true,'sme-profile-v2') ON CONFLICT(id,version) DO NOTHING;
 INSERT INTO product_rules(product_id,product_version,min_company_age_months,max_amount_to_revenue_bps,max_overdue_days,rate_grade_a_bps,rate_grade_b_bps,offer_ttl_hours)
-VALUES ('10000000-0000-4000-8000-000000000022',1,12,5000,90,1600,1800,168) ON CONFLICT(product_id,product_version) DO NOTHING;
+VALUES ('10000000-0000-4000-8000-000000000022',1,12,5000,90,1600,1800,72) ON CONFLICT(product_id,product_version) DO NOTHING;

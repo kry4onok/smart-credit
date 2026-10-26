@@ -1,0 +1,41 @@
+name: Deploy server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-credit-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Deploy main and verify authentication
+        shell: bash
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_SSH_KEY" || { echo 'Missing SERVER_SSH_KEY repository secret'; exit 1; }
+          umask 077
+          deploy_key=$(mktemp)
+          known_hosts=$(mktemp)
+          trap 'rm -f "$deploy_key" "$known_hosts"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" > "$deploy_key"
+          printf '%s\n' '185.149.147.246 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfblxJvwiUeEmW9DviEqoHq+OAIrCMzUgUfqhpf0ozP' > "$known_hosts"
+          git archive --format=tar "$GITHUB_SHA" | ssh -T \
+            -i "$deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            root@185.149.147.246 "deploy $GITHUB_SHA"

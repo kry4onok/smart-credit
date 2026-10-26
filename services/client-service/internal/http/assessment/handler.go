@@ -82,8 +82,8 @@ type Snapshot struct {
 func (h *Handler) load(ctx context.Context, id, org uuid.UUID) (Snapshot, assistanthelp.View, error) {
 	var s Snapshot
 	var raw []byte
-	var next string
-	err := h.db.QueryRow(ctx, `SELECT version,bank_event_version,status,pending_action,next_action,public_assessment FROM applications WHERE id=$1 AND org_id=$2`, id, org).Scan(&s.Version, &s.BankVersion, &s.Status, &s.Pending, &next, &raw)
+	var next, reason string
+	err := h.db.QueryRow(ctx, `SELECT version,bank_event_version,status,pending_action,next_action,COALESCE(public_reason,''),public_assessment FROM applications WHERE id=$1 AND org_id=$2`, id, org).Scan(&s.Version, &s.BankVersion, &s.Status, &s.Pending, &next, &reason, &raw)
 	if err != nil {
 		return s, assistanthelp.View{}, err
 	}
@@ -100,7 +100,7 @@ func (h *Handler) load(ctx context.Context, id, org uuid.UUID) (Snapshot, assist
 	if s.Pending != nil {
 		s.Freshness = "PENDING"
 	}
-	v := assistanthelp.View{ApplicationID: id.String(), Revision: fmt.Sprintf("client:%d:%d", s.Version, s.BankVersion), Status: s.Status, NextStep: next, Pending: s.Freshness != "CURRENT", Public: s.Assessment}
+	v := assistanthelp.View{ApplicationID: id.String(), Revision: fmt.Sprintf("client:%d:%d", s.Version, s.BankVersion), Status: s.Status, NextStep: next, Reason: reason, Pending: s.Freshness != "CURRENT", Public: s.Assessment}
 	rows, err := h.db.Query(ctx, `SELECT requirements FROM info_requests WHERE application_id=$1 AND is_active`, id)
 	if err != nil {
 		return s, v, err

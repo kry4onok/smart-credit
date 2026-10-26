@@ -84,14 +84,19 @@ func TestAcceptedOfferRemainsAvailableForSigningIntegration(t *testing.T) {
 			if err != nil || !reflect.DeepEqual(pending.Offer, before.Offer) || len(pending.AllowedActions) != 0 {
 				t.Fatalf("sign pending application=%+v, err=%v", pending, err)
 			}
-			// Inactive historical offers must remain hidden outside FORMALIZING.
+			// The disbursed card keeps the issued terms.
+			f.project(t, 5, &eventspb.ApplicationPublicStatePublished{Status: eventspb.ClientStatus_CLIENT_STATUS_DISBURSED, StageLabel: "Деньги выданы"})
+			disbursed, err := reloaded.Get(t.Context(), f.params.OrgID, f.draft.ID)
+			if err != nil || !reflect.DeepEqual(disbursed.Offer, before.Offer) || len(disbursed.AllowedActions) != 0 {
+				t.Fatalf("disbursed application=%+v, offer=%+v, err=%v", disbursed, disbursed.Offer, err)
+			}
+			// Inactive historical offers remain hidden in other statuses.
 			for i, status := range []eventspb.ClientStatus{
-				eventspb.ClientStatus_CLIENT_STATUS_DISBURSED,
 				eventspb.ClientStatus_CLIENT_STATUS_CLOSED,
 				eventspb.ClientStatus_CLIENT_STATUS_REJECTED,
 				eventspb.ClientStatus_CLIENT_STATUS_UNDER_REVIEW,
 			} {
-				f.project(t, int64(5+i), &eventspb.ApplicationPublicStatePublished{Status: status, StageLabel: "Обновление"})
+				f.project(t, int64(6+i), &eventspb.ApplicationPublicStatePublished{Status: status, StageLabel: "Обновление"})
 				got, err := reloaded.Get(t.Context(), f.params.OrgID, f.draft.ID)
 				if err != nil || got.Offer != nil {
 					t.Fatalf("offer in %s = %+v, err=%v", status, got.Offer, err)

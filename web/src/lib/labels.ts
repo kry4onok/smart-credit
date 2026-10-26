@@ -204,6 +204,10 @@ export const auditActionLabel: Record<string, string> = {
   CONTRACT_SIGNED: "Договор подписан",
   DEMO_DISBURSED: "Деньги выданы (демо)",
   APPLICATION_CANCELLED: "Клиент отозвал заявку",
+  // bank-service records offer responses under the client event names.
+  OfferAccepted: "Клиент принял оферту",
+  OfferDeclined: "Клиент отказался от оферты",
+  OFFER_RESPONSE_EXPIRED: "Ответ клиента пришёл после срока оферты",
 };
 
 // --- Profile v2: legal form, tax regimes, requirements ---
