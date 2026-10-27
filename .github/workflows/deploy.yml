@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'alfabank-hackathon-2026/smart-credit' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
